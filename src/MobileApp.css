@@ -1,0 +1,28 @@
+/* md */
+@media (min-width: 992px) {
+    .col-md-offset-4 {
+        margin-left: 33.33333333333333%;
+    }
+}
+
+/* sm */
+@media (min-width: 768px) {
+    .col-sm-offset-1 {
+        margin-left: 8.333333333333332%;
+    }
+}
+
+/* xs */
+@media (max-width: 767px) {
+    .container {
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    .row {
+        margin: 0 !important;
+    }
+    .hidden-xs {
+        display: none !important;
+    }
+}

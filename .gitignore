@@ -5,6 +5,9 @@
 /.pnp
 .pnp.js
 
+# illustrator files
+/ai
+
 # testing
 /coverage
 
