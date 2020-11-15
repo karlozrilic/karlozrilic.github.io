@@ -47,6 +47,8 @@ table {
 	--border-color: #f5f6f7;
 	--primary-color: #f5943d;
 	--text-color: #525d68;
+	--danger: #dc3545;
+	--danger-darker: #c82333;
 }
 body {
 	font-family: 'Roboto', sans-serif;
@@ -60,7 +62,7 @@ body::before {
 	top: 0;
 	width: 100%;
 	height: 100%;
-	opacity: 0.3;
+	opacity: 0.2;
 	background-repeat: no-repeat;
 	background-size: cover;
 	-moz-transform: scaleX(-1);
@@ -68,7 +70,7 @@ body::before {
     -webkit-transform: scaleX(-1);
 	transform: scaleX(-1);
 }
-h1 {
+.h1 {
 	font-size: 2rem;
 	padding: 20px;
 }
@@ -94,7 +96,54 @@ h1 {
 }
 .img-responsive {
 	display: block;
+	max-width: 100%;
+	height: auto;
 }
+.phone-img {
+	position: absolute;
+	bottom: 0;
+}
+.main-position {
+	position: relative;
+	margin-left: auto;
+	margin-right: auto;
+}
+.recent-project {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	height: 50%;
+}
+.recent-project > h1 {
+	font-size: 1.5rem;
+	padding: 10px 0;
+}
+.recent-project-links {
+	position: relative;
+	right: -40px;
+	bottom: 0;
+	width: 100%;
+}
+.github-btn {
+	background-color: var(--danger);
+	color: white;
+	width: 100%;
+	text-align: left;
+	padding: 10px 15px;
+	margin: 5px 0;
+}
+.github-btn:hover {
+	color: white;
+	background-color: var(--danger-darker);
+}
+.github-btn-icon {
+	display: inline;
+	float: right;
+}
+.github-btn:hover .github-btn-icon {
+	color: black;
+}
+
 .header-links {
 	display: flex;
 	flex-direction: row;
@@ -124,6 +173,7 @@ h1 {
 /* Custom Bootstrap */
 .row {
 	width: 100% !important;
+	margin: 0 !important;
 }
 .row::before {
 	content: "";
@@ -146,4 +196,7 @@ h1 {
 }
 .hidden-xs {
     display: block;
+}
+.margin-topx3 {
+    margin-top: 60px;
 }
