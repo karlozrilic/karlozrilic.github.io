@@ -2,11 +2,22 @@ import './App.css';
 import './MobileApp.css';
 
 function App() {
+
+  window.onscroll = function() {scrollFunction()};
+
+  function scrollFunction() {
+    if (document.body.scrollTop > 60 || document.documentElement.scrollTop > 60) {
+      document.getElementById("navigation").style.backgroundColor = "#f5f6f7";
+    } else {
+      document.getElementById("navigation").style.backgroundColor = "transparent";
+    }
+  }
+
   return (
     <>
-      <header className="container">
+      <header className="container sticky-container">
         <div className="row">
-          <div className="border-bottom border-left border-right header col-md-12">
+          <div id="navigation" className="border-bottom border-left border-right header col-md-12">
             <div className="row">
               <div className="col-md-2 col-sm-2">
                 <a className="logo" href="/"><img src={process.env.PUBLIC_URL + '/images/logo.png'} height="90" title="ZrilicH" alt="ZrilicH" /></a>
@@ -26,12 +37,12 @@ function App() {
       <div className="container">
         <div className="row">
           <div className="col-md-12 text-center padding-top">
-            <h1 className="border-bottom h1">Web developer</h1>
+            <h1 className="border-bottom h1">Karlo Zrilić:<br />Web developer</h1>
           </div>
         </div>
       </div>
       <div className="container mt-3">
-        <div className="row py-4" style={{backgroundColor: "#b8b8b8"}}>
+        <div className="row py-4" style={{backgroundColor: "#f5f6f799"}}>
           <div className="col-lg-8">
             <img className="img-responsive main-position" src={process.env.PUBLIC_URL + '/images/comp-mockup.png'} width="498" />
             <img className="hidden-xs phone-img" src={process.env.PUBLIC_URL + '/images/phone-mockup.png'} width="94" />
@@ -42,8 +53,8 @@ function App() {
               <p>Truth or Drink Web app and Android app</p>
             </div>
             <div className="recent-project-links">
-              <a href="https://github.com/karlozrilic/truth_or_drink" target="_blank" className="btn github-btn">Github <div className="github-btn-icon"><i class="far fa-caret-circle-right"></i></div></a>
-              <a href="https://play.google.com/store/apps/details?id=com.truthordrinkzrilich" target="_blank" className="btn github-btn">Google Play <div className="github-btn-icon"><i class="fab fa-google-play"></i></div></a>
+              <a href="https://github.com/karlozrilic/truth_or_drink" target="_blank" className="btn recent-project-btn">Github <div className="recent-project-btn-icon"><i className="far fa-caret-circle-right"></i></div></a>
+              <a href="https://play.google.com/store/apps/details?id=com.truthordrinkzrilich" target="_blank" className="btn recent-project-btn">Google Play <div className="recent-project-btn-icon"><i className="fab fa-google-play"></i></div></a>
             </div>
           </div>
         </div>
