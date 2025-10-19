@@ -1,0 +1,83 @@
+[
+    {
+        "job_title": "Commissioner in an Internet store",
+        "company_name": "Konzum plus d.o.o.",
+        "location": "Zadar, Croatia",
+        "start_date": "23/02/2019",
+        "end_date": "30/03/2019",
+        "description_sections": [
+            {
+                "text_before": "",
+                "points": [
+                    "Organization and time management",
+                    "Precision in picking and packing orders",
+                    "Teamwork and communication with colleagues",
+                    "Working under pressure and in a dynamic environment",
+                    "Adaptability and quick response to changes"
+                ],
+                "text_after": ""
+            }
+        ]
+    },
+    {
+        "job_title": "Frontend web developer",
+        "company_name": "Plava tvornica d.o.o.",
+        "location": "Virovitica, Croatia (Remote)",
+        "start_date": "21/02/2021",
+        "end_date": "29/11/2024",
+        "description_sections": [
+            {
+                "text_before": "",
+                "points": [
+                    "Developing responsive and intuitive user interfaces using HTML, CSS, and JavaScript frameworks such as React, Angular, and Vue",
+                    "Optimizing web performance by reducing load times, optimizing assets, and implementing caching strategies to ensure efficient, fastloading websites",
+                    "Ensuring cross-browser compatibility through thorough testing to guarantee seamless functionality across multiple browsers and platforms",
+                    "Implementing mobile-first and responsive design principles, creating layouts that were adapting smoothly to different devices and screen sizes",
+                    "Collaborating with UI/UX designers to translate wireframes and design concepts into functional, visually appealing web pages",
+                    "Integrating APIs and backend services by working closely with backend developers to ensure smooth communication between front-end and back-end systems",
+                    "Identifying and resolving front-end bugs and performance issues using debugging tools like Chrome DevTools and Lighthouse",
+                    "Maintaining high code quality by following best practices, conducting code reviews, writing unit tests, and managing version control with Git",
+                    "Staying updated on the latest trends and technologies in front-end development to continuously improve skills and project quality",
+                    "Ensuring web applications were meeting WCAG accessibility standards to provide an inclusive user experience",
+                    "Implementing animations and interactive elements to enhance user experience and create dynamic, engaging web pages",
+                    "Participating in Agile teams, attending daily stand-ups, sprint planning, and code reviews to ensure timely feature delivery",
+                    "Frontend technologies used: vanilla HTML, CSS, JavaScript and also Twig, TypeScript, React.js, Vue.js, Angular, Next.js, SASS and SCSS"
+                ],
+                "text_after": ""
+            },
+            {
+                "text_before": "Selected Projects:",
+                "points": [
+                    "AirSerbia (National airline of Serbia): Developed modular website components, implemented dynamic form handling via API, and integrated third-party applications",
+                    "Factory.dev (Company website): Led a full redesign, optimized existing features, and built new functionality to improve user experience",
+                    "Meddox (Mobile-first health-management platform): Created responsive web components and engineered an Electron-based desktop app with end-to-end encrypted data transfer",
+                    "Kenty adria (B2B FMCG consultancy): Developed an internal dashboard for procurement analytics and category-management workflows",
+                    "MyN1 (German AI-driven circular-economy software): Developed multiple internal dashboard applications to manage material-flow data and peer-to-peer exchanges",
+                    "Smykker (German eyewear brand & optician chain): Implemented interactive site components and integrated a seamless checkout process"
+                ],
+                "text_after": "...and numerous smaller projects spanning e-commerce, dashboard tools, API integrations, and UI/UX enhancements."
+            }
+        ]
+    },
+    {
+        "job_title": "Sales Advisor",
+        "company_name": "Hrvatski Telekom d.d.",
+        "location": "Zadar, Croatia",
+        "start_date": "14/04/2025",
+        "end_date": "31/07/2025",
+        "description_sections": [
+            {
+                "text_before": "",
+                "points": [
+                    "Actively advised customers and presented the full range of HT products and services (mobile and fixed plans, devices, internet, TV packages)",
+                    "Achieved individual and team sales targets through in-person and phone-based sales",
+                    "Managed new contracts and renewals, optimizing plans based on customer needs",
+                    "Resolved customer inquiries, complaints, and technical issues in coordination with technical support",
+                    "Regularly entered and updated customer data in the CRM system and monitored customer satisfaction",
+                    "Participated in sales training sessions and workshops focused on developing communication and sales skills"
+                ],
+                "text_after": ""
+            }
+        ]
+    }
+]

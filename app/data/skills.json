@@ -1,0 +1,61 @@
+[
+    {
+        "name": "tehnical_skills",
+        "title": "Technical Skills",
+        "primaryColor": "#4f46e5",
+        "secondaryColor": "#e5e7eb",
+        "skills": [
+            {
+                "name": "html",
+                "title": "HTML",
+                "value": 99.99
+            },
+            {
+                "name": "css",
+                "title": "CSS",
+                "value": 99.99
+            },
+            {
+                "name": "java_script",
+                "title": "JavaScript",
+                "value": 99.99
+            }
+        ]
+    },
+    {
+        "name": "design_skills",
+        "title": "Design Skills",
+        "primaryColor": "#3b82f6",
+        "secondaryColor": "#e5e7eb",
+        "skills": [
+            {
+                "name": "figma",
+                "title": "Figma",
+                "value": 70
+            },
+            {
+                "name": "adobe_xd",
+                "title": "Adobe XD",
+                "value": 60
+            }
+        ]
+    },
+    {
+        "name": "soft_skills",
+        "title": "Soft Skills",
+        "primaryColor": "#10b981",
+        "secondaryColor": "#e5e7eb",
+        "skills": [
+            {
+                "name": "communication",
+                "title": "Communication",
+                "value": 90
+            },
+            {
+                "name": "problem_solving",
+                "title": "Problem solving",
+                "value": 100
+            }
+        ]
+    }
+]

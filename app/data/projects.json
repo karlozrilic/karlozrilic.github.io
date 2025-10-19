@@ -1,0 +1,34 @@
+[
+    {
+        "category": "Web",
+        "title": "project 1",
+        "description": "project 1 description",
+        "image": "https://placehold.co/600x400",
+        "small_image": "",
+        "link": "https://google.com"
+    },
+    {
+        "category": "Web",
+        "title": "project 2",
+        "description": "project 1 description",
+        "image": "https://placehold.co/600x400",
+        "small_image": "",
+        "link": "https://google.com"
+    },
+    {
+        "category": "Mobile",
+        "title": "Banana",
+        "description": "Its a banana, nothing more, nothing less",
+        "image": "https://placehold.co/600x400",
+        "small_image": "https://placehold.co/100x100",
+        "link": "https://play.google.com/store/apps/details?id=com.zrilich.banana"
+    },
+    {
+        "category": "Web",
+        "title": "project 4",
+        "description": "project 1 description",
+        "image": "https://placehold.co/600x400",
+        "small_image": "",
+        "link": "https://google.com"
+    }
+]
