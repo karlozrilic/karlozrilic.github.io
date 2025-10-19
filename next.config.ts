@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
 		unoptimized: true, // Required for GitHub Pages
 	},
 	basePath: '', // if deploying to username.github.io
-	assetPrefix: ''
+	assetPrefix: '',
+	reactStrictMode: true
 };
 
 export default nextConfig;
