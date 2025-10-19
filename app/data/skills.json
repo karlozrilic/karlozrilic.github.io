@@ -1,60 +1,60 @@
 [
     {
-        "name": "tehnical_skills",
+        "id": "tehnical_skills",
         "title": "Technical Skills",
-        "primaryColor": "#4f46e5",
-        "secondaryColor": "#e5e7eb",
+        "primary_color": "#4f46e5",
+        "secondary_color": "#e5e7eb",
         "skills": [
             {
-                "name": "html",
+                "id": "html",
                 "title": "HTML",
-                "value": 99.99
+                "level": 99.99
             },
             {
-                "name": "css",
+                "id": "css",
                 "title": "CSS",
-                "value": 99.99
+                "level": 99.99
             },
             {
-                "name": "java_script",
+                "id": "java_script",
                 "title": "JavaScript",
-                "value": 99.99
+                "level": 99.99
             }
         ]
     },
     {
-        "name": "design_skills",
+        "id": "design_skills",
         "title": "Design Skills",
-        "primaryColor": "#3b82f6",
-        "secondaryColor": "#e5e7eb",
+        "primary_color": "#3b82f6",
+        "secondary_color": "#e5e7eb",
         "skills": [
             {
-                "name": "figma",
+                "id": "figma",
                 "title": "Figma",
-                "value": 70
+                "level": 70
             },
             {
-                "name": "adobe_xd",
+                "id": "adobe_xd",
                 "title": "Adobe XD",
-                "value": 60
+                "level": 60
             }
         ]
     },
     {
-        "name": "soft_skills",
+        "id": "soft_skills",
         "title": "Soft Skills",
-        "primaryColor": "#10b981",
-        "secondaryColor": "#e5e7eb",
+        "primary_color": "#10b981",
+        "secondary_color": "#e5e7eb",
         "skills": [
             {
-                "name": "communication",
+                "id": "communication",
                 "title": "Communication",
-                "value": 90
+                "level": 90
             },
             {
-                "name": "problem_solving",
+                "id": "problem_solving",
                 "title": "Problem solving",
-                "value": 100
+                "level": 100
             }
         ]
     }

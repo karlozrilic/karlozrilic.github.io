@@ -1,8 +1,49 @@
 'use client'
-import { useEffect } from 'react';
-import skillGroups from '../data/skills.json';
+import { useEffect, useState } from 'react';
+import { collection, collectionGroup, getDocs } from 'firebase/firestore';
+import { db } from '../utils/firebase';
+
+interface SkillGroup {
+    id: string,
+    title: string,
+    primary_color: string,
+    secondary_color: string,
+    skills: Skill[]
+}
+
+interface Skill {
+    id: string,
+    title: string,
+    level: number
+}
+
+type SkillWithParent = Skill & { parent?: string };
 
 export default function Skills() {
+    const [loading, setLoading] = useState(true);
+    const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setLoading(true);
+            const skillGroupsnapshot = await getDocs(collection(db, 'skill_groups'));
+            const skillGroupsData: SkillGroup[] = skillGroupsnapshot.docs.map(doc => ({ ...doc.data() as SkillGroup }));
+            const skillsSnapshot = await getDocs(collectionGroup(db, 'skills'));
+            const skillsData: SkillWithParent[] = skillsSnapshot.docs.map(doc => ({ parent: doc.ref.parent.parent?.id, ...doc.data() as Skill }));
+
+            const mergedData: SkillGroup[] = skillGroupsData.map(group => ({
+                ...group,
+                skills: skillsData
+                    .filter(skill => skill.parent === group.id)
+                    .map(({ parent, ...skill }) => skill),
+            }));
+
+            setSkillGroups(mergedData);
+            setLoading(false);
+        };
+        fetchUsers();
+    }, []);
+
     useEffect(() => {
         const skillCircles = document.querySelectorAll<HTMLDivElement>('.circle-skill');
         const skillObserver = new IntersectionObserver(entries  => {
@@ -39,15 +80,15 @@ export default function Skills() {
             }
         );
         skillCircles.forEach(c => skillObserver.observe(c));
-    }, []);
+    }, [loading]);
 
     return (
         <>
             <span id='skills'></span>
             <section className='relative py-20 bg-gray-100 dark:bg-gray-800 overflow-hidden fade-in'>
                 <h2 className='text-4xl font-bold text-center mb-12 fade-in'>Skills & Expertise</h2>
-                <div className='container mx-auto grid grid-cols-1 md:grid-cols-3 gap-12'>
-                    {skillGroups.map((skillGroup, i) => 
+                <div className={`container mx-auto ${loading ? '' : 'grid grid-cols-1 md:grid-cols-3 gap-12'}`}>
+                    {loading ? <div className='text-center'>Loading...</div> : skillGroups.map((skillGroup, i) => 
                         <div className='text-center' key={i}>
                             <h3 className='text-2xl font-semibold mb-6'>{skillGroup.title}</h3>
                             <div className='flex flex-wrap justify-center gap-6'>
@@ -58,7 +99,7 @@ export default function Skills() {
                                                 cx='50%'
                                                 cy='50%' 
                                                 r='45%'
-                                                stroke={skillGroup.secondaryColor}
+                                                stroke={skillGroup.secondary_color}
                                                 strokeWidth='8'
                                                 fill='none'
                                             />
@@ -66,19 +107,19 @@ export default function Skills() {
                                                 cx='50%'
                                                 cy='50%'
                                                 r='45%'
-                                                stroke={skillGroup.primaryColor}
+                                                stroke={skillGroup.primary_color}
                                                 strokeWidth='8'
                                                 strokeLinecap='butt'
                                                 fill='none'
                                                 strokeDasharray='282.6'
                                                 strokeDashoffset='282.6'
                                                 className='circle-skill'
-                                                data-skill={skill.value}
+                                                data-skill={skill.level}
                                             />
                                         </svg>
                                         <div className='absolute inset-0 flex flex-col items-center justify-center'>
                                             <span className='text-xl font-bold'>{skill.title}</span>
-                                            <span className='skill-percent text-primary font-semibold'>{skill.value}%{skill.value == 99.99 ? '*' : ''}</span>
+                                            <span className='skill-percent text-primary font-semibold'>{skill.level}%{skill.level == 99.99 ? '*' : ''}</span>
                                         </div>
                                     </div>
                                 )}

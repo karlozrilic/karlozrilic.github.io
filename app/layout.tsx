@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Header from './components/header';
-import Footer from './components/footer';
-
-import { config } from '@fortawesome/fontawesome-svg-core'
-import '@fortawesome/fontawesome-svg-core/styles.css'
-config.autoAddCss = false
+import Header from './layout_components/header';
+import Footer from './layout_components/footer';
+import { app, analytics } from './utils/firebase';
+import { config } from '@fortawesome/fontawesome-svg-core';
+import '@fortawesome/fontawesome-svg-core/styles.css';
+config.autoAddCss = false;
 
 export const metadata: Metadata = {
     title: 'Create Next App',
