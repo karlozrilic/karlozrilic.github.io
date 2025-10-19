@@ -37,6 +37,7 @@ export default function Skills() {
                     .filter(skill => skill.parent === group.id)
                     .map(({ parent, ...skill }) => skill),
             }));
+            console.log(mergedData)
 
             setSkillGroups(mergedData);
             setLoading(false);
