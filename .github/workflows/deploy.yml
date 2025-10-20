@@ -11,9 +11,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      NEXT_PRIVATE_STABLE_COMPILER: 1
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
