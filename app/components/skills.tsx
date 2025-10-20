@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { collection, collectionGroup, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 
