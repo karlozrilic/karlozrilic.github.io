@@ -1,0 +1,1 @@
+type SkillGroupWithGroupId = SkillGroup & { group_id?: string };

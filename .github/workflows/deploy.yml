@@ -25,6 +25,9 @@ jobs:
         run: |
           npm ci || npm ci || npm install
 
+      - name: Rebuild LightningCSS
+        run: npm rebuild lightningcss
+
       - name: Build static site
         env:
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}

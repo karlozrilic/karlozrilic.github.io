@@ -3,23 +3,6 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { collection, collectionGroup, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 
-interface SkillGroup {
-    id: string,
-    title: string,
-    primary_color: string,
-    secondary_color: string,
-    skills: Skill[]
-}
-
-interface Skill {
-    id: string,
-    title: string,
-    level: number
-}
-
-type SkillGroupWithGroupId = SkillGroup & { group_id?: string };
-type SkillWithParent = Skill & { group_id?: string };
-
 export default function Skills() {
     const [loading, setLoading] = useState(true);
     const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
