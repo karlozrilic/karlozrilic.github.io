@@ -20,13 +20,15 @@ jobs:
         with:
           node-version: 24
 
+      - name: Remove cache
+        run: rm -rf node_modules/.cache
+
       - name: Install dependencies
         run: |
           npm ci || npm ci || npm install
 
       - name: Rebuild lightningcss for Linux
         run: |
-          rm -rf node_modules/.cache
           npm rebuild lightningcss
 
       - name: Build static site
