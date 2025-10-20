@@ -7,7 +7,10 @@ const nextConfig: NextConfig = {
 	},
 	basePath: '',
 	assetPrefix: '',
-	reactStrictMode: true
+	reactStrictMode: true,
+	experimental: {
+		optimizeCss: false,
+	}
 };
 
 export default nextConfig;
