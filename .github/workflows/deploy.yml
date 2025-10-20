@@ -15,14 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Remove cache
+        run: rm -rf node_modules/.cache
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
-
-      - name: Remove cache
-        run: rm -rf node_modules/.cache
 
       - name: Remove LightningCSS before build
         run: rm -rf node_modules/lightningcss
