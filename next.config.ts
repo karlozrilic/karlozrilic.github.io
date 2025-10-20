@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
-
 const nextConfig: NextConfig = {
 	output: 'export',
 	images: {
@@ -9,7 +7,10 @@ const nextConfig: NextConfig = {
 	},
 	basePath: '',
 	assetPrefix: '',
-	reactStrictMode: true
+	reactStrictMode: true,
+	experimental: {
+		turbo: {},
+	},
 };
 
 export default nextConfig;
