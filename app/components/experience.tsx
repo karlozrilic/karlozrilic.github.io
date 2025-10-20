@@ -1,6 +1,17 @@
-import experiences from '../data/experience.json';
+'use client'
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
+import { useEffect, useState } from 'react';
+import moment from 'moment';
 
 export default function Experience() {
+    const [experiences, setExperiences] = useState<Experience[]>([]);
+    const { data } = useSelector((state: RootState) => state.experiences);
+
+    useEffect(() => {
+        setExperiences(data);
+    }, [data]);
+
     return (
         <>
             <span id='experience'></span>
@@ -10,8 +21,15 @@ export default function Experience() {
                     {experiences.map((experience, index) => 
                         <div key={index} className='bg-white dark:bg-gray-700 p-6 rounded-2xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition'>
                             <h3 className='text-2xl font-semibold'>{experience.job_title}</h3>
-                            <p className='text-gray-500 dark:text-gray-300 mb-2'>{experience.company_name} | {experience.start_date} - {experience.end_date} | {experience.location}</p>
-                            {experience.description_sections.map((section, index) => 
+                            <p
+                                className='text-gray-500 dark:text-gray-300 mb-2'
+                            >
+                                {experience.company_name} |&nbsp;
+                                {moment(new Date(experience.start_date)).format('Do MMMM YYYY')} -&nbsp;
+                                {moment(new Date(experience.end_date)).format('Do MMMM YYYY')} |&nbsp;
+                                {experience.location}
+                            </p>
+                            {experience.description.map((section, index) => 
                                 <div key={index}>
                                     {section.text_before != '' && <p>{section.text_before}</p>}
                                     {section.points.length > 0 &&

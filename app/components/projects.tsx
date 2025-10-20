@@ -1,9 +1,18 @@
 'use client'
 import { useEffect, useState } from 'react';
 import projects from '../data/projects.json';
+import { RootState } from '../store/store';
+import { useSelector } from 'react-redux';
 
 export default function Projects() {
     const [activeFilter, setActiveFilter] = useState('all');
+    const [projects, setProjects] = useState<Project[]>([]);
+
+    const { data } = useSelector((state: RootState) => state.projects);
+
+    useEffect(() => {
+        setProjects(data);
+    }, [data]);
 
     useEffect(() => {
         // PROJECT FILTERING
@@ -24,7 +33,7 @@ export default function Projects() {
                 });
             });
         });
-    }, []);
+    }, [projects]);
     
     return (
         <>
@@ -36,17 +45,23 @@ export default function Projects() {
                         className={`project-filter rounded px-4 py-2 ${activeFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
                         data-filter='all'
                     >All</button>
-                    {Array.from(new Set(projects.map(project => project.category))).map((project, index) => 
+                    {Array.from(new Set(projects.map(project => project.category.toLowerCase()))).map((project, index) => 
                         <button
-                            className={`project-filter rounded px-4 py-2 ${activeFilter === project.toLowerCase() ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
-                            data-filter={project.toLowerCase()}
+                            className={`project-filter rounded px-4 py-2 ${activeFilter === project ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                            data-filter={project}
                             key={index}
-                        >{project}</button>
+                        >{project.charAt(0).toUpperCase() + project.slice(1)}</button>
                     )}
                 </div>
                 <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8' id='project-grid'>
                     {projects.map((project, index) => 
-                        <a key={index} href={project.link} target={project.target} data-category={project.category.toLowerCase()} className='project-item web p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition transform cursor-pointer'>
+                        <a
+                            key={index}
+                            href={project.link}
+                            target={project.link.startsWith('http') ? '_blank' : '_self'}
+                            data-category={project.category.toLowerCase()}
+                            className='project-item web p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition transform cursor-pointer'
+                        >
                             <img src={project.image} className='rounded-lg h-3xs mb-2' />
                             <div className='flex flex-row'>
                                 {project.small_image != '' && <img src={project.small_image} className='rounded-lg w-[56px] me-2' />}

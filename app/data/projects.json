@@ -5,8 +5,7 @@
         "description": "project 1 description",
         "image": "https://placehold.co/600x400",
         "small_image": "",
-        "link": "https://google.com",
-        "target": "_blank"
+        "link": "https://google.com"
     },
     {
         "category": "Web",
@@ -14,8 +13,7 @@
         "description": "project 1 description",
         "image": "https://placehold.co/600x400",
         "small_image": "",
-        "link": "https://google.com",
-        "target": "_blank"
+        "link": "https://google.com"
     },
     {
         "category": "Mobile",
@@ -23,8 +21,7 @@
         "description": "Its a banana, nothing more, nothing less",
         "image": "https://placehold.co/600x400",
         "small_image": "https://placehold.co/100x100",
-        "link": "/banana",
-        "target": ""
+        "link": "/banana"
     },
     {
         "category": "Web",
@@ -32,7 +29,6 @@
         "description": "project 1 description",
         "image": "https://placehold.co/600x400",
         "small_image": "",
-        "link": "https://google.com",
-        "target": "_blank"
+        "link": "https://google.com"
     }
 ]

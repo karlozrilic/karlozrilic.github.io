@@ -2,8 +2,8 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../utils/firebase';
 import { collection, collectionGroup, getDocs, orderBy, query } from 'firebase/firestore';
-import { SkillGroupWithTime } from '@/app/interfaces/skill_group_with_time';
-import { SkillWithTime } from '@/app/interfaces/skill_with_time';
+import { SkillGroupWithTime } from '@/app/interfaces/skill/skill_group_with_time';
+import { SkillWithTime } from '@/app/interfaces/skill/skill_with_time';
 
 interface SkillGroupState {
     data: SkillGroup[];
@@ -40,7 +40,7 @@ export const fetchSkillGroups = createAsyncThunk('skillGroups/fetchSkillGroups',
 });
 
 const skillGroupsSlice = createSlice({
-    name: 'skillGroups',
+    name: 'skill_groups',
     initialState,
     reducers: {},
     extraReducers: (builder) => {
@@ -55,7 +55,7 @@ const skillGroupsSlice = createSlice({
         })
         .addCase(fetchSkillGroups.rejected, (state, action) => {
             state.loading = false;
-            state.error = action.error.message || 'Failed to fetch users';
+            state.error = action.error.message || 'Failed to fetch skill groups';
         });
     },
 });

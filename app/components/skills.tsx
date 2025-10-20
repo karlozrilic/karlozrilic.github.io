@@ -6,7 +6,7 @@ import { RootState } from '../store/store';
 export default function Skills() {
     const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
     const skillsRef = useRef<HTMLDivElement>(null);
-    const { data, loading, error } = useSelector((state: RootState) => state.skillGroups);
+    const { data } = useSelector((state: RootState) => state.skillGroups);
 
     useEffect(() => {
         setSkillGroups(data);

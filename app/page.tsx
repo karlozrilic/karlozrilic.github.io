@@ -1,8 +1,10 @@
 'use client'
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from './store/store';
 import { fetchSkillGroups } from './store/slices/skillGroupSlice';
+import { fetchProjects } from './store/slices/projectsSlice';
+import { fetchExperiences } from './store/slices/experienceSlice';
 import Hero from './components/hero';
 import AboutMe from './components/about_me';
 import Skills from './components/skills';
@@ -11,21 +13,26 @@ import Contact from './components/contact';
 import Experience from './components/experience';
 
 export default function Home() {
+    const [loading, setLoading] = useState(false);
     const dispatch = useDispatch<AppDispatch>();
-    const { data, loading, error } = useSelector((state: RootState) => state.skillGroups);
+    const skillGroups = useSelector((state: RootState) => state.skillGroups);
+    const projects = useSelector((state: RootState) => state.projects);
+    const experiences = useSelector((state: RootState) => state.experiences);
 
     // Fetch data once on mount
     useEffect(() => {
         dispatch(fetchSkillGroups());
+        dispatch(fetchProjects());
+        dispatch(fetchExperiences());
     }, [dispatch]);
 
     useEffect(() => {
         
-    }, [data]);
+    }, [skillGroups.data]);
 
     useEffect(() => {
-        
-    }, [loading]);
+        setLoading(skillGroups.loading);
+    }, [skillGroups.loading]);
 
     useEffect(() => {
         // FADE-IN

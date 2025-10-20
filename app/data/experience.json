@@ -23,14 +23,14 @@
         "job_title": "Frontend web developer",
         "company_name": "Plava tvornica d.o.o.",
         "location": "Virovitica, Croatia (Remote)",
-        "start_date": "21/02/2021",
+        "start_date": "22/02/2021",
         "end_date": "29/11/2024",
         "description_sections": [
             {
                 "text_before": "",
                 "points": [
                     "Developing responsive and intuitive user interfaces using HTML, CSS, and JavaScript frameworks such as React, Angular, and Vue",
-                    "Optimizing web performance by reducing load times, optimizing assets, and implementing caching strategies to ensure efficient, fastloading websites",
+                    "Optimizing web performance by reducing load times, optimizing assets, and implementing caching strategies to ensure efficient, fastloading-websites",
                     "Ensuring cross-browser compatibility through thorough testing to guarantee seamless functionality across multiple browsers and platforms",
                     "Implementing mobile-first and responsive design principles, creating layouts that were adapting smoothly to different devices and screen sizes",
                     "Collaborating with UI/UX designers to translate wireframes and design concepts into functional, visually appealing web pages",
