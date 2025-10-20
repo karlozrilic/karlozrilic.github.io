@@ -33,6 +33,7 @@ jobs:
         run: npm ci
 
       - name: Build static site
+        id: build
         env:
           NEXT_PRIVATE_STABLE_COMPILER: "swc"
           NEXT_TELEMETRY_DISABLED: "1"
@@ -49,17 +50,12 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload static files as artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
         with:
           name: github-pages
-          path: out
-          
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./out
+          path: out/
   
   deploy:
     needs: build
