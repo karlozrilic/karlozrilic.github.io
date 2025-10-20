@@ -107,7 +107,6 @@ export default function Header() {
 				<a href='#projects' className='hover:text-primary transition' onClick={closeDrawer}>Projects</a>
 				<a href='#experience' className='hover:text-primary transition' onClick={closeDrawer}>Experience</a>
 				<a href='#contact' className='hover:text-primary transition' onClick={closeDrawer}>Contact</a>
-				<a href='/banana' className='hover:text-primary transition' onClick={closeDrawer}>Banana</a>
 			</>
 		);
 	}
