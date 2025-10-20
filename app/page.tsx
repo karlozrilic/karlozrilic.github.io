@@ -20,11 +20,11 @@ export default function Home() {
     }, [dispatch]);
 
     useEffect(() => {
-        //console.log(data);
+        // console.log(data);
     }, [data]);
 
     useEffect(() => {
-        //console.log(loading);
+        // console.log(loading);
     }, [loading]);
 
     useEffect(() => {
