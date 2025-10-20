@@ -21,6 +21,11 @@ jobs:
           node-version: 20
           cache: 'npm'
 
+      - name: Patch LightningCSS resolution
+        run: |
+          mkdir -p node_modules/lightningcss/node
+          echo "module.exports = {}" > node_modules/lightningcss/node/index.js
+
       - name: Remove cache
         run: rm -rf node_modules/.cache
 
