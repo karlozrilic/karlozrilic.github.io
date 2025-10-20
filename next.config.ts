@@ -7,7 +7,13 @@ const nextConfig: NextConfig = {
 	},
 	basePath: '',
 	assetPrefix: '',
-	reactStrictMode: true
+	reactStrictMode: true,
+	experimental: {
+		optimizeCss: false,
+	},
+	compiler: {
+		removeConsole: process.env.NODE_ENV === "production",
+	},
 };
 
 export default nextConfig;
