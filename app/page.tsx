@@ -1,5 +1,8 @@
 'use client'
 import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from './store/store';
+import { fetchSkillGroups } from './store/slices/skillGroupSlice';
 import Hero from './components/hero';
 import AboutMe from './components/about_me';
 import Skills from './components/skills';
@@ -8,6 +11,22 @@ import Contact from './components/contact';
 import Experience from './components/experience';
 
 export default function Home() {
+    const dispatch = useDispatch<AppDispatch>();
+    const { data, loading, error } = useSelector((state: RootState) => state.skillGroups);
+
+    // Fetch data once on mount
+    useEffect(() => {
+        dispatch(fetchSkillGroups());
+    }, [dispatch]);
+
+    useEffect(() => {
+        //console.log(data);
+    }, [data]);
+
+    useEffect(() => {
+        //console.log(loading);
+    }, [loading]);
+
     useEffect(() => {
         // FADE-IN
         const faders = document.querySelectorAll('.fade-in');
@@ -38,6 +57,7 @@ export default function Home() {
 
     return (
         <>
+            {loading && <div style={{position: 'fixed', top: 0, left: 0}} className='w-full h-full bg-black z-100'>AHAHAHAHAHHA</div>}
             <Hero />
             <AboutMe />
             <Skills />

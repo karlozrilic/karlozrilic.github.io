@@ -5,6 +5,7 @@ import Footer from './layout_components/footer';
 import { app, analytics } from './utils/firebase';
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
+import ReduxProvider from './reduxProvider';
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
@@ -18,9 +19,11 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 			<body
 				className={`bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 font-sans transition-colors duration-500 antialiased`}
 			>
-				<Header />
-				{children}
-				<Footer />
+				<ReduxProvider>
+					<Header />
+					{children}
+					<Footer />
+				</ReduxProvider>
 			</body>
 		</html>
 	);
