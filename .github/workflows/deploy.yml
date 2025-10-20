@@ -21,11 +21,6 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Patch LightningCSS resolution
-        run: |
-          mkdir -p node_modules/lightningcss/node
-          echo "module.exports = {}" > node_modules/lightningcss/node/index.js
-
       - name: Remove cache
         run: rm -rf node_modules/.cache
 
@@ -42,7 +37,7 @@ jobs:
           NEXT_DISABLE_LIGHTNINGCSS: "true"
           NEXT_EXPERIMENTAL_OPTIMIZE_CSS: "false"
           NEXT_PRIVATE_LOCAL_WEBPACK: "true"
-          
+
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
