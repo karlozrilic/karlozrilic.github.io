@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-	output: 'export', // 👈 This enables static export
+	output: 'export',
 	images: {
-		unoptimized: true, // Required for GitHub Pages
+		unoptimized: true,
 	},
-	basePath: '', // if deploying to username.github.io
+	basePath: '',
 	assetPrefix: '',
 	reactStrictMode: true
 };
