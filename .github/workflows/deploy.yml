@@ -30,10 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild lightningcss for Linux
-        run: |
-          npm rebuild lightningcss
-
       - name: Build static site
         env:
           NEXT_DISABLE_LIGHTNINGCSS: 1
