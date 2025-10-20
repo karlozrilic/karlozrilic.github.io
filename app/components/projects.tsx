@@ -46,7 +46,7 @@ export default function Projects() {
                 </div>
                 <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8' id='project-grid'>
                     {projects.map((project, index) => 
-                        <a key={index} href={project.link} target='_blank' data-category={project.category.toLowerCase()} className='project-item web p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition transform cursor-pointer'>
+                        <a key={index} href={project.link} target={project.target} data-category={project.category.toLowerCase()} className='project-item web p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition transform cursor-pointer'>
                             <img src={project.image} className='rounded-lg h-3xs mb-2' />
                             <div className='flex flex-row'>
                                 {project.small_image != '' && <img src={project.small_image} className='rounded-lg w-[56px] me-2' />}
