@@ -8,12 +8,14 @@ import { ExperienceFromFirestore } from '@/app/interfaces/experience/experience_
 interface ExperienceState {
     data: Experience[];
     loading: boolean;
+    loadedOnce: boolean;
     error: string | null;
 };
 
 const initialState: ExperienceState = {
     data: [],
     loading: false,
+    loadedOnce: false,
     error: null,
 };
 
@@ -53,6 +55,7 @@ const experienceSlice = createSlice({
         })
         .addCase(fetchExperiences.fulfilled, (state, action: PayloadAction<Experience[]>) => {
             state.loading = false;
+            state.loadedOnce = true;
             state.data = action.payload;
         })
         .addCase(fetchExperiences.rejected, (state, action) => {

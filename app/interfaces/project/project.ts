@@ -4,5 +4,6 @@ interface Project {
     description: string,
     image: string,
     small_image: string,
-    link: string
+    link: string,
+    tags: string[]
 }

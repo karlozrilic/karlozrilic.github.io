@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image';
 import { useEffect } from 'react';
 
 export default function Banana() {
@@ -31,8 +32,36 @@ export default function Banana() {
     }, []);
 
     return (
-        <section className='relative py-20 bg-gray-100 dark:bg-gray-800 overflow-hidden fade-in'>
-            <h2 className='text-4xl font-bold text-center mb-10'>Banana</h2>
-        </section>
+        <main className="flex min-h-screen flex-col items-center justify-between p-24">
+            <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
+                <a href="#" className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
+                    ZrilicH
+                </a>
+            </div>
+
+            <div className="relative">
+                <Image
+                    className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] mb-5"
+                    src="/images/banana/banana.png"
+                    alt="Banana Logo"
+                    width={180}
+                    height={37}
+                    priority
+                />
+                <a href="https://play.google.com/store/apps/details?id=com.zrilich.banana">
+                    <Image
+                        className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70]"
+                        src="/images/banana/gp.png"
+                        alt="Get it on Google Play"
+                        width={180}
+                        height={37}
+                        priority
+                    />
+                </a>
+            </div>
+
+            <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
+            </div>
+        </main>
     );
 }

@@ -1,1 +1,0 @@
-type SkillWithParent = Skill & { group_id?: string };

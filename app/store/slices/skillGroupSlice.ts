@@ -3,17 +3,18 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../utils/firebase';
 import { collection, collectionGroup, getDocs, orderBy, query } from 'firebase/firestore';
 import { SkillGroupWithTime } from '@/app/interfaces/skill/skill_group_with_time';
-import { SkillWithTime } from '@/app/interfaces/skill/skill_with_time';
 
 interface SkillGroupState {
     data: SkillGroup[];
     loading: boolean;
+    loadedOnce: boolean;
     error: string | null;
 };
 
 const initialState: SkillGroupState = {
     data: [],
     loading: false,
+    loadedOnce: false,
     error: null,
 };
 
@@ -24,10 +25,7 @@ export const fetchSkillGroups = createAsyncThunk('skillGroups/fetchSkillGroups',
         return { group_id: doc.ref.id, ...rest } as SkillGroup;
     });
     const skillsSnapshot = await getDocs(collectionGroup(db, 'skills'));
-    const skillsData: SkillWithParent[] = skillsSnapshot.docs.map(doc => {
-        const { updated_at, ...rest } = doc.data() as SkillWithTime;
-        return { group_id: doc.ref.parent.parent?.id, ...rest } as Skill;
-    });
+    const skillsData: SkillWithGroupId[] = skillsSnapshot.docs.map(doc => ({ group_id: doc.ref.parent.parent?.id, ...doc.data() as Skill}));
 
     const mergedData: SkillGroup[] = skillGroupsData.map(group => ({
         ...group,
@@ -51,6 +49,7 @@ const skillGroupsSlice = createSlice({
         })
         .addCase(fetchSkillGroups.fulfilled, (state, action: PayloadAction<SkillGroup[]>) => {
             state.loading = false;
+            state.loadedOnce = true;
             state.data = action.payload;
         })
         .addCase(fetchSkillGroups.rejected, (state, action) => {

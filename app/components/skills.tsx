@@ -63,7 +63,7 @@ export default function Skills() {
                 <h2 className='text-4xl font-bold text-center mb-12'>Skills & Expertise</h2>
                 <div ref={skillsRef} className='container mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 fade-in'>
                     {skillGroups.map((skillGroup, i) => 
-                        <div className='text-center' key={i}>
+                        <div className={`text-center ${i == 0 && 'row-span-3'}`} key={i}>
                             <h3 className='text-2xl font-semibold mb-6'>{skillGroup.title}</h3>
                             <div className='flex flex-wrap justify-center gap-6'>
                                 {skillGroup.skills.map((skill, j) =>
@@ -91,9 +91,9 @@ export default function Skills() {
                                                 data-skill={skill.level}
                                             />
                                         </svg>
-                                        <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                                            <span className='text-xl font-bold'>{skill.title}</span>
-                                            <span className='skill-percent text-primary font-semibold'>{skill.level}%{skill.level == 99.99 ? '*' : ''}</span>
+                                        <div className='absolute inset-0 flex flex-col items-center justify-center text-center px-1'>
+                                            <span className='text-[clamp(0.8rem, 5vw, 1.2rem)] font-bold'>{skill.title}</span>
+                                            <span className='skill-percent text-primary font-semibold text-xs sm:text-sm'>{skill.level}%{skill.level == 99.99 ? '*' : ''}</span>
                                         </div>
                                     </div>
                                 )}

@@ -1,4 +1,6 @@
 'use client'
+import { faDownload } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRef, useEffect, useState } from 'react';
 
 export default function Hero() {
@@ -102,6 +104,20 @@ export default function Hero() {
                 className='px-6 py-3 bg-white text-primary font-semibold rounded shadow hover:shadow-lg hover:scale-105 transition transform z-1'
             >
                 Get in Touch
+            </a>
+
+            <div className="flex items-center w-3xs my-4">
+                <hr className="flex-grow border-t border-gray-300 dark:" />
+                <span className="mx-4 text-white font-semibold">OR</span>
+                <hr className="flex-grow border-t border-gray-300" />
+            </div>
+
+            <a
+                href='https://drive.google.com/file/d/1k8j3dScW7Juptu2iFUqQzd7BIIdsWLpb/view?usp=sharing' target='_blank'
+                className='px-6 py-3 bg-white text-primary font-semibold rounded shadow hover:shadow-lg hover:scale-105 transition transform z-1'
+            >
+                <span className='pr-2'>Download my CV</span>
+                <FontAwesomeIcon icon={faDownload} />
             </a>
 
             {/* Parallax layers */}

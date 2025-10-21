@@ -2,6 +2,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faSun, faBars, faXmark, IconDefinition } from '@fortawesome/free-solid-svg-icons'
+import Link from 'next/link';
 
 export default function Header() {
 	const [isDark, setIsDark] = useState<boolean | null>(null);
@@ -102,11 +103,11 @@ export default function Header() {
 	function links() {
 		return (
 			<>
-				<a href='#about' className='hover:text-primary transition' onClick={closeDrawer}>About</a>
-				<a href='#skills' className='hover:text-primary transition' onClick={closeDrawer}>Skills</a>
-				<a href='#projects' className='hover:text-primary transition' onClick={closeDrawer}>Projects</a>
-				<a href='#experience' className='hover:text-primary transition' onClick={closeDrawer}>Experience</a>
-				<a href='#contact' className='hover:text-primary transition' onClick={closeDrawer}>Contact</a>
+				<Link href='/#about' className='hover:text-primary transition' onClick={closeDrawer}>About</Link>
+				<Link href='/#skills' className='hover:text-primary transition' onClick={closeDrawer}>Skills</Link>
+				<Link href='/#projects' className='hover:text-primary transition' onClick={closeDrawer}>Projects</Link>
+				<Link href='/#experience' className='hover:text-primary transition' onClick={closeDrawer}>Experience</Link>
+				<Link href='/#contact' className='hover:text-primary transition' onClick={closeDrawer}>Contact</Link>
 			</>
 		);
 	}
