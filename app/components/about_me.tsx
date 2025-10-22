@@ -18,7 +18,7 @@ export default function AboutMe() {
                         alt='Your Photo'
                         className='rounded-lg mb-6 md:mb-0 md:w-1/3 border-4 border-primary'
                     />
-                    <div className='md:w-2/3'>
+                    <div className='md:w-2/3 md:m-auto mx-[20px]'>
                         <p className='text-lg leading-relaxed mb-2'>
                             Hi there! I'm an Information Technology Engineer who loves turning caffeine into clean, responsive, and intuitive user interfaces.
                             I speak fluent <b>HTML</b>, <b>CSS</b>, and <b>JavaScript</b> -

@@ -49,7 +49,7 @@ export default function Projects() {
             <span id='projects'></span>
             <section className='container mx-auto py-20 fade-in' id='projects'>
                 <h2 className='text-4xl font-bold text-center mb-10'>Projects</h2>
-                <div className='flex justify-center space-x-4 mb-10'>
+                <div className='flex justify-center flex-wrap mb-10 gap-3'>
                     <button
                         className={`project-filter rounded px-4 py-2 ${activeFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
                         data-filter='all'
@@ -62,18 +62,22 @@ export default function Projects() {
                         >{tag.charAt(0).toUpperCase() + tag.slice(1)}</button>
                     )}
                 </div>
-                <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8' id='project-grid'>
+                <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8 md:m-auto mx-[20px]' id='project-grid'>
                     {projects.map((project, index) => 
                         <Link
                             key={index}
                             href={project.link}
                             target={project.link.startsWith('http') ? '_blank' : '_self'}
                             data-tags={project.tags}
-                            className='project-item flex flex-col h-full p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition transform cursor-pointer'
+                            className='project-item flex flex-col h-full p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg sm:hover:shadow-2xl sm:hover:scale-105 transition transform cursor-pointer'
                         >
                             <img src={`/images/${project.image}.png`} className='rounded-lg h-3xs mb-2' />
-                            <div className='flex flex-row'>
-                                {project.small_image != '' && <img src={`/images/small/${project.small_image}.png`} className='rounded-lg w-[56px] me-2' />}
+                            <div className='flex flex-row gap-2'>
+                                {project.small_image != '' && 
+                                    <div className='flex items-center flex-shrink-0'>
+                                        <img src={`/images/small/${project.small_image}.png`} className='rounded-lg w-[56px] h-[56px]' />
+                                    </div>
+                                }
                                 
                                 <div className='flex flex-col'>
                                     <h3 className='font-bold text-xl mb-2'>{project.title}</h3>

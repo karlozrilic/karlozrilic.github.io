@@ -19,7 +19,7 @@ export default function Experience() {
                 <h2 className='text-4xl font-bold text-center mb-10'>Experience</h2>
                 <div className='container mx-auto space-y-8'>
                     {experiences.map((experience, index) => 
-                        <div key={index} className='bg-white dark:bg-gray-700 p-6 rounded-2xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition'>
+                        <div key={index} className='md:mx-[0px] mx-[20px] bg-white dark:bg-gray-700 p-6 rounded-2xl shadow-lg sm:hover:shadow-2xl transform sm:hover:scale-105 transition'>
                             <h3 className='text-2xl font-semibold'>{experience.job_title}</h3>
                             <p
                                 className='text-gray-500 dark:text-gray-300 mb-2'
