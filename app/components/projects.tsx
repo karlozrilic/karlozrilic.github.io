@@ -80,7 +80,8 @@ export default function Projects() {
                                 }
                                 
                                 <div className='flex flex-col'>
-                                    <h3 className='font-bold text-xl mb-2'>{project.title}</h3>
+                                    <h3 className='font-bold text-xl'>{project.title}</h3>
+                                    <p className='text-gray-500 dark:text-gray-300 mb-2'>{project.subtitle}</p>
                                     <p className='text-gray-600 dark:text-gray-300'>{project.description}</p>
                                 </div>
                             </div>

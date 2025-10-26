@@ -22,12 +22,11 @@ export default function Experience() {
                         <div key={index} className='md:mx-[0px] mx-[20px] bg-white dark:bg-gray-700 p-6 rounded-2xl shadow-lg sm:hover:shadow-2xl transform sm:hover:scale-105 transition'>
                             <h3 className='text-2xl font-semibold'>{experience.job_title}</h3>
                             <p
-                                className='text-gray-500 dark:text-gray-300 mb-2'
+                                className='flex flex-col text-gray-500 dark:text-gray-300 mb-2'
                             >
-                                {experience.company_name} |&nbsp;
-                                {moment(new Date(experience.start_date)).format('Do MMMM YYYY')} -&nbsp;
-                                {moment(new Date(experience.end_date)).format('Do MMMM YYYY')} |&nbsp;
-                                {experience.location}
+                                <span>{experience.company_name}</span>
+                                <span>{moment(new Date(experience.start_date)).format('Do MMMM YYYY')} - {moment(new Date(experience.end_date)).format('Do MMMM YYYY')}</span>
+                                <span>{experience.location}</span>
                             </p>
                             {experience.description.map((section, index) => 
                                 <div key={index}>

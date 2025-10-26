@@ -92,8 +92,8 @@ export default function Skills() {
                                             />
                                         </svg>
                                         <div className='absolute inset-0 flex flex-col items-center justify-center text-center px-1'>
-                                            <span className='text-[clamp(0.8rem, 5vw, 1.2rem)] font-bold'>{skill.title}</span>
-                                            <span className='skill-percent text-primary font-semibold text-xs sm:text-sm'>{skill.level}%{skill.level == 99.99 ? '*' : ''}</span>
+                                            <span className='font-bold'>{skill.title}</span>
+                                            <span className='skill-percent text-primary dark:text-white font-semibold text-xs sm:text-sm'>{skill.level}%{skill.level == 99.99 ? '*' : ''}</span>
                                         </div>
                                     </div>
                                 )}
