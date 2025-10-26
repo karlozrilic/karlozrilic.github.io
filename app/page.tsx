@@ -62,7 +62,10 @@ export default function Home() {
         
         onScroll();
 
-        return () => window.removeEventListener('scroll', onScroll);
+        return () => {
+            window.removeEventListener('scroll', onScroll);
+            faders.forEach(f => observer.unobserve(f));
+        }
     }, []);
 
     return (

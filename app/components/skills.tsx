@@ -16,7 +16,6 @@ export default function Skills() {
         const skillCircles = document.querySelectorAll<SVGCircleElement>('.circle-skill');
         const skillObserver = new IntersectionObserver(entries  => {
             entries.forEach(entry => {
-                
                 if(entry.isIntersecting && entry.target != null) {
                     const circle = entry.target as SVGCircleElement;
                     const percentEl = circle.parentElement?.querySelector('.skill-percent');
@@ -34,7 +33,7 @@ export default function Skills() {
                     circle.style.strokeDashoffset = offset.toString();
                     if(percentEl) {
                         let count = 0;
-                        const interval=setInterval(() => {
+                        const interval = setInterval(() => {
                             count++;
                             percentEl.textContent = count + '%';
                             if(count >= skill) clearInterval(interval);
@@ -48,7 +47,10 @@ export default function Skills() {
                 threshold: 0.5
             }
         );
-        skillCircles.forEach(c => skillObserver.observe(c));   
+        skillCircles.forEach(c => skillObserver.observe(c));
+        return () => {
+            skillCircles.forEach(c => skillObserver.unobserve(c));
+        };
     }, [skillGroups]);
 
     useEffect(() => {
