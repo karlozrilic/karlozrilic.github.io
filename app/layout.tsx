@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: Readonly<{children: React.ReactNode}>) {
 	return (
-		<html lang='en'>
+		<html lang='en' data-scroll-behavior="smooth">
 			<link rel="icon" href="/favicon/favicon.ico" sizes="any" />
 			<link
 				rel="icon"
