@@ -8,9 +8,11 @@ export default function Hero() {
     const typingRef = useRef<HTMLSpanElement>(null);
     const [idle, setIdle] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    
 
     useEffect(() => {
         if (typingRef.current == null) return;
+        let timeoute: NodeJS.Timeout;
         // TYPING EFFECT
         let i = 0, j = 0;
         const typingEl = typingRef.current;
@@ -19,10 +21,10 @@ export default function Hero() {
             if(j < phrases[i].length) {
                 typingEl.textContent += phrases[i][j];
                 j++;
-                setTimeout(type, 100);
+                timeoute = setTimeout(type, 100);
             } else {
                 setIdle(true);
-                setTimeout(erase, 2000);
+                timeoute = setTimeout(erase, 2000);
             }
         }
         function erase() {
@@ -30,14 +32,17 @@ export default function Hero() {
             if(j > 0) {
                 typingEl.textContent = phrases[i].substring(0, j - 1);
                 j--;
-                setTimeout(erase, 50);
+                timeoute = setTimeout(erase, 50);
             } else {
                 i = (i + 1) % phrases.length;
                 setIdle(true);
-                setTimeout(type, 500);
+                timeoute = setTimeout(type, 500);
             }
         }
         type();
+        return () => {
+            clearTimeout(timeoute);
+        };
     }, []);
 
     useEffect(() => {

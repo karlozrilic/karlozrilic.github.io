@@ -20,7 +20,9 @@ export default function Header() {
 		// Set initial value
 		setIsDark(mediaQuery.matches);
 
-		if (isDark) {
+		localStorage.getItem('dark_mode')
+
+		if (isDark || JSON.parse(localStorage.getItem('dark_mode') ?? 'false')) {
 			document.documentElement.classList.add('dark');
 			setIcon(faSun);
 		} else {
@@ -44,7 +46,13 @@ export default function Header() {
 
 		function toggleHandler() {
 			document.documentElement.classList.toggle('dark');
-			document.documentElement.classList.contains('dark') ? setIcon(faSun) : setIcon(faMoon);
+			if (document.documentElement.classList.contains('dark')) {
+				setIcon(faSun);
+				localStorage.setItem('dark_mode', JSON.stringify(true));
+			} else {
+				setIcon(faMoon);
+				localStorage.setItem('dark_mode', JSON.stringify(false));
+			}
 		}
 
 		return () => {
@@ -116,7 +124,7 @@ export default function Header() {
 		<>
 			<nav className='bg-white dark:bg-gray-800 shadow fixed w-full z-50 transition-colors duration-500'>
 				<div className='container mx-auto flex justify-between items-center p-5'>
-					<a href='/' className='text-xl font-bold'>Karlo Zrilić</a>
+					<Link href='/' className='text-xl font-bold'>Karlo Zrilić</Link>
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
 					</div>
