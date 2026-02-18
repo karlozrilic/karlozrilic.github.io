@@ -8,19 +8,19 @@ import { ExperienceFromFirestore } from '@/app/interfaces/experience/experience_
 interface ExperienceState {
     data: Experience[];
     loading: boolean;
-    loadedOnce: boolean;
+    loaded: boolean;
     error: string | null;
 };
 
 const initialState: ExperienceState = {
     data: [],
     loading: false,
-    loadedOnce: false,
+    loaded: false,
     error: null,
 };
 
 export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', async () => {
-    const experienceSnapshot = await getDocs(query(collection(db, 'experience'), orderBy('start_date', 'asc')));
+    const experienceSnapshot = await getDocs(query(collection(db, 'experience'), orderBy('start_date', 'desc')));
     const experienceData: ExperienceWithId[] = experienceSnapshot.docs.map(doc => {
         const { ...rest } = doc.data() as ExperienceFromFirestore;
         return {
@@ -55,7 +55,7 @@ const experienceSlice = createSlice({
         })
         .addCase(fetchExperiences.fulfilled, (state, action: PayloadAction<Experience[]>) => {
             state.loading = false;
-            state.loadedOnce = true;
+            state.loaded = true;
             state.data = action.payload;
         })
         .addCase(fetchExperiences.rejected, (state, action) => {

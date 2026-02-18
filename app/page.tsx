@@ -12,14 +12,14 @@ import Projects from './components/projects';
 import Contact from './components/contact';
 import Experience from './components/experience';
 import LoadingScreen from './components/loading';
+import Technologies from './components/technologies';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
     const skillGroups = useSelector((state: RootState) => state.skillGroups);
     const projects = useSelector((state: RootState) => state.projects);
     const experiences = useSelector((state: RootState) => state.experiences);
-    const [loading, setLoading] = useState(false);
-    const [loadedOnce, setLoadedOnce] = useState(experiences.loadedOnce || false);
+    const [loaded, setLoaded] = useState(experiences.loaded || false);
 
     // Fetch data once on mount
     useEffect(() => {
@@ -29,13 +29,8 @@ export default function Home() {
     }, [dispatch]);
 
     useEffect(() => {
-        setLoading(skillGroups.loading && projects.loading && experiences.loading);
-        setLoadedOnce(skillGroups.loadedOnce && projects.loadedOnce && experiences.loadedOnce)
-    }, [skillGroups.loadedOnce, projects.loadedOnce, experiences.loadedOnce]);
-
-    useEffect(() => {
-        setLoading(skillGroups.loading && projects.loading && experiences.loading);
-    }, [skillGroups.loading, projects.loading, experiences.loading]);
+        setLoaded(skillGroups.loaded && projects.loaded && experiences.loaded)
+    }, [skillGroups.loaded, projects.loaded, experiences.loaded]);
 
     useEffect(() => {
         // FADE-IN
@@ -70,14 +65,15 @@ export default function Home() {
 
     return (
         <>
-            {loading && !loadedOnce && (
+            {!loaded && (
                 <LoadingScreen />
             )}
             <Hero />
             <AboutMe />
+            <Experience />
+            <Technologies />
             <Skills />
             <Projects />
-            <Experience />
             <Contact />
         </>
     );

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import './globals.css';
+import './style/globals.css';
 import Header from './layout_components/header';
 import Footer from './layout_components/footer';
 import { app, analytics } from './utils/firebase';
@@ -50,7 +50,7 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 				sizes="180x180"
 			/>
 			<body
-				className={`bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 font-sans transition-colors duration-500 antialiased`}
+				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}
 			>
 				<ReduxProvider>
 					<Header />

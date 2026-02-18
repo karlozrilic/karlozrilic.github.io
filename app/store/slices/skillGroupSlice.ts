@@ -7,14 +7,14 @@ import { SkillGroupWithTime } from '@/app/interfaces/skill/skill_group_with_time
 interface SkillGroupState {
     data: SkillGroup[];
     loading: boolean;
-    loadedOnce: boolean;
+    loaded: boolean;
     error: string | null;
 };
 
 const initialState: SkillGroupState = {
     data: [],
     loading: false,
-    loadedOnce: false,
+    loaded: false,
     error: null,
 };
 
@@ -49,7 +49,7 @@ const skillGroupsSlice = createSlice({
         })
         .addCase(fetchSkillGroups.fulfilled, (state, action: PayloadAction<SkillGroup[]>) => {
             state.loading = false;
-            state.loadedOnce = true;
+            state.loaded = true;
             state.data = action.payload;
         })
         .addCase(fetchSkillGroups.rejected, (state, action) => {

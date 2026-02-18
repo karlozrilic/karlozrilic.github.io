@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { Button } from '@/components/ui/button';
 
 export default function AboutMe() {
     const [expanded, setExpanded] = useState(false);
@@ -75,9 +76,11 @@ export default function AboutMe() {
                             )}
                         </AnimatePresence>
 
-                        <button
+                        <Button
+                            className="px-0 mt-4 inline-flex items-center gap-2 font-semibold"
+                            size="lg"
+                            variant='link'
                             onClick={() => setExpanded(!expanded)}
-                            className='mt-4 inline-flex items-center gap-2 text-blue-600 font-semibold hover:underline focus:outline-none transition-all'
                         >
                             <span>{expanded ? 'Read less' : 'Read more'}</span>
                             <motion.span
@@ -86,7 +89,7 @@ export default function AboutMe() {
                             >
                                 <FontAwesomeIcon icon={faChevronDown} />
                             </motion.span>
-                        </button>
+                        </Button>
                     </div>  
                 </div>
             </section>

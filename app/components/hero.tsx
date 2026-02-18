@@ -1,13 +1,22 @@
 'use client'
+import { BorderBeam } from '@/components/ui/border-beam';
+import { TypingAnimation } from '@/components/ui/typing-animation';
+import { Button } from "@/components/ui/button"
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 
 export default function Hero() {
     const phrases = ['I build websites.', 'I design apps.', 'I create experiences.'];
     const typingRef = useRef<HTMLSpanElement>(null);
     const [idle, setIdle] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    const words = useMemo(() => [
+        'I build websites.',
+        'I design apps.',
+        'I create experiences.'
+    ], [])
     
 
     useEffect(() => {
@@ -97,33 +106,72 @@ export default function Hero() {
 
     return (
         <section
-            className='h-screen flex flex-col justify-center items-center text-center bg-gradient-to-b from-primary to-secondary text-white relative overflow-hidden'
+            className='h-screen flex flex-col justify-center items-center text-center bg-gradient-to-b from-primary to-secondary relative overflow-hidden'
             id='hero'
         >
             <h1 className='text-6xl md:text-7xl font-extrabold mb-4 fade-in z-1'>Hello, I'm Karlo Zrilić</h1>
-            <p className='text-2xl md:text-3xl mb-6 fade-in delay-300 z-1'>
-                <span ref={typingRef} className={`typing ${idle ? 'idle' : ''}`}></span>
-            </p>
-            <a
-                href='#contact'
-                className='px-6 py-3 bg-white text-primary font-semibold rounded shadow hover:shadow-lg hover:scale-105 transition transform z-1'
+            <div className='text-2xl md:text-3xl mb-6 z-1'>
+                <TypingAnimation
+                    words={words}
+                    typeSpeed={100}
+                    deleteSpeed={50}
+                    pauseDelay={2000}
+                    loop
+                    startOnView={false}
+                />
+            </div>
+            <Button
+                className="relative bg-secondary text-secondary-foreground overflow-hidden font-semibold"
+                size="lg"
+                variant='secondary'
+                onClick={() => {
+                    document.querySelector('#contact')?.scrollIntoView();
+                }}
             >
                 Get in Touch
-            </a>
+                <BorderBeam
+                    duration={6}
+                    size={70}
+                    className="from-transparent via-orange-500 to-transparent"
+                />
+                <BorderBeam
+                    duration={6}
+                    delay={3}
+                    size={70}
+                    className="from-transparent via-white to-transparent"
+                />
+            </Button>
 
             <div className="flex items-center w-3xs my-4">
-                <hr className="flex-grow border-t border-gray-300 dark:" />
-                <span className="mx-4 text-white font-semibold">OR</span>
-                <hr className="flex-grow border-t border-gray-300" />
+                <hr className="flex-grow border-t-2 border-border" />
+                <span className="mx-4 text-secondary font-semibold">OR</span>
+                <hr className="flex-grow border-t-2 border-border" />
             </div>
 
-            <a
-                href='https://drive.google.com/file/d/1k8j3dScW7Juptu2iFUqQzd7BIIdsWLpb/view?usp=sharing' target='_blank'
-                className='px-6 py-3 bg-white text-primary font-semibold rounded shadow hover:shadow-lg hover:scale-105 transition transform z-1'
+            <Button
+                className="relative bg-secondary text-secondary-foreground overflow-hidden font-semibold"
+                size="lg"
+                variant='secondary'
+                onClick={() => {
+                    window.open('https://drive.google.com/file/d/1k8j3dScW7Juptu2iFUqQzd7BIIdsWLpb/view?usp=sharing', '_blank');
+                }}
             >
                 <span className='pr-2'>Download my CV</span>
                 <FontAwesomeIcon icon={faDownload} />
-            </a>
+                <BorderBeam
+                    duration={6}
+                    size={70}
+                    className="from-transparent via-white to-transparent"
+                    reverse
+                />
+                <BorderBeam
+                    duration={6}
+                    delay={3}
+                    size={70}
+                    className="from-transparent via-orange-500 to-transparent"
+                    reverse
+                />
+            </Button>
 
             {/* Parallax layers */}
             <div className='w-80 h-80 bg-white opacity-10 rounded-full parallax-layer hidden' data-speed='0.3' style={{top: '-20%', left: '-15%' }}></div>

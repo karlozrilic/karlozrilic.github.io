@@ -61,7 +61,7 @@ export default function Skills() {
     return (
         <>
             <span id='skills'></span>
-            <section className='relative py-20 bg-gray-100 dark:bg-gray-800 overflow-hidden fade-in'>
+            <section className='relative py-20 overflow-hidden fade-in'>
                 <h2 className='text-4xl font-bold text-center mb-12'>Skills & Expertise</h2>
                 <div ref={skillsRef} className='container mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 fade-in'>
                     {skillGroups.map((skillGroup, i) => 
