@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import ProjectPage from '../components/project_page';
+import ProjectPage from '../sections/project_page';
 
 export const metadata: Metadata = {
     title: 'Banana | Karlo Zrilić',

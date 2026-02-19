@@ -5,14 +5,13 @@ import { AppDispatch, RootState } from './store/store';
 import { fetchSkillGroups } from './store/slices/skillGroupSlice';
 import { fetchProjects } from './store/slices/projectsSlice';
 import { fetchExperiences } from './store/slices/experienceSlice';
-import Hero from './components/hero';
-import AboutMe from './components/about_me';
-import Skills from './components/skills';
-import Projects from './components/projects';
-import Contact from './components/contact';
-import Experience from './components/experience';
-import LoadingScreen from './components/loading';
-import Technologies from './components/technologies';
+import Hero from './sections/hero';
+import AboutMe from './sections/about_me';
+import Projects from './sections/projects';
+import Contact from './sections/contact';
+import Experience from './sections/experience';
+import LoadingScreen from './sections/loading';
+import Technologies from './sections/technologies';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
@@ -72,7 +71,6 @@ export default function Home() {
             <AboutMe />
             <Experience />
             <Technologies />
-            <Skills />
             <Projects />
             <Contact />
         </>

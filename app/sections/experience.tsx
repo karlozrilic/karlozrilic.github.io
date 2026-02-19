@@ -3,8 +3,8 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { useEffect, useState } from 'react';
 import moment from 'moment';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/app/components/ui/card';
+import { Badge } from '@/app/components/ui/badge';
 
 export default function Experience() {
     const [experiences, setExperiences] = useState<Experience[]>([]);
@@ -17,22 +17,22 @@ export default function Experience() {
     return (
         <>
             <span id='experience'></span>
-            <section className='relative py-20 bg-secondary text-secondary-foreground py-20 fade-in' id='experience'>
+            <section className='relative py-10 md:py-20 bg-secondary text-secondary-foreground fade-in' id='experience'>
                 <h2 className='text-4xl font-bold text-center mb-10'>Experience</h2>
-                <div className='container mx-auto space-y-8 px-1'>
+                <div className='container mx-auto space-y-8 px-1 md:px-0'>
                     {experiences.map((experience, index) => {
                         const isLast = index === experiences.length - 1
 
                         return (
                             <div key={index} className="relative pl-4 md:pl-8">
                                 
-                                {/* Vertical line (only if not last item) */}
                                 {!isLast && (
                                     <span className="absolute left-2 md:left-3 top-4 h-[calc(100%+theme(spacing.6))] w-px bg-border" />
                                 )}
 
-                                {/* Dot */}
-                                <span className="absolute left-0 top-2 h-4 w-4 md:h-6 md:w-6 rounded-full bg-primary flex items-center justify-center" />
+                                <span className="absolute left-0 top-2 h-4 w-4 md:h-6 md:w-6 rounded-full bg-primary flex items-center justify-center">
+                                    <span className='h-2 w-2 md:h-4 md:w-4 bg-chart-5 dark:bg-chart-3 rounded-full' />
+                                </span>
 
                                 <Card className="rounded-2xl shadow-sm">
                                     <CardContent className="p-4">

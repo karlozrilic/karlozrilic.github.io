@@ -1,6 +1,6 @@
 'use client'
 import { useRef, useEffect, useState } from 'react';
-import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
+import { AnimatedThemeToggler } from "@/app/components/ui/animated-theme-toggler"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';

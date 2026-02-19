@@ -1,7 +1,7 @@
 'use client'
-import { BorderBeam } from '@/components/ui/border-beam';
-import { TypingAnimation } from '@/components/ui/typing-animation';
-import { Button } from "@/components/ui/button"
+import { BorderBeam } from '@/app/components/ui/border-beam';
+import { TypingAnimation } from '@/app/components/ui/typing-animation';
+import { Button } from "@/app/components/ui/button"
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRef, useEffect, useState, useMemo } from 'react';

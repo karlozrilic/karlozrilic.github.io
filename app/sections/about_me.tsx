@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/app/components/ui/button';
 
 export default function AboutMe() {
     const [expanded, setExpanded] = useState(false);
@@ -11,9 +11,9 @@ export default function AboutMe() {
     return (
         <>
             <span id='about'></span>
-            <section className='container mx-auto py-20 fade-in' id='about'>
+            <section className='container mx-auto py-10 md:py-20 fade-in' id='about'>
                 <h2 className='text-4xl font-bold text-center mb-10'>About Me</h2>
-                <div className='md:flex md:items-center md:space-x-10'>
+                <div className='md:flex md:items-center px-1 md:px-0 md:space-x-10'>
                     <img
                         src='/images/portfolio_picture.jpeg'
                         alt='Your Photo'
@@ -77,7 +77,7 @@ export default function AboutMe() {
                         </AnimatePresence>
 
                         <Button
-                            className="px-0 mt-4 inline-flex items-center gap-2 font-semibold"
+                            className="px-0 mt-4 inline-flex items-center gap-2 font-semibold text-chart-5 dark:text-chart-3"
                             size="lg"
                             variant='link'
                             onClick={() => setExpanded(!expanded)}
