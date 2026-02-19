@@ -19,8 +19,6 @@ export default function Header() {
 		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 		const originalValue = localStorage.getItem('theme');
 
-// structuredClone
-
 		if (originalValue === null) {
 			localStorage.setItem('theme', mediaQuery.matches ? 'dark' : 'light');
 			if (mediaQuery.matches) {
