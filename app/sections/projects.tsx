@@ -63,7 +63,7 @@ export default function Projects() {
                             >{tag.charAt(0).toUpperCase() + tag.slice(1)}</button>
                         )}
                     </div>
-                    <BentoGrid className='md:m-auto mx-[20px]'>
+                    <BentoGrid className='m-auto px-1'>
                         {projects.map((project, index) => 
                             <BentoCard
                                 key={index}
@@ -75,7 +75,7 @@ export default function Projects() {
                                         className="w-full scale-100 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-115"
                                     />
                                 }
-                                href='/'
+                                href={project.link}
                                 className='project-item'
                                 tags={project.tags}
                             />

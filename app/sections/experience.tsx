@@ -19,7 +19,7 @@ export default function Experience() {
             <span id='experience'></span>
             <section className='relative py-10 md:py-20 bg-secondary text-secondary-foreground fade-in' id='experience'>
                 <h2 className='text-4xl font-bold text-center mb-10'>Experience</h2>
-                <div className='container mx-auto space-y-8 px-1 md:px-0'>
+                <div className='container mx-auto space-y-8 px-1'>
                     {experiences.map((experience, index) => {
                         const isLast = index === experiences.length - 1
 

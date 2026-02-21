@@ -1,44 +1,29 @@
 'use client'
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { AnimatedThemeToggler } from "@/app/components/ui/animated-theme-toggler"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
 
 export default function Header() {
-	const [isDark, setIsDark] = useState<boolean | null>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const drawerBackdropRef = useRef<HTMLDivElement>(null);
 	const drawerRef = useRef<HTMLDivElement>(null);
 	const closeDrawerButtonRef = useRef<HTMLButtonElement>(null);
 
-	function saveSelection() {
-	}
-
 	useEffect(() => {
 		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-		const originalValue = localStorage.getItem('theme');
 
-		if (originalValue === null) {
-			localStorage.setItem('theme', mediaQuery.matches ? 'dark' : 'light');
-			if (mediaQuery.matches) {
-				document.documentElement.classList.add('dark');
-			} else {
-				document.documentElement.classList.remove('dark');
+		const onChange = (event: MediaQueryListEvent) => {
+			const stored = localStorage.getItem('theme');
+			if (!stored) {
+				const next = event.matches ? 'dark' : 'light';
+				document.documentElement.classList.toggle('dark', next === 'dark');
 			}
-		} else {
-			if (localStorage.getItem('theme') === 'dark' ? true : false) {
-				document.documentElement.classList.add('dark');
-			} else {
-				document.documentElement.classList.remove('dark');
-			}
-		}
+		};
 
-		// Listen for changes
-		const handler = (event: MediaQueryListEvent) => localStorage.setItem('theme', event.matches ? 'dark' : 'light');
-		mediaQuery.addEventListener('change', handler);
-
-		return () => mediaQuery.removeEventListener('change', handler);
+		mediaQuery.addEventListener('change', onChange);
+		return () => mediaQuery.removeEventListener('change', onChange);
 	}, []);
 
 	useEffect(() => {
@@ -92,9 +77,9 @@ export default function Header() {
 		return (
 			<>
 				<Link href='/#about' onClick={closeDrawer}>About</Link>
-				<Link href='/#skills' onClick={closeDrawer}>Skills</Link>
-				<Link href='/#projects' onClick={closeDrawer}>Projects</Link>
 				<Link href='/#experience' onClick={closeDrawer}>Experience</Link>
+				<Link href='/#technologies' onClick={closeDrawer}>Technologies</Link>
+				<Link href='/#projects' onClick={closeDrawer}>Projects</Link>
 				<Link href='/#contact' onClick={closeDrawer}>Contact</Link>
 			</>
 		);
@@ -108,7 +93,7 @@ export default function Header() {
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
 					</div>
-					<AnimatedThemeToggler className='hidden md:block' onClickCapture={saveSelection} />
+					<AnimatedThemeToggler className='hidden md:block' />
 					<button
 						ref={menuButtonRef}
 						className='ml-4 p-2 rounded md:hidden'
@@ -125,7 +110,7 @@ export default function Header() {
 					<button ref={closeDrawerButtonRef} className="text-2xl hover:text-primary">✕</button>
 				</div>
 				{links()}
-				<AnimatedThemeToggler onClickCapture={saveSelection} />
+				<AnimatedThemeToggler />
 			</div>
 		</>
     );

@@ -64,9 +64,7 @@ export default function Home() {
 
     return (
         <>
-            {!loaded && (
-                <LoadingScreen />
-            )}
+            {!loaded && <LoadingScreen />}
             <Hero />
             <AboutMe />
             <Experience />
