@@ -1,5 +1,5 @@
 'use client'
-import { faLinkedin } from "@fortawesome/free-brands-svg-icons";
+import { faInstagram, faLinkedin } from "@fortawesome/free-brands-svg-icons";
 import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -14,7 +14,10 @@ export default function Contact() {
                         <FontAwesomeIcon icon={faEnvelope} size='2x' />
                     </a>
                     <a href='https://www.linkedin.com/in/karlo-zrili%C4%87' target='_blank' className="flex flex-wrap content-center">
-                        <FontAwesomeIcon icon={faLinkedin} size='3x' />
+                        <FontAwesomeIcon icon={faLinkedin} size='2x' />
+                    </a>
+                    <a href='https://www.instagram.com/karlo.zrilich' target='_blank' className="flex flex-wrap content-center">
+                        <FontAwesomeIcon icon={faInstagram} size='2x' />
                     </a>
                 </div>
             </section>

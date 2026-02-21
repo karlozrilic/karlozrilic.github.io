@@ -1,0 +1,110 @@
+[
+    {
+        "name": "HTML",
+        "image": "html5.svg",
+        "row": 0,
+        "order": 0
+    },
+    {
+        "name": "CSS",
+        "image": "css3.svg",
+        "row": 0,
+        "order": 1
+    },
+    {
+        "name": "JavaScript",
+        "image": "javascript.svg",
+        "row": 0,
+        "order": 2
+    },
+    {
+        "name": "TypeScript",
+        "image": "typescript.svg",
+        "row": 0,
+        "order": 3
+    },
+    {
+        "name": "Vue.js",
+        "image": "vue.js.svg",
+        "row": 0,
+        "order": 4
+    },
+    {
+        "name": "React",
+        "image": "react.svg",
+        "row": 0,
+        "order": 5
+    },
+    {
+        "name": "Sass",
+        "image": "sass.svg",
+        "row": 0,
+        "order": 6
+    },
+    {
+        "name": "Docker",
+        "image": "docker.svg",
+        "row": 0,
+        "order": 7
+    },
+    {
+        "name": "Electron",
+        "image": "electron.svg",
+        "row": 0,
+        "order": 8
+    },
+    {
+        "name": "Git",
+        "image": "git.svg",
+        "row": 1,
+        "order": 0
+    },
+    {
+        "name": "Python",
+        "image": "python.svg",
+        "row": 1,
+        "order": 1
+    },
+    {
+        "name": "Java",
+        "image": "java.svg",
+        "row": 1,
+        "order": 2
+    },
+    {
+        "name": "Flutter",
+        "image": "flutter.svg",
+        "row": 1,
+        "order": 3
+    },
+    {
+        "name": "PostgresSQL",
+        "image": "postgressql.svg",
+        "row": 1,
+        "order": 4
+    },
+    {
+        "name": "Postman",
+        "image": "postman.svg",
+        "row": 1,
+        "order": 5
+    },
+    {
+        "name": "Next.js",
+        "image": "next.js.svg",
+        "row": 1,
+        "order": 6
+    },
+    {
+        "name": "Node.js",
+        "image": "node.js.svg",
+        "row": 1,
+        "order": 7
+    },
+    {
+        "name": "Firebase",
+        "image": "firebase.svg",
+        "row": 1,
+        "order": 8
+    }
+]

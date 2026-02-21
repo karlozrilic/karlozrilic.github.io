@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { RootState } from '../store/store';
 import { useSelector } from 'react-redux';
-import Link from 'next/link';
+import { BentoCard, BentoGrid } from '@/app/components/ui/bento-grid';
 
 export default function Projects() {
     const [activeFilter, setActiveFilter] = useState('all');
@@ -52,50 +52,35 @@ export default function Projects() {
                     <h2 className='text-4xl font-bold text-center mb-10'>Projects</h2>
                     <div className='flex justify-center flex-wrap mb-10 gap-3'>
                         <button
-                            className={`project-filter rounded px-4 py-2 ${activeFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                            className={`project-filter rounded px-4 py-2 ${activeFilter === 'all' ? 'bg-foreground text-background' : 'bg-background text-foreground'}`}
                             data-filter='all'
                         >All</button>
                         {tags.map((tag, index) => 
                             <button
-                                className={`project-filter rounded px-4 py-2 ${activeFilter === tag ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                                className={`project-filter rounded px-4 py-2 ${activeFilter === tag ? 'bg-foreground text-background' : 'bg-background text-foreground'}`}
                                 data-filter={tag}
                                 key={index}
                             >{tag.charAt(0).toUpperCase() + tag.slice(1)}</button>
                         )}
                     </div>
-                    <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8 md:m-auto mx-[20px]' id='project-grid'>
+                    <BentoGrid className='md:m-auto mx-[20px]'>
                         {projects.map((project, index) => 
-                            <Link
+                            <BentoCard
                                 key={index}
-                                href={project.link}
-                                target={project.link.startsWith('http') ? '_blank' : '_self'}
-                                data-tags={project.tags}
-                                className='project-item flex flex-col h-full p-6 bg-white dark:bg-gray-700 rounded-2xl shadow-lg sm:hover:shadow-2xl sm:hover:scale-105 transition transform cursor-pointer'
-                            >
-                                <img src={`/images/${project.image}.png`} className='rounded-lg h-3xs mb-2' />
-                                <div className='flex flex-row gap-2'>
-                                    {project.small_image != '' && 
-                                        <div className='flex items-center flex-shrink-0'>
-                                            <img src={`/images/small/${project.small_image}.png`} className='rounded-lg w-[56px] h-[56px]' />
-                                        </div>
-                                    }
-                                    
-                                    <div className='flex flex-col'>
-                                        <h3 className='font-bold text-xl'>{project.title}</h3>
-                                        <p className='text-gray-500 dark:text-gray-300 mb-2'>{project.subtitle}</p>
-                                        <p className='text-gray-600 dark:text-gray-300'>{project.description}</p>
-                                    </div>
-                                </div>
-                                <div className='mt-auto pt-2'>
-                                    {project.tags.map((tag, index) => 
-                                        <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-3 py-1 rounded-full">
-                                            {tag}
-                                        </span>
-                                    )}
-                                </div>
-                            </Link>
+                                name={project.title}
+                                description={project.description}
+                                background={
+                                    <img
+                                        src={`/images/${project.image}.png`}
+                                        className="w-full scale-100 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-115"
+                                    />
+                                }
+                                href='/'
+                                className='project-item'
+                                tags={project.tags}
+                            />
                         )}
-                    </div>
+                    </BentoGrid>
                 </div>
             </section>
         </>

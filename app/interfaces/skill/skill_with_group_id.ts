@@ -1,1 +1,0 @@
-type SkillWithGroupId = Skill & { group_id?: string };

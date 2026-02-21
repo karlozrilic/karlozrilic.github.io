@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from './store/store';
-import { fetchSkillGroups } from './store/slices/skillGroupSlice';
+import { fetchTechnologies } from './store/slices/technologiesSlice';
 import { fetchProjects } from './store/slices/projectsSlice';
 import { fetchExperiences } from './store/slices/experienceSlice';
 import Hero from './sections/hero';
@@ -15,21 +15,21 @@ import Technologies from './sections/technologies';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
-    const skillGroups = useSelector((state: RootState) => state.skillGroups);
+    const technologies = useSelector((state: RootState) => state.technologies);
     const projects = useSelector((state: RootState) => state.projects);
     const experiences = useSelector((state: RootState) => state.experiences);
     const [loaded, setLoaded] = useState(experiences.loaded || false);
 
     // Fetch data once on mount
     useEffect(() => {
-        dispatch(fetchSkillGroups());
+        dispatch(fetchTechnologies());
         dispatch(fetchProjects());
         dispatch(fetchExperiences());
     }, [dispatch]);
 
     useEffect(() => {
-        setLoaded(skillGroups.loaded && projects.loaded && experiences.loaded)
-    }, [skillGroups.loaded, projects.loaded, experiences.loaded]);
+        setLoaded(technologies.loaded && projects.loaded && experiences.loaded)
+    }, [technologies.loaded, projects.loaded, experiences.loaded]);
 
     useEffect(() => {
         // FADE-IN
