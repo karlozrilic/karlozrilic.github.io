@@ -11,9 +11,9 @@ export default function AboutMe() {
     return (
         <>
             <span id='about'></span>
-            <section className='container mx-auto py-10 md:py-20 fade-in' id='about'>
+            <section className='container mx-auto py-10 md:py-20 fade-in px-1' id='about'>
                 <h2 className='text-4xl font-bold text-center mb-10'>About Me</h2>
-                <div className='md:flex md:items-center px-1 md:space-x-10'>
+                <div className='md:flex md:items-center md:space-x-10'>
                     <img
                         src='/images/portfolio_picture.jpeg'
                         alt='Your Photo'

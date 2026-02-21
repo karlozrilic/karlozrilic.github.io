@@ -21,7 +21,7 @@ export default function Technologies() {
         <>
             <span id='technologies'></span>
             <section className='relative py-10 md:py-20 overflow-hidden fade-in'>
-                <h2 className='text-4xl font-bold text-center mb-12'>Technologies i use</h2>
+                <h2 className='text-4xl font-bold text-center mb-12'>Technologies</h2>
 
                 <div className="relative flex w-full flex-col items-center justify-center overflow-hidden">
                     <Marquee pauseOnHover className="[--duration:30s]">

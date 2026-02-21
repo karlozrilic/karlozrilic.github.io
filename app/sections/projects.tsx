@@ -47,7 +47,7 @@ export default function Projects() {
     return (
         <>
             <span id='projects'></span>
-            <section className='relative bg-secondary text-secondary-foreground fade-in' id='projects'>
+            <section className='relative bg-secondary text-secondary-foreground fade-in px-1' id='projects'>
                 <div className='container mx-auto py-10 md:py-20'>
                     <h2 className='text-4xl font-bold text-center mb-10'>Projects</h2>
                     <div className='flex justify-center flex-wrap mb-10 gap-3'>
@@ -63,7 +63,7 @@ export default function Projects() {
                             >{tag.charAt(0).toUpperCase() + tag.slice(1)}</button>
                         )}
                     </div>
-                    <BentoGrid className='m-auto px-1'>
+                    <BentoGrid className='m-auto'>
                         {projects.map((project, index) => 
                             <BentoCard
                                 key={index}
