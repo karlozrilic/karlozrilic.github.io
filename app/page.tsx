@@ -2,40 +2,34 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from './store/store';
-import { fetchSkillGroups } from './store/slices/skillGroupSlice';
+import { fetchTechnologies } from './store/slices/technologiesSlice';
 import { fetchProjects } from './store/slices/projectsSlice';
 import { fetchExperiences } from './store/slices/experienceSlice';
-import Hero from './components/hero';
-import AboutMe from './components/about_me';
-import Skills from './components/skills';
-import Projects from './components/projects';
-import Contact from './components/contact';
-import Experience from './components/experience';
-import LoadingScreen from './components/loading';
+import Hero from './sections/hero';
+import AboutMe from './sections/about_me';
+import Projects from './sections/projects';
+import Contact from './sections/contact';
+import Experience from './sections/experience';
+import LoadingScreen from './sections/loading';
+import Technologies from './sections/technologies';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
-    const skillGroups = useSelector((state: RootState) => state.skillGroups);
+    const technologies = useSelector((state: RootState) => state.technologies);
     const projects = useSelector((state: RootState) => state.projects);
     const experiences = useSelector((state: RootState) => state.experiences);
-    const [loading, setLoading] = useState(false);
-    const [loadedOnce, setLoadedOnce] = useState(experiences.loadedOnce || false);
+    const [loaded, setLoaded] = useState(experiences.loaded || false);
 
     // Fetch data once on mount
     useEffect(() => {
-        dispatch(fetchSkillGroups());
+        dispatch(fetchTechnologies());
         dispatch(fetchProjects());
         dispatch(fetchExperiences());
     }, [dispatch]);
 
     useEffect(() => {
-        setLoading(skillGroups.loading && projects.loading && experiences.loading);
-        setLoadedOnce(skillGroups.loadedOnce && projects.loadedOnce && experiences.loadedOnce)
-    }, [skillGroups.loadedOnce, projects.loadedOnce, experiences.loadedOnce]);
-
-    useEffect(() => {
-        setLoading(skillGroups.loading && projects.loading && experiences.loading);
-    }, [skillGroups.loading, projects.loading, experiences.loading]);
+        setLoaded(technologies.loaded && projects.loaded && experiences.loaded)
+    }, [technologies.loaded, projects.loaded, experiences.loaded]);
 
     useEffect(() => {
         // FADE-IN
@@ -70,14 +64,12 @@ export default function Home() {
 
     return (
         <>
-            {loading && !loadedOnce && (
-                <LoadingScreen />
-            )}
+            {!loaded && <LoadingScreen />}
             <Hero />
             <AboutMe />
-            <Skills />
-            <Projects />
             <Experience />
+            <Technologies />
+            <Projects />
             <Contact />
         </>
     );

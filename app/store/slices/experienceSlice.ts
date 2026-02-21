@@ -8,20 +8,20 @@ import { ExperienceFromFirestore } from '@/app/interfaces/experience/experience_
 interface ExperienceState {
     data: Experience[];
     loading: boolean;
-    loadedOnce: boolean;
+    loaded: boolean;
     error: string | null;
 };
 
 const initialState: ExperienceState = {
     data: [],
     loading: false,
-    loadedOnce: false,
+    loaded: false,
     error: null,
 };
 
 export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', async () => {
-    const experienceSnapshot = await getDocs(query(collection(db, 'experience'), orderBy('start_date', 'asc')));
-    const experienceData: ExperienceWithId[] = experienceSnapshot.docs.map(doc => {
+    const experiencesSnapshot = await getDocs(query(collection(db, 'experience'), orderBy('start_date', 'desc')));
+    const experiencesData: ExperienceWithId[] = experiencesSnapshot.docs.map(doc => {
         const { ...rest } = doc.data() as ExperienceFromFirestore;
         return {
             ...rest,
@@ -33,7 +33,7 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
     const descriptionSnapshot = await getDocs(collectionGroup(db, 'description'));
     const descriptionData: DescriptionWithParent[] = descriptionSnapshot.docs.map(doc => ({experience_id: doc.ref.parent.parent?.id, ...doc.data() as Description}) );
 
-    const mergedData: Experience[] = experienceData.map(experience => ({
+    const mergedData: Experience[] = experiencesData.map(experience => ({
         ...experience,
         description: descriptionData
             .filter(skill => skill.experience_id === experience.experience_id)
@@ -55,12 +55,12 @@ const experienceSlice = createSlice({
         })
         .addCase(fetchExperiences.fulfilled, (state, action: PayloadAction<Experience[]>) => {
             state.loading = false;
-            state.loadedOnce = true;
+            state.loaded = true;
             state.data = action.payload;
         })
         .addCase(fetchExperiences.rejected, (state, action) => {
             state.loading = false;
-            state.error = action.error.message || 'Failed to fetch skill groups';
+            state.error = action.error.message || 'Failed to fetch experience';
         });
     },
 });

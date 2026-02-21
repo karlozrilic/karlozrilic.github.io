@@ -7,14 +7,14 @@ import { ProjectWithTime } from '@/app/interfaces/project/project_with_time';
 interface ProjectState {
     data: Project[];
     loading: boolean;
-    loadedOnce: boolean;
+    loaded: boolean;
     error: string | null;
 };
 
 const initialState: ProjectState = {
     data: [],
     loading: false,
-    loadedOnce: false,
+    loaded: false,
     error: null,
 };
 
@@ -40,7 +40,7 @@ const projectsSlice = createSlice({
         })
         .addCase(fetchProjects.fulfilled, (state, action: PayloadAction<Project[]>) => {
             state.loading = false;
-            state.loadedOnce = true;
+            state.loaded = true;
             state.data = action.payload;
         })
         .addCase(fetchProjects.rejected, (state, action) => {

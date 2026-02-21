@@ -1,11 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
-import skillGroupsReducer from './slices/skillGroupSlice';
+import technologiesReducer from './slices/technologiesSlice';
 import projectsReducer from './slices/projectsSlice';
 import experiencesReducer from './slices/experienceSlice';
 
 export const store = configureStore({
     reducer: {
-        skillGroups: skillGroupsReducer,
+        technologies: technologiesReducer,
         projects: projectsReducer,
         experiences: experiencesReducer
     },
