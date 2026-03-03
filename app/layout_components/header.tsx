@@ -99,7 +99,7 @@ export default function Header() {
 		<>
 			<nav className='bg-background text-foreground shadow fixed w-full z-50 transition-colors duration-500'>
 				<div className='container mx-auto flex justify-between items-center p-5'>
-					<Link href='/' className='text-xl font-bold'>Karlo Zrilić</Link>
+					<Link href='/' onClick={() => trigger('warning')} className='text-xl font-bold'>Karlo Zrilić</Link>
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
 					</div>
