@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import './style/globals.css';
 import Header from './layout_components/header';
 import Footer from './layout_components/footer';
-import { app, analytics } from './utils/firebase';
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import ReduxProvider from './reduxProvider';
+import Favicons from './layout_components/favicon';
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
@@ -24,37 +24,7 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 						__html: "(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();",
 					}}
 				/>
-				<link rel="icon" href="/favicon/favicon.ico" sizes="any" />
-				<link
-					rel="icon"
-					href="/favicon/favicon-512x512.png"
-					type="image/png"
-					sizes="512x512"
-				/>
-				<link
-					rel="icon"
-					href="/favicon/favicon-192x192.png"
-					type="image/png"
-					sizes="192x192"
-				/>
-				<link
-					rel="icon"
-					href="/favicon/favicon-32x32.png"
-					type="image/png"
-					sizes="32x32"
-				/>
-				<link
-					rel="icon"
-					href="/favicon/favicon-16x16.png"
-					type="image/png"
-					sizes="16x16"
-				/>
-				<link
-					rel="apple-touch-icon"
-					href="/favicon/apple-touch-icon.png>"
-					type="image/png"
-					sizes="180x180"
-				/>
+				<Favicons />
 			</head>
 			<body
 				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}

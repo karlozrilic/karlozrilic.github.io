@@ -29,7 +29,8 @@
     "react-redux": "^9.2.0",
     "react-svg": "^17.2.1",
     "redux": "^5.0.1",
-    "tailwind-merge": "^3.4.1"
+    "tailwind-merge": "^3.4.1",
+    "web-haptics": "^0.0.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",

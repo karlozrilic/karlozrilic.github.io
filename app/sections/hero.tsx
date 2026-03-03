@@ -4,12 +4,12 @@ import { TypingAnimation } from '@/app/components/ui/typing-animation';
 import { Button } from "@/app/components/ui/button"
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
+import { useWebHaptics } from 'web-haptics/react';
 
 export default function Hero() {
-    const phrases = ['I build websites.', 'I design apps.', 'I create experiences.'];
-    const typingRef = useRef<HTMLSpanElement>(null);
-    const [idle, setIdle] = useState(false);
+    const { trigger } = useWebHaptics();
+    
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const words = useMemo(() => [
@@ -18,42 +18,6 @@ export default function Hero() {
         'I create experiences.'
     ], [])
     
-
-    useEffect(() => {
-        if (typingRef.current == null) return;
-        let timeoute: NodeJS.Timeout;
-        // TYPING EFFECT
-        let i = 0, j = 0;
-        const typingEl = typingRef.current;
-        function type() {
-            setIdle(false);
-            if(j < phrases[i].length) {
-                typingEl.textContent += phrases[i][j];
-                j++;
-                timeoute = setTimeout(type, 100);
-            } else {
-                setIdle(true);
-                timeoute = setTimeout(erase, 2000);
-            }
-        }
-        function erase() {
-            setIdle(false);
-            if(j > 0) {
-                typingEl.textContent = phrases[i].substring(0, j - 1);
-                j--;
-                timeoute = setTimeout(erase, 50);
-            } else {
-                i = (i + 1) % phrases.length;
-                setIdle(true);
-                timeoute = setTimeout(type, 500);
-            }
-        }
-        type();
-        return () => {
-            clearTimeout(timeoute);
-        };
-    }, []);
-
     useEffect(() => {
         if (canvasRef.current == null) return;
         // PARTICLES
@@ -133,6 +97,7 @@ export default function Hero() {
                 size="lg"
                 variant='secondary'
                 onClick={() => {
+                    trigger('success');
                     document.querySelector('#contact')?.scrollIntoView();
                 }}
             >

@@ -4,8 +4,11 @@ import { AnimatedThemeToggler } from "@/app/components/ui/animated-theme-toggler
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
+import { useWebHaptics } from 'web-haptics/react';
 
 export default function Header() {
+	const { trigger } = useWebHaptics();
+
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const drawerBackdropRef = useRef<HTMLDivElement>(null);
 	const drawerRef = useRef<HTMLDivElement>(null);
@@ -43,11 +46,13 @@ export default function Header() {
 		window.addEventListener('resize', resize)
 
         function menuButtonHandler() {
+			trigger('success');
             drawer.classList.toggle('translate-x-full');
 			drawerBackdrop.classList.toggle('hidden');
         }
 
 		function closeDrawerHandler() {
+			trigger('success');
 			drawer.classList.add('translate-x-full');
 			drawerBackdrop.classList.add('hidden');
 		}
@@ -68,9 +73,14 @@ export default function Header() {
     }, []);
 
 	function closeDrawer() {
+		trigger('success');
 		if (drawerRef.current == null || drawerBackdropRef.current == null) return;
 		drawerRef.current.classList.add('translate-x-full');
 		drawerBackdropRef.current.classList.add('hidden');
+	}
+
+	function themeToggle() {
+		trigger('error');
 	}
 
 	function links() {
@@ -93,7 +103,7 @@ export default function Header() {
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
 					</div>
-					<AnimatedThemeToggler className='hidden md:block' />
+					<AnimatedThemeToggler onClickCapture={themeToggle} className='hidden md:block' />
 					<button
 						ref={menuButtonRef}
 						className='ml-4 p-2 rounded md:hidden'
@@ -110,7 +120,7 @@ export default function Header() {
 					<button ref={closeDrawerButtonRef} className="text-2xl hover:text-primary">✕</button>
 				</div>
 				{links()}
-				<AnimatedThemeToggler />
+				<AnimatedThemeToggler onClickCapture={themeToggle} />
 			</div>
 		</>
     );

@@ -3,8 +3,11 @@ import { useEffect, useState } from 'react';
 import { RootState } from '../store/store';
 import { useSelector } from 'react-redux';
 import { BentoCard, BentoGrid } from '@/app/components/ui/bento-grid';
+import { useWebHaptics } from 'web-haptics/react';
 
 export default function Projects() {
+    const { trigger } = useWebHaptics();
+
     const [activeFilter, setActiveFilter] = useState('all');
     const [projects, setProjects] = useState<Project[]>([]);
     const [tags, setTags] = useState<string[]>([]);
@@ -29,6 +32,7 @@ export default function Projects() {
         const projects = document.querySelectorAll<HTMLDivElement>('.project-item');
         filterButtons.forEach(button => {
             button.addEventListener('click', () => {
+                trigger('success');
                 filterButtons.forEach(btn => btn.classList.remove('active'))
                 button.classList.add('active');
                 const filter = button.dataset.filter;

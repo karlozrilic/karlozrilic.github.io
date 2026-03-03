@@ -8,7 +8,7 @@ export const store = configureStore({
         technologies: technologiesReducer,
         projects: projectsReducer,
         experiences: experiencesReducer
-    },
+    }
 });
 
 export type RootState = ReturnType<typeof store.getState>;

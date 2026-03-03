@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="KZ tech minimal icon">
+    <!-- Background -->
+    <rect width="512" height="512" rx="96" fill="#000"/>
+
+    <!-- Subtle thin frame -->
+    <rect x="40" y="40" width="432" height="432" rx="72" fill="none" stroke="#fff" stroke-opacity="0.12" stroke-width="4"/>
+
+    <!-- Main text -->
+    <text x="256"
+        y="256"
+        dy="8"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-family="Orbitron, Rajdhani, Eurostile, Inter, system-ui, sans-serif"
+        font-size="210"
+        font-weight="700"
+        letter-spacing="-10">
+        <tspan fill="#fff">K</tspan><tspan fill="#FE9A00">Z</tspan>
+    </text>
+</svg>

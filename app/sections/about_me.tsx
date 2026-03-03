@@ -4,9 +4,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { Button } from '@/app/components/ui/button';
+import { useWebHaptics } from 'web-haptics/react';
 
 export default function AboutMe() {
+    const { trigger } = useWebHaptics();
     const [expanded, setExpanded] = useState(false);
+
+    function toggleExpand() {
+        trigger('success');
+        setExpanded(!expanded);
+    }
 
     return (
         <>
@@ -80,7 +87,7 @@ export default function AboutMe() {
                             className="px-0 mt-4 inline-flex items-center gap-2 font-semibold text-chart-5 dark:text-chart-3"
                             size="lg"
                             variant='link'
-                            onClick={() => setExpanded(!expanded)}
+                            onClick={toggleExpand}
                         >
                             <span>{expanded ? 'Read less' : 'Read more'}</span>
                             <motion.span
