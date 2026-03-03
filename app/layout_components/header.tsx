@@ -49,18 +49,24 @@ export default function Header() {
 			trigger('success');
             drawer.classList.toggle('translate-x-full');
 			drawerBackdrop.classList.toggle('hidden');
+
+			const isOpen = !drawer.classList.contains('translate-x-full');
+			document.body.style.overflow = isOpen ? 'hidden' : '';
         }
 
 		function closeDrawerHandler() {
 			trigger('success');
 			drawer.classList.add('translate-x-full');
 			drawerBackdrop.classList.add('hidden');
+
+			document.body.style.overflow = '';
 		}
 
 		function resize() {
 			if (window.innerWidth >= 768) {
 				drawer.classList.add('translate-x-full');
 				drawerBackdrop.classList.add('hidden');
+				document.body.style.overflow = '';
 			}
 		}
 
