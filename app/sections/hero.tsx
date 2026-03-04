@@ -1,7 +1,7 @@
 'use client'
 import { BorderBeam } from '@/app/components/ui/border-beam';
 import { TypingAnimation } from '@/app/components/ui/typing-animation';
-import { Button } from "@/app/components/ui/button"
+import { Button } from '@/app/components/ui/button'
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRef, useEffect, useMemo } from 'react';
@@ -93,8 +93,8 @@ export default function Hero() {
                 />
             </div>
             <Button
-                className="relative bg-secondary text-secondary-foreground overflow-hidden font-semibold"
-                size="lg"
+                className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold'
+                size='lg'
                 variant='secondary'
                 onClick={() => {
                     trigger('success');
@@ -105,25 +105,25 @@ export default function Hero() {
                 <BorderBeam
                     duration={6}
                     size={70}
-                    className="from-transparent via-orange-500 to-transparent"
+                    className='from-transparent via-orange-500 to-transparent'
                 />
                 <BorderBeam
                     duration={6}
                     delay={3}
                     size={70}
-                    className="from-transparent via-white to-transparent"
+                    className='from-transparent via-white to-transparent'
                 />
             </Button>
 
-            <div className="flex items-center w-3xs my-4 z-1">
-                <hr className="flex-grow border-t-2 border-border" />
-                <span className="mx-4 text-secondary font-semibold">OR</span>
-                <hr className="flex-grow border-t-2 border-border" />
+            <div className='flex items-center w-3xs my-4 z-1'>
+                <hr className='flex-grow border-t-2 border-border' />
+                <span className='mx-4 text-secondary font-semibold'>OR</span>
+                <hr className='flex-grow border-t-2 border-border' />
             </div>
 
             <Button
-                className="relative bg-secondary text-secondary-foreground overflow-hidden font-semibold"
-                size="lg"
+                className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold'
+                size='lg'
                 variant='secondary'
                 onClick={() => {
                     window.open('https://drive.google.com/file/d/1k8j3dScW7Juptu2iFUqQzd7BIIdsWLpb/view?usp=sharing', '_blank');
@@ -134,14 +134,14 @@ export default function Hero() {
                 <BorderBeam
                     duration={6}
                     size={70}
-                    className="from-transparent via-white to-transparent"
+                    className='from-transparent via-white to-transparent'
                     reverse
                 />
                 <BorderBeam
                     duration={6}
                     delay={3}
                     size={70}
-                    className="from-transparent via-orange-500 to-transparent"
+                    className='from-transparent via-orange-500 to-transparent'
                     reverse
                 />
             </Button>

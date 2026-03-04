@@ -84,8 +84,8 @@ export default function AboutMe() {
                         </AnimatePresence>
 
                         <Button
-                            className="px-0 mt-4 inline-flex items-center gap-2 font-semibold text-chart-5 dark:text-chart-3"
-                            size="lg"
+                            className='px-0 mt-4 inline-flex items-center gap-2 font-semibold text-chart-5 dark:text-chart-3'
+                            size='lg'
                             variant='link'
                             onClick={toggleExpand}
                         >

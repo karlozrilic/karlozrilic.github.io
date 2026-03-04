@@ -1,6 +1,6 @@
 'use client'
 import { useRef, useEffect } from 'react';
-import { AnimatedThemeToggler } from "@/app/components/ui/animated-theme-toggler"
+import { AnimatedThemeToggler } from '@/app/components/ui/animated-theme-toggler'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
@@ -119,11 +119,11 @@ export default function Header() {
 				</div>
 			</nav>
 
-			<div ref={drawerBackdropRef} className="fixed inset-0 w-full h-full bg-black/50 backdrop-blur-sm hidden z-55"></div>
-			<div ref={drawerRef} className="fixed top-0 right-0 sm:w-64 w-full h-full bg-background text-foreground shadow-xl p-6 flex flex-col space-y-6 transform translate-x-full transition-transform duration-300 z-56">
-				<div className="flex justify-between items-center">
-					<span className="text-xl font-bold">Karlo Zrilić</span>
-					<button ref={closeDrawerButtonRef} className="text-2xl hover:text-primary">✕</button>
+			<div ref={drawerBackdropRef} className='fixed inset-0 w-full h-full bg-black/50 backdrop-blur-sm hidden z-55'></div>
+			<div ref={drawerRef} className='fixed top-0 right-0 sm:w-64 w-full h-full bg-background text-foreground shadow-xl p-6 flex flex-col space-y-6 transform translate-x-full transition-transform duration-300 z-56'>
+				<div className='flex justify-between items-center'>
+					<span className='text-xl font-bold'>Karlo Zrilić</span>
+					<button ref={closeDrawerButtonRef} className='text-2xl hover:text-primary'>✕</button>
 				</div>
 				{links()}
 				<AnimatedThemeToggler onClickCapture={themeToggle} />

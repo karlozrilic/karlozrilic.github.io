@@ -76,7 +76,7 @@ export default function Projects() {
                                 background={
                                     <img
                                         src={`/images/${project.image}.png`}
-                                        className="w-full scale-100 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-115"
+                                        className='w-full scale-100 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-115'
                                     />
                                 }
                                 href={project.link}
