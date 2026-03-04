@@ -3,6 +3,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../utils/firebase';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { ProjectWithTime } from '@/app/interfaces/project/project_with_time';
+import { FirebaseError } from 'firebase/app';
 
 interface ProjectState {
     data: Project[];
@@ -19,12 +20,30 @@ const initialState: ProjectState = {
 };
 
 export const fetchProjects = createAsyncThunk('project/fetchProjects', async () => {
-    const projectsSnapshot = await getDocs(query(collection(db, 'projects'), orderBy('updated_at', 'asc')));
-    const projectsData: Project[] = projectsSnapshot.docs.map(doc => {
-        const { updated_at, ...rest } = doc.data() as ProjectWithTime;
-        return { ...rest } as Project;
-    });
+    let projectsData: Project[] = [];
 
+    try {
+        const projectsSnapshot = await getDocs(query(collection(db, 'projects'), orderBy('updated_at', 'asc')));
+        projectsData = projectsSnapshot.docs.map(doc => {
+            const { updated_at, ...rest } = doc.data() as ProjectWithTime;
+            return { ...rest } as Project;
+        });
+    } catch (error: unknown) {
+        if (error instanceof FirebaseError) {
+            console.error("FIRESTORE QUERY FAILED");
+            console.error("code:", error.code);
+            console.error("message:", error.message);
+            console.error("customData:", error.customData);
+        } else if (error instanceof Error) {
+            console.error("UNKNOWN ERROR");
+            console.error("name:", error.name);
+            console.error("message:", error.message);
+        } else {
+            console.error("NON-ERROR THROWN:", error);
+        }
+        throw error;
+    }
+    
     return projectsData;
 });
 

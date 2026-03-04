@@ -41,7 +41,7 @@ export default function Experience() {
                                                 <h3 className='text-2xl font-semibold text-chart-5 dark:text-chart-3'>{experience.job_title}</h3>
                                                 <h5>{experience.company_name} - {experience.location}</h5>
                                             </div>
-                                            <Badge variant='secondary'>{moment(new Date(experience.start_date)).format('MMMM YYYY')} - {moment(new Date(experience.end_date)).format('MMMM YYYY')}</Badge>
+                                            <Badge variant='secondary'>{moment(new Date(experience.start_date)).format('MMMM YYYY')} - {experience.end_date ? moment(new Date(experience.end_date)).format('MMMM YYYY') : 'Present'}</Badge>
                                         </div>
                                         <div className='text-muted-foreground marker:text-secondary-foreground text-sm md:text-base'>
                                             {experience.description.map((section, index) => 

@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../utils/firebase';
 import { collection, doc, getDocs, getDocsFromServer, orderBy, query, setDoc } from 'firebase/firestore';
+import { FirebaseError } from 'firebase/app';
 
 interface TechnologiesState {
     data: Technologies[];
@@ -18,8 +19,26 @@ const initialState: TechnologiesState = {
 };
 
 export const fetchTechnologies = createAsyncThunk('technologies/fetchTechnologies', async () => {
-    const technologiesSnapshot = await getDocs(query(collection(db, 'technologies')));
-    const technologiesData: Technologies[] = technologiesSnapshot.docs.map((doc) => doc.data() as Technologies);
+    let technologiesData: Technologies[] = [];
+    
+    try {
+        const technologiesSnapshot = await getDocs(query(collection(db, 'technologies')));
+        technologiesData = technologiesSnapshot.docs.map((doc) => doc.data() as Technologies);
+    } catch (error: unknown) {
+        if (error instanceof FirebaseError) {
+            console.error("FIRESTORE QUERY FAILED");
+            console.error("code:", error.code);
+            console.error("message:", error.message);
+            console.error("customData:", error.customData);
+        } else if (error instanceof Error) {
+            console.error("UNKNOWN ERROR");
+            console.error("name:", error.name);
+            console.error("message:", error.message);
+        } else {
+            console.error("NON-ERROR THROWN:", error);
+        }
+        throw error;
+    }
 
     return technologiesData;
 });
