@@ -7,6 +7,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRef, useEffect, useMemo } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 
+type Particle = {
+    x: number;
+    y: number;
+    r: number;
+    speed: number;
+    opacity: number;
+};
+
 export default function Hero() {
     const { trigger } = useWebHaptics();
     
@@ -18,44 +26,96 @@ export default function Hero() {
         'I create experiences.'
     ], [])
     
+    // PARTICLES
     useEffect(() => {
         if (canvasRef.current == null) return;
-        // PARTICLES
+        
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d')!;
-        let animationFrameId: number;
-        const particles: Array<{x: number, y: number, r: number, speed: number}> = [];
+        if (!ctx) return;
 
-        resize();
+        let animationFrameId: number = 0;
+        const particles: Particle[] = [];
 
-        for (let p = 0; p < 50; p++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 3 + 1,
-                speed: Math.random() * 0.5 + 0.2
+        function createParticle(): Particle {
+            return {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: Math.random() * 3 + 1,
+            speed: Math.random() * 0.5 + 0.2,
+            opacity: Math.random() * 0.5 + 0.3,
+            };
+        }
+
+        function getTargetParticleCount() {
+            const area = canvas.width * canvas.height;
+
+            // tweak this number to control density
+            const density = 1 / 16000;
+
+            return Math.max(20, Math.min(120, Math.round(area * density)));
+        }
+
+        function syncParticleCountSmooth() {
+            const target = getTargetParticleCount();
+            const diff = target - particles.length;
+
+            if (diff > 0) {
+                const toAdd = Math.min(diff, 2);
+                for (let i = 0; i < toAdd; i++) {
+                    particles.push(createParticle());
+                }
+            } else if (diff < 0) {
+                const toRemove = Math.min(Math.abs(diff), 2);
+                particles.splice(particles.length - toRemove, toRemove);
+            }
+        }
+
+        function resize() {
+            const oldWidth = canvas.width || window.innerWidth;
+            const oldHeight = canvas.height || window.innerHeight;
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const scaleX = canvas.width / oldWidth;
+            const scaleY = canvas.height / oldHeight;
+
+            particles.forEach(p => {
+                p.x *= scaleX;
+                p.y *= scaleY;
             });
+
+            syncParticleCountSmooth();
         }
 
         function animateParticles() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            syncParticleCountSmooth();
+
             particles.forEach(p => {
                 p.y -= p.speed;
-                if(p.y < 0) {
-                    p.y = canvas.height;
+
+                if (p.y < -p.r) {
+                    p.y = canvas.height + p.r;
+                    p.x = Math.random() * canvas.width;
                 }
+
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = `rgba(255,255,255,${p.opacity})`;
                 ctx.fill();
                 ctx.closePath();
             });
+
             animationFrameId = window.requestAnimationFrame(animateParticles);
         }
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        resize();
+
+        while (particles.length < getTargetParticleCount()) {
+            particles.push(createParticle());
         }
 
         animateParticles();
@@ -74,9 +134,9 @@ export default function Hero() {
             id='hero'
         >
             {/* Parallax layers */}
-            <div className='w-80 h-80 bg-white opacity-10 rounded-full parallax-layer hidden' data-speed='0.3' style={{top: '-20%', left: '-15%' }}></div>
-            <div className='w-60 h-60 bg-white opacity-10 rounded-full parallax-layer hidden' data-speed='0.5' style={{top: '10%', right: '-10%' }}></div>
-            <div className='w-96 h-96 bg-white opacity-5 rounded-full parallax-layer hidden' data-speed='0.2' style={{bottom: '-20%', left: '25%' }}></div>
+            <div className='w-80 h-80 bg-white opacity-10 rounded-full parallax-layer hidden' data-speed='0.3' data-base-top="-20" style={{top: '-20%', left: '-15%' }}></div>
+            <div className='w-60 h-60 bg-white opacity-10 rounded-full parallax-layer hidden' data-speed='0.5' data-base-top="10" style={{top: '10%', right: '-10%' }}></div>
+            <div className='w-96 h-96 bg-white opacity-5 rounded-full parallax-layer hidden' data-speed='0.2' data-base-bottom="-20" style={{bottom: '-20%', left: '25%' }}></div>
 
             {/* Particles */}
             <canvas ref={canvasRef} className='absolute top-0 left-0 w-full h-full pointer-events-none'></canvas>

@@ -36,10 +36,17 @@ export default function Home() {
         const faders = document.querySelectorAll('.fade-in');
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
-                if(entry.isIntersecting) entry.target.classList.add('visible');
+                if(entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
             });
-        }, {threshold: 0.2});
+        }, {
+            threshold: 0,
+            rootMargin: '0px 0px -15% 0px',
+        });
         faders.forEach(f => observer.observe(f));
+        
 
         // PARALLAX
         const parallaxEls = document.querySelectorAll<HTMLDivElement>('.parallax-layer');
@@ -49,7 +56,18 @@ export default function Home() {
             const scrollTop = window.pageYOffset;
             parallaxEls.forEach(element => {
                 const speed = Number(element.dataset.speed);
-                element.style.top = `${scrollTop * speed}px`;
+                const baseTop = element.dataset.baseTop;
+                const baseBottom = element.dataset.baseBottom;
+                const offset = scrollTop * speed * 0.9;
+
+                if (baseTop !== undefined) {
+                    element.style.top = `calc(${baseTop}% + ${offset}px)`;
+                }
+
+                if (baseBottom !== undefined) {
+                    element.style.bottom = `calc(${baseBottom}% - ${offset}px)`;
+                }
+
                 element.classList.remove('hidden');
             });
         }
