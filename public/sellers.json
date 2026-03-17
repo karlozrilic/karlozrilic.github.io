@@ -1,0 +1,14 @@
+{
+    "version": "1.0",
+    "contact_email": "kazrile@gmail.com",
+    "contact_address": "Sv. Petar n/M 111d 23207, Sv. Filip i Jakov, Croatia",
+    "sellers": [
+        {
+            "seller_id": "pub-2968705770793431",
+            "seller_type": "PUBLISHER",
+            "name": "Karlo Zrilić",
+            "domain": "karlozrilic.github.io",
+            "is_confidential": 0
+        }
+    ]
+}
