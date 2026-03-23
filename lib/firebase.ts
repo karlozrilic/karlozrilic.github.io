@@ -31,7 +31,7 @@ const db = getFirestore(app);
 if (typeof window !== "undefined") {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   if (!siteKey) {
-    throw new Error('Missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY in .env.local');
+    throw new Error('Missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable');
   }
 
   initializeAppCheck(app, {
