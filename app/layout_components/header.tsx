@@ -14,6 +14,8 @@ export default function Header() {
 	const drawerRef = useRef<HTMLDivElement>(null);
 	const closeDrawerButtonRef = useRef<HTMLButtonElement>(null);
 
+	const headerTitle = 'Karlo Zrilić';
+
 	useEffect(() => {
 		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -105,7 +107,7 @@ export default function Header() {
 		<>
 			<nav className='bg-background text-foreground shadow fixed w-full z-50 transition-colors duration-500'>
 				<div className='container mx-auto flex justify-between items-center p-5'>
-					<Link href='/' onClick={() => trigger('warning')} className='text-xl font-bold'>Karlo Zrilić</Link>
+					<Link href='/' onClick={() => trigger('warning')} className='text-xl font-bold'>{headerTitle}</Link>
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
 					</div>
@@ -122,7 +124,7 @@ export default function Header() {
 			<div ref={drawerBackdropRef} className='fixed inset-0 w-full h-full bg-black/50 backdrop-blur-sm hidden z-55'></div>
 			<div ref={drawerRef} className='fixed top-0 right-0 sm:w-64 w-full h-full bg-background text-foreground shadow-xl p-6 flex flex-col space-y-6 transform translate-x-full transition-transform duration-300 z-56'>
 				<div className='flex justify-between items-center'>
-					<span className='text-xl font-bold'>Karlo Zrilić</span>
+					<span className='text-xl font-bold'>{headerTitle}</span>
 					<button ref={closeDrawerButtonRef} className='text-2xl hover:text-primary'>✕</button>
 				</div>
 				{links()}
