@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import './style/globals.css';
+import '@/app/style/globals.css';
 import Header from './layout_components/header';
 import Footer from './layout_components/footer';
 import { config } from '@fortawesome/fontawesome-svg-core';

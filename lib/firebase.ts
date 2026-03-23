@@ -19,6 +19,20 @@ let analytics;
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
+let appCheck;
+
+if (typeof window !== "undefined") {
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  if (!siteKey) {
+    throw new Error('Missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable');
+  }
+
+  appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(siteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
+
 const auth = getAuth(app);
 
 if (typeof window !== 'undefined') {
@@ -28,21 +42,10 @@ if (typeof window !== 'undefined') {
 
 const db = getFirestore(app);
 
-if (typeof window !== "undefined") {
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-  if (!siteKey) {
-    throw new Error('Missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable');
-  }
-
-  initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(siteKey),
-    isTokenAutoRefreshEnabled: true,
-  });
-}
-
 export {
     app,
-    auth,
+    appCheck,
+    auth,    
     analytics,
     db
 }
