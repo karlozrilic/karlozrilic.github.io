@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { RootState } from '../store/store';
+import { RootState } from '@/app/store/store';
 import { useSelector } from 'react-redux';
 import { BentoCard, BentoGrid } from '@/app/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';

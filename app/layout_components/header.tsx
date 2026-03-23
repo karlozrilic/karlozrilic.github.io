@@ -5,8 +5,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
 import { useWebHaptics } from 'web-haptics/react';
+import { useAuth } from '@/hooks/useAuth';
+import { logout } from '@/helpers/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
+	const router = useRouter();
+	const { user, loading } = useAuth();
 	const { trigger } = useWebHaptics();
 
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -87,6 +92,11 @@ export default function Header() {
 		drawerBackdropRef.current.classList.add('hidden');
 	}
 
+	async function adminLogout() {
+		await logout();
+		router.push('/');
+	}
+
 	function themeToggle() {
 		trigger('error');
 	}
@@ -99,6 +109,16 @@ export default function Header() {
 				<Link href='/#technologies' onClick={closeDrawer}>Technologies</Link>
 				<Link href='/#projects' onClick={closeDrawer}>Projects</Link>
 				<Link href='/#contact' onClick={closeDrawer}>Contact</Link>
+				{user && !loading && (
+					<>
+						<Link href='/admin' onClick={closeDrawer}>
+							Admin dashboard
+						</Link>
+						<Link href='/' onClick={adminLogout}>
+							Logout
+						</Link>
+					</>
+				)}
 			</>
 		);
 	}

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { db } from '../../utils/firebase';
+import { db } from '@/lib/firebase';
 import { collection, collectionGroup, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { ExperienceWithId } from '@/app/interfaces/experience/experience_with_id';
 import { ExperienceFromFirestore } from '@/app/interfaces/experience/experience_from_firestore';

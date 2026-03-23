@@ -1,6 +1,6 @@
 'use client'
 import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
+import { RootState } from '@/app/store/store';
 import { useEffect, useState } from 'react';
 import moment from 'moment';
 import { Card, CardContent } from '@/app/components/ui/card';
