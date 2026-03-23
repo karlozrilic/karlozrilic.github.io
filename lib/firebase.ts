@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { AppCheck, initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
-import { getAnalytics } from 'firebase/analytics';
+import { Analytics, getAnalytics } from 'firebase/analytics';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -15,11 +15,11 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let analytics;
+let analytics: Analytics;
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-let appCheck;
+let appCheck: AppCheck;
 
 if (typeof window !== "undefined") {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
@@ -38,7 +38,7 @@ if (typeof window !== 'undefined') {
   analytics = getAnalytics(app);
 }
 
-const auth = getAuth(app);
+const auth = getAuth(app)
 const db = getFirestore(app);
 
 export {
