@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
 import { getFirestore } from 'firebase/firestore';
@@ -33,19 +33,17 @@ if (typeof window !== "undefined") {
   });
 }
 
-const auth = getAuth(app);
-
 if (typeof window !== 'undefined') {
   // Only run analytics in the browser
   analytics = getAnalytics(app);
 }
 
+const auth = getAuth(app);
 const db = getFirestore(app);
 
 export {
     app,
     appCheck,
-    auth,    
-    analytics,
+    auth,
     db
 }
