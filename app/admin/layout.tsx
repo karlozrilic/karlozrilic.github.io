@@ -28,30 +28,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({children}: Readonly<{children: React.ReactNode}>) {
-	return (
-		<html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
-			<head>
-				<link rel='stylesheet' href='richtexteditor/plugins/aitoolkit.css' />
-                <link rel='stylesheet' href='richtexteditor/rte_theme_default.css' />
-				<script
-					dangerouslySetInnerHTML={{
-						__html: `(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();`,
-					}}
-				/>
-				<script src='richtexteditor/rte.js' />
-				<script src='richtexteditor/plugins/all_plugins.js' />
-				<script src="richtexteditor/patch.js"></script>
-			</head>
-			<body
-				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}
-			>
-				<ReduxProvider>
-					<Header />
-					{children}
-					<Footer />
-				</ReduxProvider>
-				<script>RTE_DefaultConfig.url_base='richtexteditor'</script>
-			</body>
-		</html>
-	);
+	return <div>{children}</div>;
 }
