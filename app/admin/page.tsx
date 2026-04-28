@@ -3,15 +3,18 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import LoadingScreen from '../sections/loading';
 
 export default function Dashboard() {
 	const editorRef = useRef<HTMLDivElement>(null);
 	const { user, loading } = useAuth();
 	const router = useRouter();
+	const [loaded, setLoaded] = useState(false);
 
 	useEffect(() => {
 		if (!loading && !user) {
+			setLoaded(true);
 			router.push('/login');
 		}
 	}, [user, loading]);
@@ -21,7 +24,6 @@ export default function Dashboard() {
 			const RichTextEditor = (window as any).RichTextEditor;
 
 			if (!RichTextEditor || !editorRef.current) return false;
-			console.log('here')
 
 			new RichTextEditor('#div_editor1', {
 				toolbar: 'default',
@@ -31,13 +33,16 @@ export default function Dashboard() {
 		};
 
 		const interval = setInterval(() => {
-			if (tryInit()) clearInterval(interval);
+			const initialized = tryInit();
+			setLoaded(initialized);
+			console.log(initialized)
+			if (initialized) clearInterval(interval);
 		}, 200);
 
 		return () => clearInterval(interval);
 	}, []);
 
-	if (loading) return <p>Loading...</p>;
+	if (loading) return <LoadingScreen />;
 
 	return (
 		<>
