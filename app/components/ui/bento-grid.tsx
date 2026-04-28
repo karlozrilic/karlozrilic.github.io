@@ -60,7 +60,7 @@ const BentoCard = ({
 	>
 		<a 
 			href={href}
-			target={href.startsWith('http') && !isExternalLink(href) ? '_blank' : '_self'}
+			target={href.startsWith('http') && isExternalLink(href) ? '_blank' : '_self'}
 			key={name}
 		>
 			<div>{background}</div>
