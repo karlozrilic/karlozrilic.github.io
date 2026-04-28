@@ -3,6 +3,11 @@ import { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Badge } from './badge'
 
+function isExternalLink(link: string): boolean {
+	const currentHost = window.location.hostname;
+	return !link.includes(currentHost);
+}
+
 interface BentoGridProps extends ComponentPropsWithoutRef<'div'> {
     children: ReactNode
     className?: string
@@ -55,7 +60,7 @@ const BentoCard = ({
 	>
 		<a 
 			href={href}
-			target={href.startsWith('http') ? '_blank' : '_self'}
+			target={href.startsWith('http') && !isExternalLink(href) ? '_blank' : '_self'}
 			key={name}
 		>
 			<div>{background}</div>
