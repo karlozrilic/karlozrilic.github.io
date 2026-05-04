@@ -1,9 +1,12 @@
-name: Deploy Next.js to GitHub Pages
+name: Build & Deploy
 
 on:
   push:
     branches:
       - master
+    paths-ignore:
+      - .github/workflows/**
+  workflow_dispatch:
 
 permissions:
   contents: write
