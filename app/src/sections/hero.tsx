@@ -150,7 +150,7 @@ export default function Hero() {
 
     return (
         <section
-            className='h-screen flex flex-col justify-center items-center text-center bg-gradient-to-b from-primary to-secondary relative overflow-hidden'
+            className='h-[calc(100vh-5rem)] md:h-[calc(100vh-4.25rem)] flex flex-col justify-center items-center text-center bg-gradient-to-b from-primary to-secondary relative overflow-hidden'
             id='hero'
         >
             {/* Parallax layers */}
