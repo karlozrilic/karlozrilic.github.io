@@ -104,9 +104,6 @@ export default function Header() {
 				<Link href='/#contact' onClick={closeDrawer}>Contact</Link>
 				{user && !loading && (
 					<>
-						<Link href='/admin' onClick={closeDrawer}>
-							Admin dashboard
-						</Link>
 						<SidebarTrigger onClick={closeDrawer} />
 					</>
 				)}
