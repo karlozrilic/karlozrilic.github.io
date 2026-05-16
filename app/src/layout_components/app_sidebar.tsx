@@ -118,7 +118,7 @@ export function AppSidebar() {
                                         <SidebarMenuSubButton
                                             asChild
                                             onClick={() => {
-                                                router.push('/admin/portfolio/view');
+                                                router.push('/admin/portfolio/about-me');
                                                 toggleSidebar();
                                             }}
                                             className='cursor-pointer'
@@ -132,7 +132,7 @@ export function AppSidebar() {
                                         <SidebarMenuSubButton
                                             asChild
                                             onClick={() => {
-                                                router.push('/admin/portfolio');
+                                                router.push('/admin/portfolio/about-me/edit');
                                                 toggleSidebar();
                                             }}
                                             className='cursor-pointer'

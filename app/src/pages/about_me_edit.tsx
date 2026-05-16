@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 import moment, { Moment } from 'moment';
 
-export default function Portfolio() {
+export default function AboutMeEdit() {
     const dispatch = useDispatch<AppDispatch>();
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
 
@@ -23,6 +23,7 @@ export default function Portfolio() {
     const [wysiwygLoaded, setWysiwygLoaded] = useState(false);
     const [loaded, setLoaded] = useState(aboutMe.loaded || false);
     const [readOnly, setReadOnly] = useState(true);
+    const [isDirty, setIsDirty] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const [aboutMeData, setAboutMeData] = useState<AboutMe | null>(null);
@@ -57,11 +58,11 @@ export default function Portfolio() {
                 readOnly: readOnly
             });
 
-            editor.setHTMLCode(aboutMeData?.content);
-
             editorRefInstance.current = editor;
 
             editor.attachEvent('change', onChange);
+
+            editor.setHTMLCode(aboutMeData?.content);
 
             return true;
         };
@@ -76,12 +77,12 @@ export default function Portfolio() {
             clearInterval(interval);
             editorRefInstance.current?.detachEvent('change', onChange);
         }
-    }, [aboutMe, aboutMeData]);
+    }, [aboutMeData]);
 
-    function onChange() {
-        console.log(editorRefInstance.current.getPlainText());
-        console.log(aboutMeData?.content);
-        console.log(editorRefInstance.current.getHTMLCode() === aboutMeData?.content);
+    function onChange(state: any, cmd: any, value: any) {
+        const original = aboutMeData?.content.replace(/[\n\r\t]/gm, '');
+        const current = editorRefInstance.current?.getHTMLCode().replace(/[\n\r\t]/gm, '');
+        setIsDirty(!(original === current));
     }
 
     function toggleLock() {
@@ -154,17 +155,20 @@ export default function Portfolio() {
                     <AlertDialog>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <AlertDialogTrigger asChild>
-                                    <Button
-                                        variant='outline'
-                                        size='sm'
-                                    >
-                                        <Save />
-                                    </Button>
-                                </AlertDialogTrigger>
+                                <span>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant='outline'
+                                            size='sm'
+                                            disabled={!isDirty}
+                                        >
+                                            <Save />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Save text</p>
+                                {isDirty ? <p>Save text</p> : <p>Edit text to save</p>}
                             </TooltipContent>
                         </Tooltip>
                         <AlertDialogContent>
