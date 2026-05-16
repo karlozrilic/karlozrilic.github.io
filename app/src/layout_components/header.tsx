@@ -59,14 +59,6 @@ export default function Header() {
 			document.body.style.overflow = isOpen ? 'hidden' : '';
         }
 
-		function closeDrawerHandler() {
-			trigger('success');
-			drawer.classList.add('translate-x-full');
-			drawerBackdrop.classList.add('hidden');
-
-			document.body.style.overflow = '';
-		}
-
 		function resize() {
 			if (window.innerWidth >= 768) {
 				drawer.classList.add('translate-x-full');
@@ -83,11 +75,12 @@ export default function Header() {
         };
     }, []);
 
-	function closeDrawer() {
+	function closeDrawerHandler() {
 		trigger('success');
 		if (drawerRef.current == null || drawerBackdropRef.current == null) return;
 		drawerRef.current.classList.add('translate-x-full');
 		drawerBackdropRef.current.classList.add('hidden');
+		document.body.style.overflow = '';
 	}
 
 	function themeToggle() {
@@ -97,16 +90,11 @@ export default function Header() {
 	function links() {
 		return (
 			<>
-				<Link href='/#about' onClick={closeDrawer}>About</Link>
-				<Link href='/#experience' onClick={closeDrawer}>Experience</Link>
-				<Link href='/#technologies' onClick={closeDrawer}>Technologies</Link>
-				<Link href='/#projects' onClick={closeDrawer}>Projects</Link>
-				<Link href='/#contact' onClick={closeDrawer}>Contact</Link>
-				{user && !loading && (
-					<>
-						<SidebarTrigger onClick={closeDrawer} />
-					</>
-				)}
+				<Link href='/#about' onClick={closeDrawerHandler}>About</Link>
+				<Link href='/#experience' onClick={closeDrawerHandler}>Experience</Link>
+				<Link href='/#technologies' onClick={closeDrawerHandler}>Technologies</Link>
+				<Link href='/#projects' onClick={closeDrawerHandler}>Projects</Link>
+				<Link href='/#contact' onClick={closeDrawerHandler}>Contact</Link>
 			</>
 		);
 	}
@@ -119,13 +107,29 @@ export default function Header() {
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
 					</div>
-					<AnimatedThemeToggler onClickCapture={themeToggle} className='hidden md:block' />
-					<button
-						ref={menuButtonRef}
-						className='ml-4 p-2 rounded md:hidden'
-					>
-						<FontAwesomeIcon icon={faBars} />
-					</button>
+
+					<div className='hidden md:flex gap-2'>
+						{user && !loading && (
+							<>
+								<SidebarTrigger onClick={closeDrawerHandler} />
+							</>
+						)}
+						<AnimatedThemeToggler onClickCapture={themeToggle} />
+					</div>
+
+					<div className='flex items-center ml-4 md:hidden'>
+						{user && !loading && (
+							<>
+								<SidebarTrigger className='p-2 w-auto h-auto' onClick={closeDrawerHandler} />
+							</>
+						)}
+						<button
+							ref={menuButtonRef}
+							className='p-2 rounded'
+						>
+							<FontAwesomeIcon icon={faBars} />
+						</button>
+					</div>
 				</div>
 			</nav>
 
