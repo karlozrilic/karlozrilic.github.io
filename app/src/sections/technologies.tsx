@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { Marquee } from '@/app/components/ui/marquee'; 
-import Technology from '@/app/components/custom/technology';
+import { Marquee } from '@/app/src/components/ui/marquee'; 
+import Technology from '@/app/src/components/custom/technology';
 import { useSelector } from 'react-redux';
-import { RootState } from '@/app/store/store';
+import { RootState } from '@/app/src/store/store';
 
 export default function Technologies() {
     const [technologies, setTechnologies] = useState<Technologies[]>([]);

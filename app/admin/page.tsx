@@ -2,9 +2,9 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script';
 import { useEffect, useRef, useState } from 'react';
-import LoadingScreen from '../sections/loading';
+import { SidebarTrigger } from "@/app/src/components/ui/sidebar"
+import LoadingScreen from '../src/sections/loading';
 
 export default function Dashboard() {
 	const editorRef = useRef<HTMLDivElement>(null);
@@ -35,7 +35,6 @@ export default function Dashboard() {
 		const interval = setInterval(() => {
 			const initialized = tryInit();
 			setLoaded(initialized);
-			console.log(initialized)
 			if (initialized) clearInterval(interval);
 		}, 200);
 
@@ -46,9 +45,11 @@ export default function Dashboard() {
 
 	return (
 		<>
-			<main className='flex min-h-screen flex-col items-center justify-between p-24'>
-				<div className='relative'>
+			<main className='flex min-h-screen justify-center p-2'>
+				<div className='relative flex-col items-center justify-between'>
 					<div>Welcome {user?.displayName}</div>
+
+					<SidebarTrigger />
 
 					<div ref={editorRef} id='div_editor1'>
 						<p>Hello world!</p>

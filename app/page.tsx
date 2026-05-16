@@ -1,17 +1,17 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from './store/store';
-import { fetchTechnologies } from './store/slices/technologiesSlice';
-import { fetchProjects } from './store/slices/projectsSlice';
-import { fetchExperiences } from './store/slices/experienceSlice';
-import Hero from './sections/hero';
-import AboutMe from './sections/about_me';
-import Projects from './sections/projects';
-import Contact from './sections/contact';
-import Experience from './sections/experience';
-import LoadingScreen from './sections/loading';
-import Technologies from './sections/technologies';
+import { AppDispatch, RootState } from './src/store/store';
+import { fetchTechnologies } from './src/store/slices/technologiesSlice';
+import { fetchProjects } from './src/store/slices/projectsSlice';
+import { fetchExperiences } from './src/store/slices/experienceSlice';
+import Hero from './src/sections/hero';
+import AboutMe from './src/sections/about_me';
+import Projects from './src/sections/projects';
+import Contact from './src/sections/contact';
+import Experience from './src/sections/experience';
+import LoadingScreen from './src/sections/loading';
+import Technologies from './src/sections/technologies';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
@@ -81,7 +81,7 @@ export default function Home() {
     }, []);
 
     return (
-        <>
+        <main className='w-full'>
             {!loaded && <LoadingScreen />}
             <Hero />
             <AboutMe />
@@ -89,6 +89,6 @@ export default function Home() {
             <Technologies />
             <Projects />
             <Contact />
-        </>
+        </main>
     );
 }

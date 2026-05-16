@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
-import '@/app/style/globals.css';
-import Header from '@/app/layout_components/header';
-import Footer from '@/app/layout_components/footer';
+import '@/app/src/style/globals.css';
+import Header from '@/app/src/layout_components/header';
+import Footer from '@/app/src/layout_components/footer';
+import { TooltipProvider } from "@/app/src/components/ui/tooltip"
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import ReduxProvider from '@/app/reduxProvider';
+import { SidebarProvider } from './src/components/ui/sidebar';
+import { AppSidebar } from './src/layout_components/app_sidebar';
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
@@ -45,11 +48,19 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 			<body
 				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}
 			>
-				<ReduxProvider>
-					<Header />
-					{children}
-					<Footer />
-				</ReduxProvider>
+				<SidebarProvider
+					defaultOpen={false}
+					className='flex-col'
+				>
+					<ReduxProvider>
+						<TooltipProvider>
+							<Header />
+							{children}
+							<Footer />
+							<AppSidebar />
+						</TooltipProvider>
+					</ReduxProvider>
+				</SidebarProvider>
 				<script>RTE_DefaultConfig.url_base='richtexteditor'</script>
 			</body>
 		</html>

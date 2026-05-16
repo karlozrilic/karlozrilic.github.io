@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { Button } from '@/app/components/ui/button';
+import { Button } from '@/app/src/components/ui/button';
 import { useWebHaptics } from 'web-haptics/react';
 
 export default function AboutMe() {

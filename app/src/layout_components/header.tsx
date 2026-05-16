@@ -1,16 +1,14 @@
 'use client'
 import { useRef, useEffect } from 'react';
-import { AnimatedThemeToggler } from '@/app/components/ui/animated-theme-toggler'
+import { AnimatedThemeToggler } from '@/app/src/components/ui/animated-theme-toggler'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
 import { useWebHaptics } from 'web-haptics/react';
 import { useAuth } from '@/hooks/useAuth';
-import { logout } from '@/helpers/firebase';
-import { useRouter } from 'next/navigation';
+import { SidebarTrigger } from '../components/ui/sidebar';
 
 export default function Header() {
-	const router = useRouter();
 	const { user, loading } = useAuth();
 	const { trigger } = useWebHaptics();
 
@@ -92,11 +90,6 @@ export default function Header() {
 		drawerBackdropRef.current.classList.add('hidden');
 	}
 
-	async function adminLogout() {
-		await logout();
-		router.push('/');
-	}
-
 	function themeToggle() {
 		trigger('error');
 	}
@@ -114,9 +107,7 @@ export default function Header() {
 						<Link href='/admin' onClick={closeDrawer}>
 							Admin dashboard
 						</Link>
-						<Link href='/' onClick={adminLogout}>
-							Logout
-						</Link>
+						<SidebarTrigger onClick={closeDrawer} />
 					</>
 				)}
 			</>
@@ -125,7 +116,7 @@ export default function Header() {
 
     return (
 		<>
-			<nav className='bg-background text-foreground shadow fixed w-full z-50 transition-colors duration-500'>
+			<nav className='bg-background text-foreground shadow sticky top-0 w-full z-50 transition-colors duration-500'>
 				<div className='container mx-auto flex justify-between items-center p-5'>
 					<Link href='/' onClick={() => trigger('warning')} className='text-xl font-bold'>{headerTitle}</Link>
 					<div className='hidden space-x-6 md:flex'>
@@ -142,7 +133,7 @@ export default function Header() {
 			</nav>
 
 			<div ref={drawerBackdropRef} className='fixed inset-0 w-full h-full bg-black/50 backdrop-blur-sm hidden z-55'></div>
-			<div ref={drawerRef} className='fixed top-0 right-0 sm:w-64 w-full h-full bg-background text-foreground shadow-xl p-6 flex flex-col space-y-6 transform translate-x-full transition-transform duration-300 z-56'>
+			<div ref={drawerRef} className='fixed top-0 right-0 sm:w-64 w-full h-full bg-background text-foreground shadow-xl p-6 flex flex-col space-y-6 transform translate-x-full transition-transform duration-300 z-55'>
 				<div className='flex justify-between items-center'>
 					<span className='text-xl font-bold'>{headerTitle}</span>
 					<button ref={closeDrawerButtonRef} className='text-2xl hover:text-primary'>✕</button>

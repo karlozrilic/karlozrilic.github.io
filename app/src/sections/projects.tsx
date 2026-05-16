@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { RootState } from '@/app/store/store';
+import { RootState } from '@/app/src/store/store';
 import { useSelector } from 'react-redux';
-import { BentoCard, BentoGrid } from '@/app/components/ui/bento-grid';
+import { BentoCard, BentoGrid } from '@/app/src/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';
 
 export default function Projects() {

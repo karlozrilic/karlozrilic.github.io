@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { ProjectWithTime } from '@/app/interfaces/project/project_with_time';
+import { ProjectWithTime } from '@/app/src/interfaces/project/project_with_time';
 import { FirebaseError } from 'firebase/app';
 
 interface ProjectState {

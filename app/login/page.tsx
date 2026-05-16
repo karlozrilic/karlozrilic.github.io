@@ -12,8 +12,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className='flex min-h-screen flex-col items-center justify-between p-24'>
-        <div className='relative'>
+    <main className='flex min-h-screen justify-center p-2'>
+        <div className='relative flex-col items-center justify-between'>
             <h1>Login</h1>
             <button onClick={handleLogin}>
                 Sign in with Google

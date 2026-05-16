@@ -1,10 +1,10 @@
 'use client'
 import { useSelector } from 'react-redux';
-import { RootState } from '@/app/store/store';
+import { RootState } from '@/app/src/store/store';
 import { useEffect, useState } from 'react';
 import moment from 'moment';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Badge } from '@/app/components/ui/badge';
+import { Card, CardContent } from '@/app/src/components/ui/card';
+import { Badge } from '@/app/src/components/ui/badge';
 
 export default function Experience() {
     const [experiences, setExperiences] = useState<Experience[]>([]);
