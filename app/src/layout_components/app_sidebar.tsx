@@ -14,16 +14,16 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
-} from "@/app/src/components/ui/sidebar"
-import { ChevronDown, ChevronRight, ChevronsUpDown, LogOutIcon, SquareTerminal } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible"
-import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
-import { useEffect, useState } from "react"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { logout } from "@/helpers/firebase"
-import { useRouter } from "next/navigation"
+} from '@/app/src/components/ui/sidebar'
+import { ChevronDown, ChevronRight, ChevronsUpDown, LogOutIcon, SquareTerminal } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../components/ui/dropdown-menu'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible'
+import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
+import { useEffect, useState } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { logout } from '@/helpers/firebase'
+import { useRouter } from 'next/navigation'
  
 export function AppSidebar() {
     const router = useRouter();
@@ -45,9 +45,9 @@ export function AppSidebar() {
 
     return (
         <Sidebar
-            side="left"
-            variant="sidebar"
-            className="pt-16"
+            side='left'
+            variant='sidebar'
+            className='pt-16'
         >
             <SidebarHeader>
                 <SidebarMenu>
@@ -59,10 +59,10 @@ export function AppSidebar() {
                             <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton>
                                     Select Workspace
-                                <ChevronDown className="ml-auto" />
+                                <ChevronDown className='ml-auto' />
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-[--radix-popper-anchor-width]">
+                            <DropdownMenuContent className='w-[--radix-popper-anchor-width]'>
                                 <DropdownMenuItem>
                                     <span>Acme Inc</span>
                                 </DropdownMenuItem>
@@ -87,7 +87,7 @@ export function AppSidebar() {
                             >
                                 <SquareTerminal />
                                 <span>Admin</span>
-                                <ChevronRight className="ml-auto" />
+                                <ChevronRight className='ml-auto' />
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>
@@ -98,34 +98,34 @@ export function AppSidebar() {
                     </SidebarGroupLabel>
 
                     <SidebarMenu>
-                        <Collapsible className="group/collapsible">
+                        <Collapsible className='group/collapsible'>
                             <SidebarMenuItem>
                                 <CollapsibleTrigger asChild>
                                     <SidebarMenuButton>
                                         <SquareTerminal />
                                         <span>Portfolio</span>
-                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                        <ChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
                             </SidebarMenuItem>
                             <CollapsibleContent
-                                className="
+                                className='
                                     overflow-hidden
                                     data-[state=closed]:animate-collapsible-up
                                     data-[state=open]:animate-collapsible-down
-                                "
+                                '
                             >
                                 <SidebarMenuSub>
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild>
-                                            <a href="#">Edit</a>
+                                            <a href='#'>Edit</a>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                 </SidebarMenuSub>
                                 <SidebarMenuSub>
                                     <SidebarMenuSubItem>
                                         <SidebarMenuSubButton asChild>
-                                            <a href="#">View</a>
+                                            <a href='#'>View</a>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                 </SidebarMenuSub>
@@ -141,24 +141,24 @@ export function AppSidebar() {
                             <SidebarMenuItem>
                                 <SidebarMenuButton size={'lg'}>
                                     <Avatar>
-                                        <AvatarImage src={user?.photoURL ??  "https://github.com/shadcn.png"} />
+                                        <AvatarImage src={user?.photoURL ??  'https://github.com/shadcn.png'} />
                                         <AvatarFallback>{acronym}</AvatarFallback>
                                     </Avatar>
-                                    <div className="grid flex-1 text-left text-sm leading-tight">
-                                        <span className="font-medium">{user?.displayName}</span>
-                                        <span className="text-xs">{user?.email}</span>
+                                    <div className='grid flex-1 text-left text-sm leading-tight'>
+                                        <span className='font-medium'>{user?.displayName}</span>
+                                        <span className='text-xs'>{user?.email}</span>
                                     </div>
                                     <ChevronsUpDown />
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent side={isMobile ? "top" : "right"}>
+                        <DropdownMenuContent side={isMobile ? 'top' : 'right'}>
                             <DropdownMenuGroup>
                                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                                 <DropdownMenuItem>Profile</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                    variant="destructive"
+                                    variant='destructive'
                                     onClick={adminLogout}
                                 >
                                     <LogOutIcon />

@@ -9748,7 +9748,8 @@ var RTE_CreateConfig, RichTextEditor;
     }
     function qR() {
         return function (b) {
-            rO()(rm(a[2086] + rS()[a[1430]](b), a[2087]))
+            // Some consol warn whatever
+            // rO()(rm(a[2086] + rS()[a[1430]](b), a[2087]))
         }
     }
     function qS(b, c) {

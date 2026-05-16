@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from './src/store/store';
+import { fetchAboutMe } from './src/store/slices/aboutMeSlice';
 import { fetchTechnologies } from './src/store/slices/technologiesSlice';
 import { fetchProjects } from './src/store/slices/projectsSlice';
 import { fetchExperiences } from './src/store/slices/experienceSlice';
@@ -15,21 +16,23 @@ import Technologies from './src/sections/technologies';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
+    const aboutMe = useSelector((state: RootState) => state.aboutMe);
     const technologies = useSelector((state: RootState) => state.technologies);
     const projects = useSelector((state: RootState) => state.projects);
     const experiences = useSelector((state: RootState) => state.experiences);
-    const [loaded, setLoaded] = useState(experiences.loaded || false);
+    const [loaded, setLoaded] = useState(false);
 
     // Fetch data once on mount
     useEffect(() => {
+        dispatch(fetchAboutMe());
         dispatch(fetchTechnologies());
         dispatch(fetchProjects());
         dispatch(fetchExperiences());
     }, [dispatch]);
 
     useEffect(() => {
-        setLoaded(technologies.loaded && projects.loaded && experiences.loaded)
-    }, [technologies.loaded, projects.loaded, experiences.loaded]);
+        setLoaded(aboutMe.loaded && technologies.loaded && projects.loaded && experiences.loaded)
+    }, [aboutMe.loaded, technologies.loaded, projects.loaded, experiences.loaded]);
 
     useEffect(() => {
         // FADE-IN

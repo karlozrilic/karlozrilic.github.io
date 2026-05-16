@@ -39,11 +39,11 @@ export default function Hero() {
 
         function createParticle(): Particle {
             return {
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            r: Math.random() * 3 + 1,
-            speed: Math.random() * 0.5 + 0.2,
-            opacity: Math.random() * 0.5 + 0.3,
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: Math.random() * 3 + 1,
+                speed: Math.random() * 0.5 + 0.2,
+                opacity: Math.random() * 0.5 + 0.3,
             };
         }
 
@@ -206,7 +206,6 @@ export default function Hero() {
                 />
             </Button>
 
-            
         </section>
     );
 }

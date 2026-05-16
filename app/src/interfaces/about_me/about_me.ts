@@ -1,0 +1,3 @@
+interface AboutMe {
+    content: string;
+}

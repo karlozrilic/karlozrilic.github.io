@@ -3,8 +3,8 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { SidebarTrigger } from "@/app/src/components/ui/sidebar"
 import LoadingScreen from '../src/sections/loading';
+import Link from 'next/link';
 
 export default function Dashboard() {
 	const editorRef = useRef<HTMLDivElement>(null);
@@ -41,15 +41,16 @@ export default function Dashboard() {
 		return () => clearInterval(interval);
 	}, []);
 
-	if (loading) return <LoadingScreen />;
-
 	return (
 		<>
+			{
+				!loaded ? <LoadingScreen /> : null
+			}
 			<main className='flex min-h-screen justify-center p-2'>
-				<div className='relative flex-col items-center justify-between'>
+				<div className='relative max-w-5xl flex flex-col items-center'>
 					<div>Welcome {user?.displayName}</div>
 
-					<SidebarTrigger />
+					<Link href='/admin/portfolio'>Portfolio</Link>
 
 					<div ref={editorRef} id='div_editor1'>
 						<p>Hello world!</p>

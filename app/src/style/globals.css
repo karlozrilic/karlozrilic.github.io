@@ -115,3 +115,39 @@ button {
 	--sidebar-border: hsl(240 3.7% 15.9%);
 	--sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
+
+.richtexteditor {
+	color: black;
+}
+
+/* Main editor container */
+.richtexteditor {
+  background: #111 !important;
+  border: 1px solid #2a2a2a !important;
+  color: #eee !important;
+}
+
+/* Toolbar */
+.rte-toolbar,
+.e-toolbar {
+  background: #1b1b1b !important;
+  border-bottom: 1px solid #333 !important;
+}
+
+/* Buttons */
+.e-toolbar .e-tbar-btn {
+  color: #fff !important;
+}
+
+/* Hover */
+.e-toolbar .e-tbar-btn:hover {
+  background: #333 !important;
+}
+
+/* Editing area */
+.rte-content,
+.rte-editor,
+.e-content {
+  background: #111 !important;
+  color: #eee !important;
+}
