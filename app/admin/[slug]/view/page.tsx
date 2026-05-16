@@ -1,4 +1,4 @@
-import Portfolio from "@/app/src/pages/portfolio";
+import AboutMe from '@/app/src/sections/about_me';
 
 export function generateStaticParams() {
     return [
@@ -8,7 +8,7 @@ export function generateStaticParams() {
     ];
 }
 
-export default async function Page({
+export default async function View({
     params,
 }: {
     params: Promise<{ slug: string }>
@@ -16,7 +16,7 @@ export default async function Page({
     const { slug } = await params;
 
     if (slug == 'portfolio') {
-        return <Portfolio />
+        return <main className='flex w-full min-h-screen justify-center p-2'><AboutMe /></main>
     }
 
     return <></>;

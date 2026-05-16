@@ -93,9 +93,7 @@ export function AppSidebar() {
                     </SidebarMenu>
                 </SidebarGroup>
                 <SidebarGroup>
-                    <SidebarGroupLabel>
-                        Edit
-                    </SidebarGroupLabel>
+                    <SidebarGroupLabel>Portfolio</SidebarGroupLabel>
 
                     <SidebarMenu>
                         <Collapsible className='group/collapsible'>
@@ -103,7 +101,7 @@ export function AppSidebar() {
                                 <CollapsibleTrigger asChild>
                                     <SidebarMenuButton>
                                         <SquareTerminal />
-                                        <span>Portfolio</span>
+                                        <span>About me</span>
                                         <ChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
@@ -120,12 +118,12 @@ export function AppSidebar() {
                                         <SidebarMenuSubButton
                                             asChild
                                             onClick={() => {
-                                                router.push('/admin/portfolio');
+                                                router.push('/admin/portfolio/view');
                                                 toggleSidebar();
                                             }}
                                             className='cursor-pointer'
                                         >
-                                            <span>Edit</span>
+                                            <span>View</span>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                 </SidebarMenuSub>
@@ -139,7 +137,7 @@ export function AppSidebar() {
                                             }}
                                             className='cursor-pointer'
                                         >
-                                            <span>View</span>
+                                            <span>Edit</span>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                 </SidebarMenuSub>

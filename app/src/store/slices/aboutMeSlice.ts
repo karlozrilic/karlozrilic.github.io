@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { collection, getDocs, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 
 interface AboutMeState {
@@ -27,7 +27,16 @@ export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () =>
                 collection(db, 'about_me')
             )
         );
-        aboutMeData = aboutMeSnapshot.docs.map((doc) => doc.data() as AboutMe);
+        aboutMeData = aboutMeSnapshot.docs.map((doc) => {
+            const data = doc.data() as Omit<AboutMe, 'updated'> & {
+                updated: Timestamp;
+            };
+
+            return {
+                ...data,
+                updated: data.updated?.toDate?.().toISOString(),
+            };
+        });
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
             console.error("FIRESTORE QUERY FAILED");

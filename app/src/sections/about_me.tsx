@@ -1,36 +1,52 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { Button } from '@/app/src/components/ui/button';
-import { useWebHaptics } from 'web-haptics/react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store/store';
+import { fetchAboutMe } from '../store/slices/aboutMeSlice';
+import LoadingComponent from '../layout_components/loading';
 
 export default function AboutMe() {
-    const { trigger } = useWebHaptics();
-    const [expanded, setExpanded] = useState(false);
+    const dispatch = useDispatch<AppDispatch>();
+    const aboutMe = useSelector((state: RootState) => state.aboutMe);
 
-    const [aboutMe, setAboutMe] = useState<string>('');
+    const [aboutMeData, setAboutMeData] = useState<string>('');
 
-    const { data } = useSelector((state: RootState) => state.aboutMe);
+    // Fetch data once on mount
+    useEffect(() => {
+        dispatch(fetchAboutMe());
+    }, [dispatch]);
 
     useEffect(() => {
-        if (data.length) {
-            setAboutMe(data[0].content);
+        if (aboutMe.data.length) {
+            setAboutMeData(aboutMe.data[0].content);
         }
-    }, [data]);
+    }, [aboutMe]);
 
-    function toggleExpand() {
-        trigger('success');
-        setExpanded(!expanded);
-    }
+    useEffect(() => {
+        const faders = document.querySelectorAll('.fade-in');
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0,
+            rootMargin: '0px 0px -15% 0px',
+        });
+        faders.forEach(f => observer.observe(f));
+
+        return () => {
+            faders.forEach(f => observer.unobserve(f));
+        }
+    }, []);
 
     return (
         <>
             <span id='about'></span>
             <section className='container mx-auto py-10 md:py-20 fade-in px-1' id='about'>
+                { aboutMeData ? null : <LoadingComponent /> }
                 <h2 className='text-4xl font-bold text-center mb-10'>About Me</h2>
                 <div className='md:flex md:items-center md:space-x-10'>
                     <img
@@ -38,7 +54,7 @@ export default function AboutMe() {
                         alt='Your Photo'
                         className='rounded-lg mb-6 md:mb-0 md:w-1/3 border-4 border-primary'
                     />
-                    <div className='md:w-2/3 md:m-auto mx-[20px] text-lg leading-relaxed space-y-4' dangerouslySetInnerHTML={{ __html: aboutMe }}></div>
+                    <div className='md:w-2/3 md:m-auto mx-[20px] text-lg leading-relaxed space-y-4' dangerouslySetInnerHTML={{ __html: aboutMeData }}></div>
                     {/**
                         I'm an Information Technology Engineer who enjoys building clean, responsive, and easy-to-use interfaces. I like turning ideas into simple, functional digital experiences that work smoothly across devices and feel natural to use.
 

@@ -1,36 +1,7 @@
 'use client'
 import Image from 'next/image';
-import { useEffect } from 'react';
 
 export default function ProjectPage() {
-    useEffect(() => {
-        // FADE-IN
-        const faders = document.querySelectorAll('.fade-in');
-        const observer = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if(entry.isIntersecting) entry.target.classList.add('visible');
-            });
-        }, {threshold: 0.2});
-        faders.forEach(f => observer.observe(f));
-
-        // PARALLAX
-        const parallaxEls = document.querySelectorAll<HTMLDivElement>('.parallax-layer');
-        window.addEventListener('scroll', onScroll);
-
-        function onScroll() {
-            const scrollTop = window.pageYOffset;
-            parallaxEls.forEach(element => {
-                const speed = Number(element.dataset.speed);
-                element.style.top = `${scrollTop * speed}px`;
-                element.classList.remove('hidden');
-            });
-        }
-        
-        onScroll();
-
-        return () => window.removeEventListener('scroll', onScroll);
-    }, []);
-
     return (
         <main className='flex min-h-screen flex-col items-center justify-between p-24'>
             <div className='z-10 w-full max-w-5xl items-center justify-between font-mono text-sm flex'>

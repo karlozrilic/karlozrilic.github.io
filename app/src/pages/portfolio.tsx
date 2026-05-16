@@ -12,20 +12,21 @@ import { Spinner } from '../components/ui/spinner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
+import moment, { Moment } from 'moment';
 
 export default function Portfolio() {
     const dispatch = useDispatch<AppDispatch>();
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
 
-    const editorRef = useRef<HTMLDivElement>(null);
-    const [textEditor, setTextEditor] = useState<any>(null);
+    const editorRef = useRef<any>(null);
+    const editorRefInstance = useRef<any>(null);
     const [wysiwygLoaded, setWysiwygLoaded] = useState(false);
     const [loaded, setLoaded] = useState(aboutMe.loaded || false);
     const [readOnly, setReadOnly] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    const [aboutMeData, setAboutMeData] = useState<string>('');
-    const { data } = useSelector((state: RootState) => state.aboutMe);
+    const [aboutMeData, setAboutMeData] = useState<AboutMe | null>(null);
+    const [updatedAt, setUpdatedAt] = useState<Moment | null>(null);
 
     // Fetch data once on mount
     useEffect(() => {
@@ -35,7 +36,9 @@ export default function Portfolio() {
     useEffect(() => {
         setLoaded(aboutMe.loaded)
         if (aboutMe.data.length) {
-            setAboutMeData(data[0].content);
+            setAboutMeData(aboutMe.data[0]);
+            const updated = moment(aboutMe.data[0].updated);
+            setUpdatedAt(updated);
         }
     }, [aboutMe]);
 
@@ -54,15 +57,11 @@ export default function Portfolio() {
                 readOnly: readOnly
             });
 
-            editor.setHTMLCode(aboutMeData);
+            editor.setHTMLCode(aboutMeData?.content);
 
-            setTextEditor(editor);
+            editorRefInstance.current = editor;
 
-            editor.attachEvent('change', function () {       
-                console.log(editor.getPlainText());
-                console.log(aboutMeData);
-                console.log(editor.getHTMLCode() === aboutMeData);
-            });
+            editor.attachEvent('change', onChange);
 
             return true;
         };
@@ -73,24 +72,34 @@ export default function Portfolio() {
             if (initialized) clearInterval(interval);
         }, 200);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            editorRefInstance.current?.detachEvent('change', onChange);
+        }
     }, [aboutMe, aboutMeData]);
 
+    function onChange() {
+        console.log(editorRefInstance.current.getPlainText());
+        console.log(aboutMeData?.content);
+        console.log(editorRefInstance.current.getHTMLCode() === aboutMeData?.content);
+    }
+
     function toggleLock() {
-        textEditor.setReadOnly(!readOnly);
+        editorRefInstance.current.setReadOnly(!readOnly);
         setReadOnly(!readOnly);
     }
 
     async function submitChanges() {
-        if (!textEditor) return;
+        if (!editorRefInstance.current) return;
         setSubmitting(true);
-        textEditor.setReadOnly(true);
+        editorRefInstance.current.setReadOnly(true);
         setReadOnly(true);
         toast.promise<{ name: string }>(
             () =>
               new Promise(async (resolve, reject) => {
                 try {
-                    await updateAboutMe(textEditor.getHTMLCode())
+                    await updateAboutMe(editorRefInstance.current.getHTMLCode())
+                    await dispatch(fetchAboutMe());
                     setSubmitting(false);
                     return resolve({ name: 'Data' });
                 } catch (error) {
@@ -112,7 +121,21 @@ export default function Portfolio() {
         {!wysiwygLoaded || !loaded ? <LoadingScreen /> : null}
         <main className='flex min-h-screen justify-center p-2'>
             <div className='relative max-w-5xl flex flex-col items-center gap-4'>
-                <div className='flex self-end gap-2'>
+                <div className='flex self-end items-center gap-2'>
+                    { updatedAt ?
+                        moment().diff(updatedAt, 'hours') < 24 ?
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>{updatedAt.fromNow()}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {updatedAt.format('D.M.YYYY., HH:mm:ss')}
+                                </TooltipContent>
+                            </Tooltip>
+                            : <span>{updatedAt.format('D.M.YYYY., HH:mm:ss')}</span>
+                        :
+                        null
+                    }
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button

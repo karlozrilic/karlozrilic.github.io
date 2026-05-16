@@ -24,7 +24,7 @@ export default function Home() {
 
     // Fetch data once on mount
     useEffect(() => {
-        dispatch(fetchAboutMe());
+        // dispatch(fetchAboutMe());
         dispatch(fetchTechnologies());
         dispatch(fetchProjects());
         dispatch(fetchExperiences());
@@ -35,22 +35,6 @@ export default function Home() {
     }, [aboutMe.loaded, technologies.loaded, projects.loaded, experiences.loaded]);
 
     useEffect(() => {
-        // FADE-IN
-        const faders = document.querySelectorAll('.fade-in');
-        const observer = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if(entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, {
-            threshold: 0,
-            rootMargin: '0px 0px -15% 0px',
-        });
-        faders.forEach(f => observer.observe(f));
-        
-
         // PARALLAX
         const parallaxEls = document.querySelectorAll<HTMLDivElement>('.parallax-layer');
         window.addEventListener('scroll', onScroll);
@@ -79,7 +63,6 @@ export default function Home() {
 
         return () => {
             window.removeEventListener('scroll', onScroll);
-            faders.forEach(f => observer.unobserve(f));
         }
     }, []);
 

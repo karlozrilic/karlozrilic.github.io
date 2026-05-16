@@ -2,25 +2,55 @@ import { useEffect, useState } from 'react';
 
 import { Marquee } from '@/app/src/components/ui/marquee'; 
 import Technology from '@/app/src/components/custom/technology';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/app/src/store/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/app/src/store/store';
+import { fetchTechnologies } from '../store/slices/technologiesSlice';
+import LoadingComponent from '../layout_components/loading';
 
 export default function Technologies() {
-    const [technologies, setTechnologies] = useState<Technologies[]>([]);
+    const dispatch = useDispatch<AppDispatch>();
+    const technologies = useSelector((state: RootState) => state.technologies);
+    // const [technologies, setTechnologies] = useState<Technologies[]>([]);
 
-    const { data } = useSelector((state: RootState) => state.technologies);
+    // const { data } = useSelector((state: RootState) => state.technologies);
+
+    // Fetch data once on mount
+    useEffect(() => {
+        dispatch(fetchTechnologies());
+    }, [dispatch]);
+
+    //useEffect(() => {
+    //    setTechnologies(data);
+    //}, [data]);
 
     useEffect(() => {
-        setTechnologies(data);
-    }, [data]);
+        const faders = document.querySelectorAll('.fade-in');
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0,
+            rootMargin: '0px 0px -15% 0px',
+        });
+        faders.forEach(f => observer.observe(f));
 
-    const firstRow = technologies.filter(technology => technology.row == 0).sort((a, b) => a.order - b.order);
-    const secondRow = technologies.filter(technology => technology.row == 1).sort((a, b) => a.order - b.order);
+        return () => {
+            faders.forEach(f => observer.unobserve(f));
+        }
+    }, []);
+
+    const firstRow = technologies.data.filter(technology => technology.row == 0).sort((a, b) => a.order - b.order);
+    const secondRow = technologies.data.filter(technology => technology.row == 1).sort((a, b) => a.order - b.order);
         
     return (
         <>
             <span id='technologies'></span>
             <section className='relative py-10 md:py-20 overflow-hidden fade-in'>
+                { technologies.loaded ? null : <LoadingComponent /> }
                 <h2 className='text-4xl font-bold text-center mb-12'>Technologies</h2>
 
                 <div className='relative flex w-full flex-col items-center justify-center overflow-hidden'>
