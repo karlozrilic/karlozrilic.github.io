@@ -117,15 +117,29 @@ export function AppSidebar() {
                             >
                                 <SidebarMenuSub>
                                     <SidebarMenuSubItem>
-                                        <SidebarMenuSubButton asChild>
-                                            <a href='#'>Edit</a>
+                                        <SidebarMenuSubButton
+                                            asChild
+                                            onClick={() => {
+                                                router.push('/admin/portfolio');
+                                                toggleSidebar();
+                                            }}
+                                            className='cursor-pointer'
+                                        >
+                                            <span>Edit</span>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                 </SidebarMenuSub>
                                 <SidebarMenuSub>
                                     <SidebarMenuSubItem>
-                                        <SidebarMenuSubButton asChild>
-                                            <a href='#'>View</a>
+                                        <SidebarMenuSubButton
+                                            asChild
+                                            onClick={() => {
+                                                router.push('/admin/portfolio');
+                                                toggleSidebar();
+                                            }}
+                                            className='cursor-pointer'
+                                        >
+                                            <span>View</span>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                 </SidebarMenuSub>

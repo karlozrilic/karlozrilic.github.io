@@ -37,6 +37,7 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 			<head>
 				<link rel='stylesheet' href='/richtexteditor/plugins/aitoolkit.css' />
                 <link rel='stylesheet' href='/richtexteditor/rte_theme_default.css' />
+				<link rel='stylesheet' href='/styles/richtexteditor_overrides.css' />
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();`,

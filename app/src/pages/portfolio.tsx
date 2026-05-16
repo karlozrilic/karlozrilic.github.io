@@ -84,6 +84,8 @@ export default function Portfolio() {
     async function submitChanges() {
         if (!textEditor) return;
         setSubmitting(true);
+        textEditor.setReadOnly(true);
+        setReadOnly(true);
         toast.promise<{ name: string }>(
             () =>
               new Promise(async (resolve, reject) => {
