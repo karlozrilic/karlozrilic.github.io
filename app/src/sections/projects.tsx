@@ -4,6 +4,8 @@ import { RootState } from '@/app/src/store/store';
 import { useSelector } from 'react-redux';
 import { BentoCard, BentoGrid } from '@/app/src/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';
+import { AspectRatio } from '../components/ui/aspect-ratio';
+import Image from 'next/image';
 
 export default function Projects() {
     const { trigger } = useWebHaptics();
@@ -87,17 +89,28 @@ export default function Projects() {
                             >{tag.charAt(0).toUpperCase() + tag.slice(1)}</button>
                         )}
                     </div>
-                    <BentoGrid className='m-auto'>
+                    <BentoGrid className='m-auto bg-muted'>
                         {projects.map((project, index) => 
                             <BentoCard
                                 key={index}
                                 name={project.title}
                                 description={project.description}
                                 background={
-                                    <img
-                                        src={`/images/${project.image}.png`}
-                                        className='w-full scale-100 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-115'
-                                    />
+                                    <AspectRatio
+                                        ratio={16 / 9}
+                                        className='flex items-center'
+                                    >
+                                        <Image
+                                            src={`/images/${project.image}.svg`}
+                                            alt={`${project.title} logo`}
+                                            width={100}
+                                            height={100}
+                                            onError={(e) => {
+                                                e.currentTarget.src = `/images/${project.image}.png`;
+                                            }}
+                                            className='w-full h-full object-contain scale-80 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-100'
+                                        />
+                                    </AspectRatio>
                                 }
                                 href={project.link}
                                 className='project-item'
