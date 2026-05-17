@@ -3,15 +3,15 @@
 import LoadingScreen from '@/app/src/sections/loading';
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../store/store';
-import { fetchAboutMe } from '../store/slices/aboutMeSlice';
-import { updateAboutMe } from '../service/firebase';
-import { Button } from '../components/ui/button';
+import { AppDispatch, RootState } from '@/app/src/store/store';
+import { fetchAboutMe } from '@/app/src/store/slices/aboutMeSlice';
+import { updateAboutMe } from '@/app/src/service/firebase';
+import { Button } from '@/app/src/components/ui/button';
 import { Lock, LockOpen, Save } from 'lucide-react';
-import { Spinner } from '../components/ui/spinner';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
+import { Spinner } from '@/app/src/components/ui/spinner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/app/src/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/src/components/ui/tooltip';
 import moment, { Moment } from 'moment';
 
 export default function AboutMeEdit() {

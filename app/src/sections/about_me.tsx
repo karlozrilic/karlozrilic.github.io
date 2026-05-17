@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../store/store';
-import { fetchAboutMe } from '../store/slices/aboutMeSlice';
-import LoadingComponent from '../layout_components/loading';
+import { AppDispatch, RootState } from '@/app/src/store/store';
+import { fetchAboutMe } from '@/app/src/store/slices/aboutMeSlice';
+import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function AboutMe() {
     const dispatch = useDispatch<AppDispatch>();

@@ -6,7 +6,7 @@ import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
 import { useWebHaptics } from 'web-haptics/react';
 import { useAuth } from '@/hooks/useAuth';
-import { SidebarTrigger } from '../components/ui/sidebar';
+import { SidebarTrigger } from '@/app/src/components/ui/sidebar';
 
 export default function Header() {
 	const { user, loading } = useAuth();

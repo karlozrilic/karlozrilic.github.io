@@ -16,10 +16,10 @@ import {
   useSidebar,
 } from '@/app/src/components/ui/sidebar'
 import { ChevronDown, ChevronRight, ChevronsUpDown, LogOutIcon, SquareTerminal } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../components/ui/dropdown-menu'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/app/src/components/ui/dropdown-menu'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/components/ui/collapsible'
 import { useAuth } from '@/hooks/useAuth';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/src/components/ui/avatar'
 import { useEffect, useState } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { logout } from '@/helpers/firebase'

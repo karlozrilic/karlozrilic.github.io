@@ -4,7 +4,7 @@ import { RootState } from '@/app/src/store/store';
 import { useSelector } from 'react-redux';
 import { BentoCard, BentoGrid } from '@/app/src/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';
-import { AspectRatio } from '../components/ui/aspect-ratio';
+import { AspectRatio } from '@/app/src/components/ui/aspect-ratio';
 import Image from 'next/image';
 
 export default function Projects() {

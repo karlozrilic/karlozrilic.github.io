@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import LoadingScreen from '../src/sections/loading';
+import LoadingScreen from '@/app/src/sections/loading';
 import Link from 'next/link';
 
 export default function Dashboard() {

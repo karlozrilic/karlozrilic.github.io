@@ -4,8 +4,8 @@ import { Marquee } from '@/app/src/components/ui/marquee';
 import Technology from '@/app/src/components/custom/technology';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
-import { fetchTechnologies } from '../store/slices/technologiesSlice';
-import LoadingComponent from '../layout_components/loading';
+import { fetchTechnologies } from '@/app/src/store/slices/technologiesSlice';
+import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function Technologies() {
     const dispatch = useDispatch<AppDispatch>();
