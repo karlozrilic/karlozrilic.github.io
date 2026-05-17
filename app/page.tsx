@@ -1,18 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from './src/store/store';
-import { fetchAboutMe } from './src/store/slices/aboutMeSlice';
-import { fetchTechnologies } from './src/store/slices/technologiesSlice';
-import { fetchProjects } from './src/store/slices/projectsSlice';
-import { fetchExperiences } from './src/store/slices/experienceSlice';
-import Hero from './src/sections/hero';
-import AboutMe from './src/sections/about_me';
-import Projects from './src/sections/projects';
-import Contact from './src/sections/contact';
-import Experience from './src/sections/experience';
-import LoadingScreen from './src/sections/loading';
-import Technologies from './src/sections/technologies';
+import { AppDispatch, RootState } from '@/app/src/store/store';
+import Hero from '@/app/src/sections/hero';
+import AboutMe from '@/app/src/sections/about_me';
+import Projects from '@/app/src/sections/projects';
+import Contact from '@/app/src/sections/contact';
+import Experience from '@/app/src/sections/experience';
+import LoadingScreen from '@/app/src/sections/loading';
+import Technologies from '@/app/src/sections/technologies';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
@@ -22,16 +18,8 @@ export default function Home() {
     const experiences = useSelector((state: RootState) => state.experiences);
     const [loaded, setLoaded] = useState(false);
 
-    // Fetch data once on mount
     useEffect(() => {
-        // dispatch(fetchAboutMe());
-        dispatch(fetchTechnologies());
-        dispatch(fetchProjects());
-        dispatch(fetchExperiences());
-    }, [dispatch]);
-
-    useEffect(() => {
-        setLoaded(aboutMe.loaded && technologies.loaded && projects.loaded && experiences.loaded)
+        setLoaded(aboutMe.loaded && technologies.loaded && projects.loaded && experiences.loaded);
     }, [aboutMe.loaded, technologies.loaded, projects.loaded, experiences.loaded]);
 
     useEffect(() => {

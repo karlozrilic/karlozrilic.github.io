@@ -6,9 +6,9 @@ import { TooltipProvider } from "@/app/src/components/ui/tooltip"
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import ReduxProvider from '@/app/reduxProvider';
-import { SidebarProvider } from './src/components/ui/sidebar';
-import { AppSidebar } from './src/layout_components/app_sidebar';
-import { Toaster } from './src/components/ui/sonner';
+import { SidebarProvider } from '@/app/src/components/ui/sidebar';
+import { AppSidebar } from '@/app/src/layout_components/app_sidebar';
+import { Toaster } from '@/app/src/components/ui/sonner';
 config.autoAddCss = false;
 
 export const metadata: Metadata = {

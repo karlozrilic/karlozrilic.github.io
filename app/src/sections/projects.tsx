@@ -1,29 +1,32 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { RootState } from '@/app/src/store/store';
-import { useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/app/src/store/store';
+import { useDispatch, useSelector } from 'react-redux';
 import { BentoCard, BentoGrid } from '@/app/src/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';
 import { AspectRatio } from '@/app/src/components/ui/aspect-ratio';
 import Image from 'next/image';
+import { fetchProjects } from '@/app/src/store/slices/projectsSlice';
+import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function Projects() {
+    const dispatch = useDispatch<AppDispatch>();
+    const projects = useSelector((state: RootState) => state.projects);
+    
     const { trigger } = useWebHaptics();
 
     const [activeFilter, setActiveFilter] = useState('all');
-    const [projects, setProjects] = useState<Project[]>([]);
     const [tags, setTags] = useState<string[]>([]);
 
-    const { data } = useSelector((state: RootState) => state.projects);
-
+    // Fetch data once on mount
     useEffect(() => {
-        setProjects(data);
-    }, [data]);
+        dispatch(fetchProjects());
+    }, [dispatch]);
 
     useEffect(() => {
         setTags(Array.from(
             new Set(
-                projects.flatMap(project => project.tags.map(tag => tag.toLowerCase()))
+                projects.data.flatMap(project => project.tags.map(tag => tag.toLowerCase()))
             )
         ));
     }, [projects]);
@@ -74,6 +77,7 @@ export default function Projects() {
         <>
             <span id='projects'></span>
             <section className='relative bg-secondary text-secondary-foreground fade-in px-1' id='projects'>
+                { projects.loaded ? null : <LoadingComponent /> }
                 <div className='container mx-auto py-10 md:py-20'>
                     <h2 className='text-4xl font-bold text-center mb-10'>Projects</h2>
                     <div className='flex justify-center flex-wrap mb-10 gap-3'>
@@ -90,7 +94,7 @@ export default function Projects() {
                         )}
                     </div>
                     <BentoGrid className='m-auto bg-muted'>
-                        {projects.map((project, index) => 
+                        {projects.data.map((project, index) => 
                             <BentoCard
                                 key={index}
                                 name={project.title}

@@ -1,18 +1,21 @@
 'use client'
-import { useSelector } from 'react-redux';
-import { RootState } from '@/app/src/store/store';
-import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/app/src/store/store';
+import { useEffect } from 'react';
 import moment from 'moment';
 import { Card, CardContent } from '@/app/src/components/ui/card';
 import { Badge } from '@/app/src/components/ui/badge';
+import { fetchExperiences } from '@/app/src/store/slices/experienceSlice';
+import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function Experience() {
-    const [experiences, setExperiences] = useState<Experience[]>([]);
-    const { data } = useSelector((state: RootState) => state.experiences);
+    const dispatch = useDispatch<AppDispatch>();
+    const experiences = useSelector((state: RootState) => state.experiences);
 
+    // Fetch data once on mount
     useEffect(() => {
-        setExperiences(data);
-    }, [data]);
+        dispatch(fetchExperiences());
+    }, [dispatch]);
 
     useEffect(() => {
         const faders = document.querySelectorAll('.fade-in');
@@ -38,10 +41,11 @@ export default function Experience() {
         <>
             <span id='experience'></span>
             <section className='relative py-10 md:py-20 bg-secondary text-secondary-foreground fade-in px-1' id='experience'>
+                { experiences.loaded ? null : <LoadingComponent /> }
                 <h2 className='text-4xl font-bold text-center mb-10'>Experience</h2>
                 <div className='container mx-auto space-y-8'>
-                    {experiences.map((experience, index) => {
-                        const isLast = index === experiences.length - 1
+                    {experiences.data.map((experience, index) => {
+                        const isLast = index === experiences.data.length - 1
 
                         return (
                             <div key={index} className='relative pl-0 md:pl-8'>
