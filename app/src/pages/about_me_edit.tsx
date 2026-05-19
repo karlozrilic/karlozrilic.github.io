@@ -66,9 +66,9 @@ export default function AboutMeEdit() {
 
             return true;
         };
-
+        
         const initialized = tryInit();
-		setLoaded(initialized);
+		setWysiwygLoaded(initialized);
 
         return () => {
             editorRefInstance.current?.detachEvent('change', onChange);

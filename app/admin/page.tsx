@@ -14,27 +14,10 @@ export default function Dashboard() {
 
 	useEffect(() => {
 		if (!loading && !user) {
-			setLoaded(true);
-			//router.push('/login');
+			router.push('/login');
 		}
+		setLoaded(!loading);
 	}, [user, loading]);
-
-	useEffect(() => {
-		const tryInit = () => {
-			const RichTextEditor = (window as any).RichTextEditor;
-
-			if (!RichTextEditor || !editorRef.current) return false;
-
-			new RichTextEditor('#div_editor1', {
-				toolbar: 'default',
-			});
-
-			return true;
-		};
-
-		const initialized = tryInit();
-		setLoaded(initialized);
-	}, []);
 
 	return (
 		<>
@@ -46,10 +29,6 @@ export default function Dashboard() {
 					<div>Welcome {user?.displayName}</div>
 
 					<Link href='/admin/portfolio'>Portfolio</Link>
-
-					<div ref={editorRef} id='div_editor1'>
-						<p>Hello world!</p>
-					</div>
 				</div>
 			</main>
 		</>
