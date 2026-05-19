@@ -74,7 +74,7 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 		
 		        <Script
 		          src='/richtexteditor/patch.js'
-		          strategy='beforeInteractive'
+		          strategy='afterInteractive'
 		        />
 				<SidebarProvider
 					defaultOpen={false}
