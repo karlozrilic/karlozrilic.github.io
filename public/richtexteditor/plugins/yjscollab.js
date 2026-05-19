@@ -65,14 +65,38 @@ function RTE_Plugin_YjsCollab() {
         var user = options.user || config.currentUser || { id: "user", name: "User", color: "#2563eb" };
         var ledgerMap = doc.getMap(config.collabLedgerMapName);
 
-        // Text-sync (preview): when enabled, bind a shared Y.Text to the editor's
-        // HTML as an opaque string. This unlocks concurrent editing with CRDT
-        // merge semantics, at the cost of coarse caret snap-back on remote apply.
-        // The proper per-node binding is on the roadmap — this MVP buys parity
-        // on the basic "two people typing" RFP checkbox without blocking on it.
-        var textSyncEnabled = options.textSync === true
-            || (options.textSync !== false && config.collabTextSync === true);
-        var textMap = textSyncEnabled ? doc.getText(config.collabTextName || "richtextbox.body") : null;
+        // textSync modes:
+        //   false / unset → awareness/presence/ledger only.
+        //   true          → legacy shared-Y.Text snapshot mode (last-write-
+        //                   wins on same-paragraph conflicts; kept for
+        //                   back-compat).
+        //   "crdt"        → per-node Yjs CRDT via crdt-engine.js. Falls
+        //                   back to legacy mode (with console.warn) if
+        //                   the engine bundle isn't loaded.
+        var requestedTextSync = options.textSync;
+        if (requestedTextSync === undefined) {
+            requestedTextSync = config.collabTextSync === "crdt"
+                ? "crdt"
+                : (config.collabTextSync === true);
+        }
+        var textSyncMode;       // "off" | "legacy" | "crdt"
+        var textMap = null;
+        var crdtBinding = null;
+        if (requestedTextSync === "crdt") {
+            var Crdt = (typeof window !== "undefined") ? window.RichTextEditorCrdt : null;
+            if (Crdt && typeof Crdt.attachCrdtBinding === "function") {
+                textSyncMode = "crdt";
+            } else {
+                console.warn("yjscollab: textSync \"crdt\" requested but richtexteditor/plugins/crdt-engine.js is not loaded — falling back to legacy snapshot mode.");
+                textSyncMode = "legacy";
+                textMap = doc.getText(config.collabTextName || "richtextbox.body");
+            }
+        } else if (requestedTextSync === true) {
+            textSyncMode = "legacy";
+            textMap = doc.getText(config.collabTextName || "richtextbox.body");
+        } else {
+            textSyncMode = "off";
+        }
 
         session = {
             doc: doc,
@@ -80,7 +104,9 @@ function RTE_Plugin_YjsCollab() {
             awareness: provider.awareness,
             ledgerMap: ledgerMap,
             textMap: textMap,
-            textSyncEnabled: textSyncEnabled,
+            textSyncEnabled: textSyncMode !== "off",
+            textSyncMode: textSyncMode,
+            crdtBinding: crdtBinding,
             user: user,
             cleanup: []
         };
@@ -104,8 +130,30 @@ function RTE_Plugin_YjsCollab() {
             seedLedgerFromRemote();
         }
 
-        // Bind shared Y.Text <-> editor HTML (opt-in; MVP).
-        if (session.textSyncEnabled && session.textMap) {
+        // Wire text sync per the requested mode. For "crdt" the engine
+        // owns Y.XmlFragment ↔ DOM mirroring + selection preservation;
+        // we retain awareness, presence panel, remote-cursor overlay,
+        // and the review ledger bridge.
+        if (session.textSyncMode === "crdt") {
+            try {
+                session.crdtBinding = window.RichTextEditorCrdt.attachCrdtBinding({
+                    editable: editor.getEditable(),
+                    ydoc: doc,
+                    provider: provider,
+                    awareness: provider.awareness,
+                    fragmentName: options.fragmentName || "default"
+                });
+                session.cleanup.push(function () {
+                    try { session.crdtBinding && session.crdtBinding.dispose(); }
+                    catch (ignore) { }
+                });
+            } catch (err) {
+                console.warn("yjscollab: CRDT engine attach failed; falling back to legacy mode.", err);
+                session.textSyncMode = "legacy";
+                session.textMap = doc.getText(config.collabTextName || "richtextbox.body");
+                wireTextSync();
+            }
+        } else if (session.textSyncMode === "legacy" && session.textMap) {
             wireTextSync();
         }
 

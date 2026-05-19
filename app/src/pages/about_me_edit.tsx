@@ -67,14 +67,10 @@ export default function AboutMeEdit() {
             return true;
         };
 
-        const interval = setInterval(() => {
-            const initialized = tryInit();
-            setWysiwygLoaded(initialized);
-            if (initialized) clearInterval(interval);
-        }, 200);
+        const initialized = tryInit();
+		setLoaded(initialized);
 
         return () => {
-            clearInterval(interval);
             editorRefInstance.current?.detachEvent('change', onChange);
         }
     }, [aboutMeData]);

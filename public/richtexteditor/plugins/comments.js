@@ -1,7 +1,7 @@
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 if (!RTE_DefaultConfig.svgCode_commentadd) {
-    RTE_DefaultConfig.svgCode_commentadd = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-7l-4 4v-4H4a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>';
+    RTE_DefaultConfig.svgCode_commentadd = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-7l-4 4v-4H4a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>';
 }
 
 RTE_DefaultConfig.plugin_comments = RTE_Plugin_Comments;
@@ -582,5 +582,29 @@ function RTE_Plugin_Comments() {
             ].join("\n");
             editdoc.head.appendChild(iStyle);
         }
+    }
+
+    // Block-anchored comments: img, table, figure, video, audio, iframe, embed, object, hr, svg.
+    function resolveCommentTarget(range, editdoc) {
+        if (!range) return null;
+        var container = range.commonAncestorContainer;
+        var el = container && container.nodeType === 1 ? container : (container && container.parentNode);
+        if (!el) return null;
+        // If selection collapses on/inside an embedded block, anchor to that element instead of a text range.
+        var block = el.closest && el.closest("img,table,figure,video,audio,iframe,embed,object,hr,svg");
+        if (!block && el.querySelector) {
+            block = el.querySelector("img,table,figure,video,audio,iframe,embed,object,hr,svg");
+        }
+        if (block) {
+            block.setAttribute("data-rte-comment-anchor", "element");
+            return { kind: "element", element: block };
+        }
+        return { kind: "range", range: range };
+    }
+
+    function isElementAnchoredComment(el) {
+        if (!el || el.nodeType !== 1 || !el.getAttribute) return false;
+        if (el.getAttribute("data-rte-comment-anchor") === "element") return true;
+        return false;
     }
 }

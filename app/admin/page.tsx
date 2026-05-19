@@ -15,7 +15,7 @@ export default function Dashboard() {
 	useEffect(() => {
 		if (!loading && !user) {
 			setLoaded(true);
-			router.push('/login');
+			//router.push('/login');
 		}
 	}, [user, loading]);
 
@@ -32,13 +32,8 @@ export default function Dashboard() {
 			return true;
 		};
 
-		const interval = setInterval(() => {
-			const initialized = tryInit();
-			setLoaded(initialized);
-			if (initialized) clearInterval(interval);
-		}, 200);
-
-		return () => clearInterval(interval);
+		const initialized = tryInit();
+		setLoaded(initialized);
 	}, []);
 
 	return (

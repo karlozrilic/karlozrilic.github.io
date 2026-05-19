@@ -162,11 +162,10 @@ function RTE_Plugin_InsertGallery() {
         };
 
         var browser = append(dialoginner, "div", "", "rte-gallery-browser");
+        // The outer dialog frame already supplies a title bar + close button via
+        // __UI_CreateDialogFrame, so we only render a short subtitle here (no
+        // duplicate "Image gallery" heading underneath the frame title).
         var header = append(browser, "div", "", "rte-dialog-browser-header");
-        var kicker = append(header, "div", "", "rte-dialog-browser-kicker");
-        kicker.innerText = "Media Library";
-        var title = append(header, "div", "", "rte-dialog-browser-title");
-        title.innerText = "Image gallery";
         var copy = append(header, "div", "", "rte-dialog-browser-copy");
         copy.innerText = "Browse uploaded assets, filter by name, and insert the selected image into the editor.";
 

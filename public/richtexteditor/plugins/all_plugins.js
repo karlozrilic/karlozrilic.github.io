@@ -1,17 +1,468 @@
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
+RTE_DefaultConfig.plugin_accessibilitychecker = RTE_Plugin_AccessibilityChecker;
+
+function RTE_Plugin_AccessibilityChecker() {
+    var obj = this;
+    var config;
+    var editor;
+    var shell = null;
+    var panel = null;
+    var list = null;
+    var empty = null;
+    var detail = null;
+    var refreshTimer = 0;
+    var lastResult = null;
+    var selectedIssueIndex = -1;
+
+    obj.PluginName = "AccessibilityChecker";
+
+    obj.InitConfig = function (argconfig) {
+        config = argconfig;
+        if (config.accessibilityCheckerEnabled === false) return;
+
+        if (typeof config.accessibilityCheckerAutoOpen !== "boolean") config.accessibilityCheckerAutoOpen = false;
+        config.accessibilityCheckerTitle = config.accessibilityCheckerTitle || "Accessibility";
+        config.accessibilityCheckerHint = config.accessibilityCheckerHint || "Review heading structure, image alt text, and table headers without leaving the editor.";
+        config.accessibilityCheckerEmptyText = config.accessibilityCheckerEmptyText || "No accessibility issues found in the current document.";
+
+        appendToolbarCommand("toolbar_default", "#{accessibilitychecker}");
+        appendToolbarCommand("toolbar_full", "#{accessibilitychecker}");
+    };
+
+    obj.InitEditor = function (argeditor) {
+        editor = argeditor;
+        if (config.accessibilityCheckerEnabled === false) return;
+
+        editor.accessibilityChecker = {
+            close: function () { closePanel(); },
+            getIssues: function () { return lastResult ? lastResult.issues.slice() : []; },
+            open: function () { openPanel(); },
+            refresh: function () { return runAudit(); },
+            repair: function (issueIndex, options) { return repairIssue(issueIndex, options); },
+            run: function () { return runAudit(); },
+            toggle: function () { togglePanel(); }
+        };
+
+        injectStyles();
+
+        editor.toolbarFactoryMap = editor.toolbarFactoryMap || {};
+        editor.toolbarFactoryMap["accessibilitychecker"] = function (cmd) {
+            return editor.createToolbarButton(cmd);
+        };
+
+        editor.attachEvent("exec_command_accessibilitychecker", function (state) {
+            state.returnValue = true;
+            state.stopBubble = true;
+            togglePanel();
+        });
+        editor.attachEvent("change", function () {
+            scheduleRefresh();
+        });
+
+        ensureShell();
+        runAudit();
+        if (config.accessibilityCheckerAutoOpen) openPanel();
+    };
+
+    function appendToolbarCommand(toolbar, item) {
+        if (!config[toolbar]) return;
+        if (config[toolbar].indexOf(item) !== -1) return;
+        config[toolbar] = config[toolbar] + item;
+    }
+
+    function injectStyles() {
+        var hostDoc = config.container.ownerDocument;
+        if (hostDoc.getElementById("rte-accessibility-checker-style")) return;
+        var style = hostDoc.createElement("style");
+        style.id = "rte-accessibility-checker-style";
+        style.innerHTML = [
+            ".rte-a11y-shell{display:flex;align-items:stretch;gap:12px;}",
+            ".rte-a11y-shell>.rte-a11y-host{flex:1 1 auto;min-width:0;}",
+            ".rte-a11y-panel{display:none;flex:0 0 320px;min-width:280px;max-width:360px;border:1px solid #dbe4f0;border-radius:18px;background:linear-gradient(180deg,#fbfdff 0%,#f5f9ff 100%);box-shadow:0 18px 40px rgba(15,23,42,.08);overflow:hidden;}",
+            ".rte-a11y-shell.is-open>.rte-a11y-panel{display:flex;flex-direction:column;}",
+            ".rte-a11y-header{padding:16px 18px 10px 18px;border-bottom:1px solid rgba(148,163,184,.18);}",
+            ".rte-a11y-kicker{font-size:11px;line-height:1.3;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:700;}",
+            ".rte-a11y-title{margin-top:4px;font-size:18px;line-height:1.2;font-weight:700;color:#0f172a;}",
+            ".rte-a11y-copy{margin-top:6px;font-size:12px;line-height:1.5;color:#475569;}",
+            ".rte-a11y-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid rgba(148,163,184,.18);gap:12px;}",
+            ".rte-a11y-count{font-size:12px;color:#64748b;}",
+            ".rte-a11y-actions{display:flex;align-items:center;gap:10px;}",
+            ".rte-a11y-link{appearance:none;border:0;background:transparent;color:#2563eb;cursor:pointer;font-size:12px;font-weight:600;padding:0;}",
+            ".rte-a11y-body{padding:10px;overflow:auto;min-height:160px;max-height:560px;display:flex;flex-direction:column;gap:12px;}",
+            ".rte-a11y-list{display:flex;flex-direction:column;gap:8px;}",
+            ".rte-a11y-item{appearance:none;width:100%;text-align:left;border:1px solid rgba(148,163,184,.22);background:#fff;cursor:pointer;border-radius:14px;padding:12px;}",
+            ".rte-a11y-item.is-active{border-color:rgba(37,99,235,.4);box-shadow:0 0 0 2px rgba(37,99,235,.1);}",
+            ".rte-a11y-item-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}",
+            ".rte-a11y-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:10px;line-height:1;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}",
+            ".rte-a11y-badge-warning{background:#fef3c7;color:#92400e;}",
+            ".rte-a11y-badge-error{background:#fee2e2;color:#991b1b;}",
+            ".rte-a11y-code{font-size:11px;color:#64748b;font-family:Consolas,monospace;}",
+            ".rte-a11y-message{margin-top:8px;font-size:13px;line-height:1.5;color:#0f172a;}",
+            ".rte-a11y-detail{border:1px solid rgba(148,163,184,.22);background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;}",
+            ".rte-a11y-detail-title{font-size:13px;font-weight:700;color:#0f172a;}",
+            ".rte-a11y-detail-copy{font-size:12px;line-height:1.5;color:#475569;}",
+            ".rte-a11y-field{display:flex;flex-direction:column;gap:6px;}",
+            ".rte-a11y-label{font-size:11px;line-height:1.3;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:700;}",
+            ".rte-a11y-input{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:9px 10px;font-size:13px;line-height:1.4;box-sizing:border-box;}",
+            ".rte-a11y-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}",
+            ".rte-a11y-button{appearance:none;border:0;border-radius:10px;background:#2563eb;color:#fff;padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer;}",
+            ".rte-a11y-button-secondary{background:#e2e8f0;color:#0f172a;}",
+            ".rte-a11y-empty{padding:18px 14px;border-radius:14px;background:rgba(255,255,255,.85);color:#475569;font-size:13px;line-height:1.6;border:1px dashed rgba(148,163,184,.4);}",
+            "@media (max-width: 1100px){.rte-a11y-shell{display:block;}.rte-a11y-panel{margin-top:12px;max-width:none;width:100%;}.rte-a11y-body{max-height:360px;}}"
+        ].join("");
+        hostDoc.head.appendChild(style);
+    }
+
+    function ensureShell() {
+        if (shell) return shell;
+        var container = config.container;
+        var hostDoc = container.ownerDocument;
+        shell = hostDoc.createElement("div");
+        shell.className = "rte-a11y-shell";
+
+        var host = hostDoc.createElement("div");
+        host.className = "rte-a11y-host";
+
+        var parent = container.parentNode;
+        parent.insertBefore(shell, container);
+        shell.appendChild(host);
+        host.appendChild(container);
+
+        panel = hostDoc.createElement("aside");
+        panel.className = "rte-a11y-panel";
+        panel.setAttribute("aria-label", config.accessibilityCheckerTitle);
+
+        var header = hostDoc.createElement("div");
+        header.className = "rte-a11y-header";
+        header.innerHTML = '<div class="rte-a11y-kicker">Accessibility</div><div class="rte-a11y-title"></div><div class="rte-a11y-copy"></div>';
+        header.querySelector(".rte-a11y-title").innerText = config.accessibilityCheckerTitle;
+        header.querySelector(".rte-a11y-copy").innerText = config.accessibilityCheckerHint;
+
+        var toolbar = hostDoc.createElement("div");
+        toolbar.className = "rte-a11y-toolbar";
+        toolbar.innerHTML = '<div class="rte-a11y-count" data-rte-a11y-count="1"></div><div class="rte-a11y-actions"><button type="button" class="rte-a11y-link" data-rte-a11y-refresh="1">Refresh</button><button type="button" class="rte-a11y-link" data-rte-a11y-close="1">Hide</button></div>';
+        toolbar.querySelector("[data-rte-a11y-refresh]").onclick = function () { runAudit(); };
+        toolbar.querySelector("[data-rte-a11y-close]").onclick = function () { closePanel(); };
+
+        var body = hostDoc.createElement("div");
+        body.className = "rte-a11y-body";
+        list = hostDoc.createElement("div");
+        list.className = "rte-a11y-list";
+        empty = hostDoc.createElement("div");
+        empty.className = "rte-a11y-empty";
+        empty.innerText = config.accessibilityCheckerEmptyText;
+        detail = hostDoc.createElement("div");
+        detail.className = "rte-a11y-detail";
+        body.appendChild(list);
+        body.appendChild(empty);
+        body.appendChild(detail);
+
+        panel.appendChild(header);
+        panel.appendChild(toolbar);
+        panel.appendChild(body);
+        shell.appendChild(panel);
+        return shell;
+    }
+
+    function togglePanel() {
+        if (shell && shell.classList.contains("is-open")) closePanel();
+        else openPanel();
+    }
+
+    function openPanel() {
+        ensureShell();
+        shell.classList.add("is-open");
+        renderPanel();
+    }
+
+    function closePanel() {
+        if (!shell) return;
+        shell.classList.remove("is-open");
+    }
+
+    function scheduleRefresh() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(function () {
+            runAudit();
+        }, 120);
+    }
+
+    function runAudit() {
+        ensureShell();
+        var ctor = window.RichTextEditor;
+        var documentModel = editor.getJSON ? editor.getJSON() : null;
+        lastResult = ctor && typeof ctor.auditAccessibility === "function"
+            ? ctor.auditAccessibility(documentModel)
+            : { document: documentModel, issues: [], valid: true };
+        if (!lastResult.issues.length) selectedIssueIndex = -1;
+        else if (selectedIssueIndex < 0 || selectedIssueIndex >= lastResult.issues.length) selectedIssueIndex = 0;
+        renderPanel();
+        return lastResult;
+    }
+
+    function repairIssue(issueIndex, options) {
+        if (!lastResult || !lastResult.issues || !lastResult.issues[issueIndex]) return runAudit();
+        var ctor = window.RichTextEditor;
+        if (!ctor || typeof ctor.repairAccessibilityIssue !== "function") return runAudit();
+        var nextDocument = ctor.repairAccessibilityIssue(editor.getJSON(), lastResult.issues[issueIndex], options || {});
+        editor.setJSON(nextDocument);
+        selectedIssueIndex = issueIndex;
+        return runAudit();
+    }
+
+    function focusIssue(issue) {
+        if (!issue) return;
+        var editable = editor.getEditable ? editor.getEditable() : null;
+        if (!editable) return;
+        var match = /^content\[(\d+)\]/.exec(issue.path || "");
+        if (!match) return;
+        var targetIndex = parseInt(match[1], 10);
+        var nodes = [];
+        for (var index = 0; index < editable.childNodes.length; index++) {
+            if (editable.childNodes[index] && editable.childNodes[index].nodeType === 1) {
+                nodes.push(editable.childNodes[index]);
+            }
+        }
+        var target = nodes[targetIndex];
+        if (target && typeof target.scrollIntoView === "function") {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        editor.focus();
+    }
+
+    function renderPanel() {
+        ensureShell();
+        var issues = lastResult && lastResult.issues ? lastResult.issues : [];
+        while (list.firstChild) list.removeChild(list.firstChild);
+
+        var count = panel.querySelector("[data-rte-a11y-count]");
+        if (count) {
+            count.innerText = issues.length
+                ? (issues.length + " issue" + (issues.length === 1 ? "" : "s") + " to review")
+                : "Ready to publish";
+        }
+
+        empty.style.display = issues.length ? "none" : "block";
+
+        for (var index = 0; index < issues.length; index++) {
+            (function (issue, issueIndex) {
+                var button = panel.ownerDocument.createElement("button");
+                button.type = "button";
+                button.className = "rte-a11y-item" + (issueIndex === selectedIssueIndex ? " is-active" : "");
+                button.innerHTML =
+                    '<div class="rte-a11y-item-top">' +
+                    '<span class="rte-a11y-badge rte-a11y-badge-' + issue.severity + '">' + issue.severity + '</span>' +
+                    '<span class="rte-a11y-code">' + issue.code + '</span>' +
+                    "</div>" +
+                    '<div class="rte-a11y-message"></div>';
+                button.querySelector(".rte-a11y-message").innerText = issue.message;
+                button.onclick = function () {
+                    selectedIssueIndex = issueIndex;
+                    focusIssue(issue);
+                    renderPanel();
+                };
+                list.appendChild(button);
+            })(issues[index], index);
+        }
+
+        renderDetail();
+    }
+
+    function renderDetail() {
+        while (detail.firstChild) detail.removeChild(detail.firstChild);
+
+        var issues = lastResult && lastResult.issues ? lastResult.issues : [];
+        if (!issues.length || selectedIssueIndex < 0 || !issues[selectedIssueIndex]) {
+            detail.innerHTML = '<div class="rte-a11y-detail-title">No fixes pending</div><div class="rte-a11y-detail-copy">Run the checker again after major content changes to keep headings, image descriptions, and tables in shape.</div>';
+            return;
+        }
+
+        var issue = issues[selectedIssueIndex];
+        var title = detail.ownerDocument.createElement("div");
+        title.className = "rte-a11y-detail-title";
+        title.innerText = issue.code;
+        var copy = detail.ownerDocument.createElement("div");
+        copy.className = "rte-a11y-detail-copy";
+        copy.innerText = issue.message;
+        detail.appendChild(title);
+        detail.appendChild(copy);
+
+        if (issue.code === "image-missing-alt") {
+            renderTextRepair("Alt text", "Describe the image for screen-reader users.", function (value) {
+                repairIssue(selectedIssueIndex, { altText: value });
+            });
+            return;
+        }
+
+        if (issue.code === "heading-empty") {
+            renderTextRepair("Heading text", "Add a concise heading label before publishing.", function (value) {
+                repairIssue(selectedIssueIndex, { headingText: value });
+            });
+            return;
+        }
+
+        if (issue.code === "heading-level-skip") {
+            var suggestedLevel = suggestHeadingLevel(issue);
+            var row = detail.ownerDocument.createElement("div");
+            row.className = "rte-a11y-row";
+            var normalize = detail.ownerDocument.createElement("button");
+            normalize.type = "button";
+            normalize.className = "rte-a11y-button";
+            normalize.innerText = "Normalize to H" + suggestedLevel;
+            normalize.onclick = function () {
+                repairIssue(selectedIssueIndex, { targetLevel: suggestedLevel });
+            };
+            var focus = detail.ownerDocument.createElement("button");
+            focus.type = "button";
+            focus.className = "rte-a11y-button rte-a11y-button-secondary";
+            focus.innerText = "Focus issue";
+            focus.onclick = function () { focusIssue(issue); };
+            row.appendChild(normalize);
+            row.appendChild(focus);
+            detail.appendChild(row);
+            return;
+        }
+
+        if (issue.code === "table-missing-header") {
+            var actionRow = detail.ownerDocument.createElement("div");
+            actionRow.className = "rte-a11y-row";
+            var promote = detail.ownerDocument.createElement("button");
+            promote.type = "button";
+            promote.className = "rte-a11y-button";
+            promote.innerText = "Promote first row to headers";
+            promote.onclick = function () {
+                repairIssue(selectedIssueIndex, {});
+            };
+            var review = detail.ownerDocument.createElement("button");
+            review.type = "button";
+            review.className = "rte-a11y-button rte-a11y-button-secondary";
+            review.innerText = "Focus issue";
+            review.onclick = function () { focusIssue(issue); };
+            actionRow.appendChild(promote);
+            actionRow.appendChild(review);
+            detail.appendChild(actionRow);
+            return;
+        }
+
+        detail.innerHTML += '<div class="rte-a11y-detail-copy">This issue is visible here, but does not have an automatic repair action yet.</div>';
+    }
+
+    function renderTextRepair(labelText, hintText, apply) {
+        var field = detail.ownerDocument.createElement("div");
+        field.className = "rte-a11y-field";
+        var label = detail.ownerDocument.createElement("div");
+        label.className = "rte-a11y-label";
+        label.innerText = labelText;
+        var input = detail.ownerDocument.createElement("input");
+        input.type = "text";
+        input.className = "rte-a11y-input";
+        input.placeholder = hintText;
+        var row = detail.ownerDocument.createElement("div");
+        row.className = "rte-a11y-row";
+        var button = detail.ownerDocument.createElement("button");
+        button.type = "button";
+        button.className = "rte-a11y-button";
+        button.innerText = "Apply fix";
+        button.onclick = function () {
+            var value = String(input.value || "").replace(/^\s+|\s+$/g, "");
+            if (!value) return;
+            apply(value);
+        };
+        var focus = detail.ownerDocument.createElement("button");
+        focus.type = "button";
+        focus.className = "rte-a11y-button rte-a11y-button-secondary";
+        focus.innerText = "Focus issue";
+        focus.onclick = function () {
+            var issues = lastResult && lastResult.issues ? lastResult.issues : [];
+            if (issues[selectedIssueIndex]) focusIssue(issues[selectedIssueIndex]);
+        };
+        row.appendChild(button);
+        row.appendChild(focus);
+        field.appendChild(label);
+        field.appendChild(input);
+        detail.appendChild(field);
+        detail.appendChild(row);
+    }
+
+    function suggestHeadingLevel(issue) {
+        var path = (issue && issue.path ? issue.path : "").replace(/\.attrs\.level$/, "");
+        var documentModel = editor.getJSON ? editor.getJSON() : null;
+        if (!documentModel || !documentModel.content) return 2;
+        var lastHeadingLevel = 0;
+
+        function visit(node, nodePath) {
+            if (!node || typeof node.type !== "string") return false;
+            if (nodePath === path) return true;
+            if (node.type === "heading" && node.attrs && typeof node.attrs.level === "number") {
+                lastHeadingLevel = node.attrs.level;
+            }
+            if (!node.content || !node.content.length) return false;
+            for (var index = 0; index < node.content.length; index++) {
+                if (visit(node.content[index], nodePath + ".content[" + index + "]")) return true;
+            }
+            return false;
+        }
+
+        for (var rootIndex = 0; rootIndex < documentModel.content.length; rootIndex++) {
+            if (visit(documentModel.content[rootIndex], "content[" + rootIndex + "]")) break;
+        }
+
+        return Math.max(1, Math.min(6, (lastHeadingLevel || 1) + (lastHeadingLevel ? 1 : 0)));
+    }
+}
+
+if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
+
+// Auto-inject aitoolkit.css if the host page didn't link it. Without
+// this stylesheet the inline SVG icons in the AI menu / chat / review
+// panels expand to fill their container (the SVGs carry only viewBox,
+// no width/height attrs). Resolves the CSS href as a sibling of this
+// script's own <script src>. Opt out via
+// `RTE_DefaultConfig.aitoolkit_skip_auto_css = true`.
+(function autoInjectAiToolkitCss() {
+    if (typeof document === "undefined") return;
+    if (window.RTE_DefaultConfig && window.RTE_DefaultConfig.aitoolkit_skip_auto_css) return;
+    var existing = document.querySelectorAll("link[rel=stylesheet]");
+    for (var i = 0; i < existing.length; i++) {
+        var href = existing[i].getAttribute("href") || "";
+        if (/(?:^|\/)aitoolkit\.css(?:\?.*)?$/i.test(href)) return;
+    }
+    // Locate our own script tag (aitoolkit.js or all_plugins.js) so we
+    // can resolve aitoolkit.css next to it. Matches a custom mount path.
+    var ourScript = null;
+    var scripts = document.getElementsByTagName("script");
+    for (var j = scripts.length - 1; j >= 0; j--) {
+        var src = scripts[j].getAttribute("src") || "";
+        if (/(?:^|\/)(?:aitoolkit|all_plugins)\.js(?:\?.*)?$/i.test(src)) {
+            ourScript = scripts[j];
+            break;
+        }
+    }
+    var srcAttr = ourScript ? ourScript.getAttribute("src") : "";
+    var cssHref = srcAttr
+        ? srcAttr.replace(/[^/]+$/, "aitoolkit.css")
+        : (((window.RTE_DefaultConfig && window.RTE_DefaultConfig.url_base) || "/richtexteditor") + "/plugins/aitoolkit.css");
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = cssHref;
+    link.setAttribute("data-rte-auto-injected", "aitoolkit");
+    (document.head || document.documentElement).appendChild(link);
+})();
+
 if (!RTE_DefaultConfig.svgCode_aiassist) {
-    RTE_DefaultConfig.svgCode_aiassist = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5v2.6"/><path d="M8.2 7.1V6.5a3.8 3.8 0 017.6 0v.6"/><rect x="5.5" y="7.1" width="13" height="10.7" rx="3.2"/><circle cx="10" cy="12" r="1"/><circle cx="14" cy="12" r="1"/><path d="M9.2 15.1c.9.8 1.8 1.2 2.8 1.2s1.9-.4 2.8-1.2"/><path d="M8.2 20.3l1.1-2.5"/><path d="M15.8 20.3l-1.1-2.5"/></svg>';
+    RTE_DefaultConfig.svgCode_aiassist = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><defs><linearGradient id="rte-ai-robot-shell" x1="5" y1="6" x2="19" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#1fb6ff"/><stop offset=".52" stop-color="#2563eb"/><stop offset="1" stop-color="#7c3aed"/></linearGradient><linearGradient id="rte-ai-robot-glow" x1="8" y1="10" x2="16" y2="15" gradientUnits="userSpaceOnUse"><stop stop-color="#fef9c3"/><stop offset="1" stop-color="#fde68a"/></linearGradient></defs><path d="M12 2.4v2.4" stroke="#f59e0b" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="2.4" r="1" fill="#fbbf24"/><rect x="5.1" y="6.1" width="13.8" height="11.2" rx="3.4" fill="url(#rte-ai-robot-shell)" stroke="#1e40af" stroke-width="1.2"/><path d="M8.2 6.1V5.8A1.8 1.8 0 0110 4h4a1.8 1.8 0 011.8 1.8v.3" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round"/><rect x="7.7" y="9.2" width="8.6" height="4.8" rx="2.4" fill="#0f172a" opacity=".26"/><circle cx="10" cy="11.6" r="1.15" fill="url(#rte-ai-robot-glow)"/><circle cx="14" cy="11.6" r="1.15" fill="url(#rte-ai-robot-glow)"/><path d="M9.4 14.9c.8.55 1.66.83 2.6.83s1.8-.28 2.6-.83" stroke="#ffffff" stroke-width="1.45" stroke-linecap="round"/><path d="M8.1 19.2l1-2.1M15.9 19.2l-1-2.1" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/><path d="M18.8 6.4l.55-1.25.55 1.25 1.25.55-1.25.55-.55 1.25-.55-1.25-1.25-.55z" fill="#fef08a"/></svg>';
+    RTE_DefaultConfig.svgCode_aiassist = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><defs><linearGradient id="rte-ai-bot-v4-shell" x1="4.2" y1="5.8" x2="19.8" y2="18.4" gradientUnits="userSpaceOnUse"><stop stop-color="#22d3ee"/><stop offset=".52" stop-color="#2563eb"/><stop offset="1" stop-color="#4338ca"/></linearGradient><linearGradient id="rte-ai-bot-v4-visor" x1="7.8" y1="9" x2="16.2" y2="13.8" gradientUnits="userSpaceOnUse"><stop stop-color="#f8fafc"/><stop offset="1" stop-color="#bfdbfe"/></linearGradient></defs><path d="M12 2.6v2.3" stroke="#f59e0b" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="2.6" r=".9" fill="#fbbf24"/><path d="M4.9 12.2h-1a1.4 1.4 0 010-2.8h1M19.1 9.4h1a1.4 1.4 0 010 2.8h-1" stroke="#2563eb" stroke-width="1.25" stroke-linecap="round"/><rect x="5.2" y="5.9" width="13.6" height="12.2" rx="4" fill="url(#rte-ai-bot-v4-shell)" stroke="#1e40af" stroke-width="1.15"/><rect x="7.6" y="8.8" width="8.8" height="5.2" rx="2.6" fill="url(#rte-ai-bot-v4-visor)" opacity=".98"/><circle cx="10.2" cy="11.4" r=".9" fill="#0f172a"/><circle cx="13.8" cy="11.4" r=".9" fill="#0f172a"/><path d="M9.5 15.3c.78.52 1.6.78 2.5.78s1.72-.26 2.5-.78" stroke="#eff6ff" stroke-width="1.35" stroke-linecap="round"/><path d="M7.7 20.2l1.15-2.15M16.3 20.2l-1.15-2.15" stroke="#2563eb" stroke-width="1.45" stroke-linecap="round"/><path d="M18.6 5.1l.45-.95.45.95.95.45-.95.45-.45.95-.45-.95-.95-.45z" fill="#fde68a"/></svg>';
 }
 
 if (!RTE_DefaultConfig.svgCode_aiassist_open_dialog) {
     RTE_DefaultConfig.svgCode_aiassist_open_dialog = RTE_DefaultConfig.svgCode_aiassist;
 }
 if (!RTE_DefaultConfig.svgCode_aiassist_review) {
-    RTE_DefaultConfig.svgCode_aiassist_review = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 6.5h13"/><path d="M5.5 11.5h8"/><path d="M5.5 16.5h6"/><path d="M16.5 14.2l1.8 1.8 3.2-4.2"/></svg>';
+    RTE_DefaultConfig.svgCode_aiassist_review = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 6.5h13"/><path d="M5.5 11.5h8"/><path d="M5.5 16.5h6"/><path d="M16.5 14.2l1.8 1.8 3.2-4.2"/></svg>';
 }
 if (!RTE_DefaultConfig.svgCode_aiassist_chat) {
-    RTE_DefaultConfig.svgCode_aiassist_chat = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2a3 3 0 013 3v.9h1.3a3.2 3.2 0 013.2 3.2v4.8a3.2 3.2 0 01-3.2 3.2H9.9l-3.8 2.8v-2.8H6a3.2 3.2 0 01-3.2-3.2v-4.8A3.2 3.2 0 016 7.1h1V6.2a3 3 0 013-3"/><circle cx="10" cy="12" r="1"/><circle cx="14" cy="12" r="1"/><path d="M8.7 15.2c.9.7 1.9 1 3.3 1 1.3 0 2.4-.3 3.3-1"/></svg>';
+    RTE_DefaultConfig.svgCode_aiassist_chat = RTE_DefaultConfig.svgCode_aiassist;
 }
 if (!RTE_DefaultConfig.svgCode_aiassist_proofread) {
     RTE_DefaultConfig.svgCode_aiassist_proofread = '<svg viewBox="0 0 24 24" fill="none" stroke="#5F6368" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="4.5"/><path d="M14 14l5 5"/><path d="M8.8 10.5l1.2 1.3 2.3-2.5"/></svg>';
@@ -58,22 +509,38 @@ function RTE_Plugin_AIToolkit() {
             { value: "portuguese", label: "Portuguese" },
             { value: "japanese", label: "Japanese" }
         ];
+        // 2026-05-13 (v20260513d): trimmed AI-redundant words from titles.
+        // The menu is opened FROM the AI toolbar button and renders inside
+        // a panel scoped to AI, so "Chat with AI" / "Draft with AI" / "Add
+        // AI note" each spent a word on context the user already has.
+        // "Proofread selection" / "Rewrite selection" similarly trail an
+        // object the icon + Selection-source default already imply. Same
+        // shape Notion AI's slash menu ("Continue writing", "Summarize",
+        // "Improve writing") and Linear's command palette ship — single
+        // verb / verb-object labels that read at a glance. Saves ~6-10px
+        // horizontal per item so the menu can tighten to a narrower frame
+        // in a later pass. Customer overrides via `aiToolkitActions` keep
+        // any legacy long-form labels untouched.
         config.aiToolkitActions = config.aiToolkitActions || [
-            { id: "chat-panel", section: "Chat", icon: "chat", title: "AI Chat", description: "Open a docked AI chat panel for multi-turn document help.", target: "chat-panel" },
-            { id: "open-dialog", section: "Review", icon: "open_dialog", title: "Ask AI", description: "Open the full AI review dialog.", target: "dialog" },
-            { id: "review-panel", section: "Review", icon: "review", title: "AI Review", description: "Open the persistent AI suggestion queue for this editor.", target: "review-panel" },
-            { id: "proofread", section: "Review", icon: "proofread", title: "Proofread", description: "Preview a cleanup of the current selection.", resolverMode: "proofread", target: "selection-preview" },
-            { id: "rewrite", section: "Review", icon: "rewrite", title: "Adjust selection", description: "Rewrite the current selection for clarity.", resolverMode: "rewrite", target: "selection-preview" },
-            { id: "translate", section: "Review", icon: "translate", title: "Translate", description: "Open Ask AI with a target-language translation review flow.", resolverMode: "translate", target: "dialog", autoRun: false },
-            { id: "justify", section: "Review", icon: "justify", title: "Justify edit", description: "Open Ask AI with a rewrite-focused review flow and explanation.", resolverMode: "justify", target: "dialog", autoRun: false },
-            { id: "comment", section: "Insert", icon: "comment", title: "Add AI comment", description: "Insert a comment-style AI note near the selection.", resolverMode: "comment", target: "comment" },
-            { id: "paragraph", section: "Insert", icon: "paragraph", title: "Add new paragraph", description: "Generate a short supporting paragraph below the selection.", resolverMode: "paragraph", target: "insert" }
+            { id: "chat-panel", section: "Start", icon: "chat", title: "Chat", description: "Ask follow-up questions about this document.", target: "chat-panel" },
+            { id: "open-dialog", section: "Start", icon: "open_dialog", title: "Draft", description: "Generate, rewrite, translate, or summarize before applying.", target: "dialog" },
+            { id: "review-panel", section: "Start", icon: "review", title: "Review", description: "Accept or reject prepared AI edits.", target: "review-panel" },
+            { id: "proofread", section: "Quick edit", icon: "proofread", title: "Proofread", description: "Check grammar, spacing, and clarity.", resolverMode: "proofread", target: "selection-preview" },
+            { id: "rewrite", section: "Quick edit", icon: "rewrite", title: "Rewrite", description: "Improve clarity without changing intent.", resolverMode: "rewrite", target: "selection-preview" },
+            { id: "translate", section: "Quick edit", icon: "translate", title: "Translate", description: "Choose a language and preview the result.", resolverMode: "translate", target: "dialog", autoRun: false },
+            { id: "justify", section: "Quick edit", icon: "justify", title: "Explain", description: "Rewrite and show why it changed.", resolverMode: "justify", target: "dialog", autoRun: false },
+            { id: "comment", section: "Insert", icon: "comment", title: "Add note", description: "Insert a short comment near the selection.", resolverMode: "comment", target: "comment" },
+            { id: "paragraph", section: "Insert", icon: "paragraph", title: "Add paragraph", description: "Draft a supporting paragraph below.", resolverMode: "paragraph", target: "insert" }
         ];
+        // 2026-05-09 (v20260509j): single-verb default chip labels matching
+        // the toolbar dropdown idiom — chips render on one line at the
+        // default 390px chat panel width. Customer overrides via
+        // aiToolkitChatPrompts keep their own labels untouched.
         config.aiToolkitChatPrompts = config.aiToolkitChatPrompts || [
             { id: "summarize", label: "Summarize", prompt: "Summarize the current content and suggest the clearest next edit." },
             { id: "proofread", label: "Proofread", prompt: "Proofread the current content and prepare a cleaner version I can review." },
             { id: "translate", label: "Translate", prompt: "Translate the current content into Spanish and prepare a reviewable version." },
-            { id: "headings", label: "Suggest headings", prompt: "Suggest better section titles and subheadings for this content." },
+            { id: "headings", label: "Headings", prompt: "Suggest better section titles and subheadings for this content." },
             { id: "expand", label: "Expand", prompt: "Add a short supporting paragraph that strengthens this content." }
         ];
         config.aiToolkitDialogModes = config.aiToolkitDialogModes || [
@@ -91,15 +558,15 @@ function RTE_Plugin_AIToolkit() {
         config.aiToolkitReviewSyncInterval = config.aiToolkitReviewSyncInterval || 15000;
         config.aiToolkitSuggestionLedgerUrl = config.aiToolkitSuggestionLedgerUrl || "";
         config.aiToolkitReviewLogUrl = config.aiToolkitReviewLogUrl || "";
+        config.aiToolkitAutoToolbarButtons = config.aiToolkitAutoToolbarButtons !== false;
+        config.aiToolkitUiVersion = config.aiToolkitUiVersion || "v20260603b";
 
         appendToolbarCommand("toolbar_default", "#{aiassist}");
         appendToolbarCommand("toolbar_basic", "#{aiassist}");
         appendToolbarCommand("toolbar_full", "#{aiassist}");
         appendToolbarCommand("toolbar_mobile", "#{aiassist}");
 
-        if ((config.controltoolbar_TEXT || "").indexOf("aiassist") === -1) {
-            config.controltoolbar_TEXT = (config.controltoolbar_TEXT || "") + "|{aiassist}";
-        }
+        appendControlToolbarCommand("controltoolbar_TEXT", "|{aiassist}");
 
         config.toolbarfactory_aiassist = function (cmd, suffix, ownerElement) {
             var toolbarEditor = this;
@@ -213,8 +680,30 @@ function RTE_Plugin_AIToolkit() {
             },
             exportDocx: function (options) {
                 return exportDocx(options);
+            },
+            importDocx: function (options) {
+                return importDocx(options);
             }
         };
+
+        if (!editor.__aiChatLiveSyncBound) {
+            editor.__aiChatLiveSyncBound = true;
+            var editable = editor.getEditable ? editor.getEditable() : null;
+            var liveSyncHandler = function () {
+                scheduleOpenChatPanelSync();
+                scheduleOpenDialogSync();
+            };
+            if (editable && editable.addEventListener) {
+                editable.addEventListener("input", liveSyncHandler);
+                editable.addEventListener("keyup", liveSyncHandler);
+                editable.addEventListener("mouseup", liveSyncHandler);
+                editable.addEventListener("focus", liveSyncHandler);
+            }
+            var editableDoc = editable && editable.ownerDocument ? editable.ownerDocument : null;
+            if (editableDoc && editableDoc.addEventListener) {
+                editableDoc.addEventListener("selectionchange", liveSyncHandler);
+            }
+        }
 
         // Shared review ledger — the AI toolkit owns the store, but other plugins
         // (e.g. human Track Changes) add their own entries here so the Review drawer
@@ -364,9 +853,8 @@ function RTE_Plugin_AIToolkit() {
                 }
             }
             else if (action === "review") {
-                activateReviewSuggestion(suggestionId, {
-                    focusPanel: true,
-                    focusAction: getDefaultReviewActionName(findSuggestionById(suggestionId))
+                activateReviewSuggestionWithDefaultActionFocus(suggestionId, {
+                    focusPanel: true
                 });
             }
             else if (action === "previous") {
@@ -511,12 +999,53 @@ function RTE_Plugin_AIToolkit() {
         startRemoteReviewSync();
     };
 
+    var stockToolbarDefinitions = {
+        toolbar_default: "{bold,italic,underline,forecolor,backcolor}|{justifyleft,justifycenter,justifyright,justifyfull}|{insertorderedlist,insertunorderedlist,indent,outdent,insertblockquote,insertemoji}|{aiassist}#{toggleborder,fullscreenenter,fullscreenexit,undo,redo,togglemore}",
+        toolbar_mobile: "{bold,italic,underline|fontname:toggle,fontsize:toggle,menu_paragraphop|forecolor,backcolor}{insertlink,insertemoji,inserttable,insertimage,removeformat}|{aiassist}#{toggleborder,fullscreenenter,fullscreenexit,undo,redo,togglemore}",
+        toolbar_basic: "{bold,italic,underline}|{fontname,fontsize}|{insertlink,insertemoji,insertimage,insertvideo}|removeformat|code#{toggleborder,fullscreenenter,fullscreenexit,undo,redo,togglemore}",
+        toolbar_full: "{bold,italic,underline,forecolor,backcolor}|{justifyleft,justifycenter,justifyright,justifyfull}|{insertorderedlist,insertunorderedlist,indent,outdent}{superscript,subscript}|{insertlink,insertimage,insertvideo,inserttable,insertemoji,find,code,html2pdf}|{aiassist_chat,aiassist_review}|{insertcomment,trackchanges}#{insertmergefield,insertfootnote,inserttoc,insertpagebreak,revisionhistory,newdoc,save,toggleborder,fullscreenenter,fullscreenexit,undo,redo,togglemore}",
+        controltoolbar_TEXT: "removeformat | {bold,italic,underline,forecolor,backcolor}|{fontname:toggle,fontsize:toggle}|{insertlink}"
+    };
+
+    function normalizeToolbarDefinition(value) {
+        return String(value || "").replace(/\s+/g, "");
+    }
+
+    function shouldAutoAppendToolbarCommand(key) {
+        if (config.aiToolkitAutoToolbarButtons === false) {
+            return false;
+        }
+        var current = config[key];
+        if (!current) {
+            return true;
+        }
+        var stock = stockToolbarDefinitions[key];
+        if (!stock) {
+            return true;
+        }
+        return normalizeToolbarDefinition(current) === normalizeToolbarDefinition(stock);
+    }
+
     function appendToolbarCommand(key, token) {
         var current = config[key] || "";
         if (current.indexOf("aiassist") !== -1) {
             return;
         }
+        if (!shouldAutoAppendToolbarCommand(key)) {
+            return;
+        }
         config[key] = current ? current + " " + token : token;
+    }
+
+    function appendControlToolbarCommand(key, token) {
+        var current = config[key] || "";
+        if (current.indexOf("aiassist") !== -1) {
+            return;
+        }
+        if (!shouldAutoAppendToolbarCommand(key)) {
+            return;
+        }
+        config[key] = current ? current + token : token;
     }
 
     function append(parent, tagName, cssText, className, text) {
@@ -538,6 +1067,108 @@ function RTE_Plugin_AIToolkit() {
         var node = append(parent, "div", "", className, text);
         node.setAttribute("aria-hidden", "true");
         return node;
+    }
+
+    function getAiHeroPhotoDataUri() {
+        return "data:image/svg+xml;utf8," + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="Editorial workspace photo">' +
+            '<defs>' +
+            '<linearGradient id="ai-photo-sky" x1="0" y1="0" x2="1" y2="1">' +
+            '<stop offset="0%" stop-color="#e0f2fe"/>' +
+            '<stop offset="52%" stop-color="#bfdbfe"/>' +
+            '<stop offset="100%" stop-color="#ddd6fe"/>' +
+            '</linearGradient>' +
+            '<linearGradient id="ai-photo-desk" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#fef3c7"/>' +
+            '<stop offset="100%" stop-color="#fdba74"/>' +
+            '</linearGradient>' +
+            '<filter id="ai-photo-blur" x="-20%" y="-20%" width="140%" height="140%">' +
+            '<feGaussianBlur stdDeviation="14"/>' +
+            '</filter>' +
+            '</defs>' +
+            '<rect width="320" height="240" rx="28" fill="url(#ai-photo-sky)"/>' +
+            '<circle cx="248" cy="52" r="40" fill="#ffffff" opacity=".55"/>' +
+            '<circle cx="76" cy="44" r="34" fill="#fdf2f8" opacity=".65"/>' +
+            '<path d="M0 174C37 155 68 151 99 162c24 9 47 23 75 17 20-4 31-17 51-23 28-7 54 6 95 18v66H0z" fill="#86efac" opacity=".92"/>' +
+            '<path d="M0 188c34-24 66-27 100-15 32 12 63 26 95 17 23-6 44-24 66-26 22-2 39 7 59 18v48H0z" fill="#60a5fa" opacity=".3"/>' +
+            '<g filter="url(#ai-photo-blur)" opacity=".34">' +
+            '<circle cx="248" cy="154" r="54" fill="#1d4ed8"/>' +
+            '<circle cx="92" cy="134" r="48" fill="#7c3aed"/>' +
+            '</g>' +
+            '<rect x="74" y="72" width="172" height="110" rx="14" fill="#f8fafc" opacity=".95"/>' +
+            '<rect x="88" y="86" width="144" height="14" rx="7" fill="#cbd5e1"/>' +
+            '<rect x="88" y="110" width="118" height="10" rx="5" fill="#dbeafe"/>' +
+            '<rect x="88" y="128" width="128" height="10" rx="5" fill="#dbeafe"/>' +
+            '<rect x="88" y="146" width="82" height="10" rx="5" fill="#e9d5ff"/>' +
+            '<rect x="198" y="138" width="34" height="28" rx="10" fill="url(#ai-photo-desk)"/>' +
+            '<rect x="54" y="183" width="212" height="32" rx="16" fill="#ffffff" opacity=".68"/>' +
+            '</svg>'
+        );
+    }
+
+    // Inline SVG used in the AI Chat empty state and AI Review empty state.
+    // Drawn as a single document with a chat bubble + sparkle stars on top
+    // to evoke "your assistant is ready". Works on both light and dark page
+    // backgrounds because the strokes use currentColor — the parent CSS
+    // controls hue via `color`. ~6 KB so it stays inline rather than being
+    // requested as a separate file.
+    function getAiAssistantIllustrationSvg() {
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" role="img" aria-hidden="true" focusable="false">' +
+            '<defs>' +
+                '<linearGradient id="ai-illus-doc" x1="0" y1="0" x2="0" y2="1">' +
+                    '<stop offset="0%" stop-color="#ffffff"/>' +
+                    '<stop offset="100%" stop-color="#f1f5fb"/>' +
+                '</linearGradient>' +
+                '<linearGradient id="ai-illus-bubble" x1="0" y1="0" x2="1" y2="1">' +
+                    '<stop offset="0%" stop-color="#3b82f6"/>' +
+                    '<stop offset="100%" stop-color="#6366f1"/>' +
+                '</linearGradient>' +
+                '<linearGradient id="ai-illus-sparkle" x1="0" y1="0" x2="0" y2="1">' +
+                    '<stop offset="0%" stop-color="#fbbf24"/>' +
+                    '<stop offset="100%" stop-color="#f59e0b"/>' +
+                '</linearGradient>' +
+            '</defs>' +
+            // soft halo behind everything
+            '<ellipse cx="100" cy="118" rx="68" ry="8" fill="#0f172a" opacity="0.08"/>' +
+            // document with shadow
+            '<rect x="44" y="34" width="92" height="78" rx="10" fill="#cbd5e1" opacity="0.45" transform="translate(2,3)"/>' +
+            '<rect x="44" y="34" width="92" height="78" rx="10" fill="url(#ai-illus-doc)" stroke="#cbd5e1" stroke-width="1"/>' +
+            // document text lines
+            '<rect x="56" y="54" width="60" height="6" rx="3" fill="#dbeafe"/>' +
+            '<rect x="56" y="66" width="68" height="5" rx="2.5" fill="#e2e8f0"/>' +
+            '<rect x="56" y="76" width="52" height="5" rx="2.5" fill="#e2e8f0"/>' +
+            '<rect x="56" y="90" width="44" height="5" rx="2.5" fill="#ede9fe"/>' +
+            // chat bubble peeking out top-right with AI sparkle
+            '<g>' +
+                '<path d="M118 22 H162 a10 10 0 0 1 10 10 v22 a10 10 0 0 1 -10 10 H140 l-9 8 v-8 H118 a10 10 0 0 1 -10 -10 V32 a10 10 0 0 1 10 -10 z" fill="url(#ai-illus-bubble)"/>' +
+                '<circle cx="128" cy="42" r="2.6" fill="#ffffff"/>' +
+                '<circle cx="140" cy="42" r="2.6" fill="#ffffff"/>' +
+                '<circle cx="152" cy="42" r="2.6" fill="#ffffff"/>' +
+            '</g>' +
+            // sparkle stars (4-point)
+            '<g fill="url(#ai-illus-sparkle)">' +
+                '<path d="M36 28 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2 z"/>' +
+                '<path d="M168 88 l1.6 4.8 4.8 1.6 -4.8 1.6 -1.6 4.8 -1.6 -4.8 -4.8 -1.6 4.8 -1.6 z"/>' +
+                '<path d="M30 92 l1.2 3.6 3.6 1.2 -3.6 1.2 -1.2 3.6 -1.2 -3.6 -3.6 -1.2 3.6 -1.2 z"/>' +
+            '</g>' +
+        '</svg>';
+    }
+
+    function appendAiHero(parent, variant) {
+        var hero = append(parent, "div", "", "rte-ai-hero" + (variant ? " is-" + variant : ""));
+        var media = append(hero, "div", "", "rte-ai-hero-media");
+        var image = append(media, "img", "", "rte-ai-hero-image");
+        image.alt = "Styled editorial workspace preview";
+        image.src = getAiHeroPhotoDataUri();
+        image.loading = "eager";
+        image.decoding = "async";
+        var body = append(hero, "div", "", "rte-ai-hero-body");
+        append(body, "div", "", "rte-ai-hero-kicker", variant === "dialog" ? "Guided AI flow" : "Beautiful drafting");
+        append(body, "div", "", "rte-ai-hero-title", variant === "dialog" ? "Review the change before it lands" : "Shape the document with a calmer AI workspace");
+        append(body, "div", "", "rte-ai-hero-copy", variant === "dialog"
+            ? "Load source text, compare the result, and apply only the version that improves the draft."
+            : "Keep context visible, ask for help in smaller steps, and make each suggestion feel intentional.");
+        return hero;
     }
 
     function appendReviewControlGroup(parent, className, text) {
@@ -787,6 +1418,75 @@ function RTE_Plugin_AIToolkit() {
         });
     }
 
+    /**
+     * Import a .docx file and apply its HTML into the editor.
+     *
+     *   editor.aiToolkit.importDocx({
+     *     url: "/richtextbox/import/docx",      // optional server endpoint
+     *     file: fileObject,                     // optional File / Blob
+     *     mode: "replace" | "insert",           // replace = overwrite document; insert = at caret
+     *     onError: function (err) { ... }
+     *   });
+     *
+     * If `file` is omitted, prompts the user with a file picker. Resolves with
+     * the inserted HTML (or undefined if cancelled).
+     */
+    function importDocx(options) {
+        options = options || {};
+        var url = options.url || "/richtextbox/import/docx";
+        var mode = options.mode === "insert" ? "insert" : "replace";
+
+        function extractImportHtml(payload) {
+            if (!payload) return "";
+            return payload.html || payload.content || "";
+        }
+
+        function postFile(file) {
+            if (typeof fetch !== "function" || typeof FormData !== "function") {
+                var err = new Error("importDocx requires fetch + FormData support.");
+                if (options.onError) options.onError(err);
+                return Promise.reject(err);
+            }
+            var fd = new FormData();
+            fd.append("file", file, file.name || "document.docx");
+            fd.append("mode", mode);
+            return fetch(url, { method: "POST", body: fd, credentials: "same-origin" }).then(function (res) {
+                if (!res.ok) throw new Error("importDocx failed: HTTP " + res.status);
+                return res.json().then(extractImportHtml);
+            }).then(function (html) {
+                if (!html) return undefined;
+                if (mode === "insert" && editor && editor.insertHTML) {
+                    editor.insertHTML(html);
+                } else if (editor && editor.setHTMLCode) {
+                    editor.setHTMLCode(html);
+                }
+                return html;
+            }).catch(function (err) {
+                if (options.onError) options.onError(err);
+                throw err;
+            });
+        }
+
+        if (options.file) return postFile(options.file);
+
+        // No file provided — prompt user.
+        return new Promise(function (resolve, reject) {
+            if (typeof document === "undefined") return reject(new Error("importDocx: no document"));
+            var input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            input.style.display = "none";
+            input.onchange = function () {
+                var f = input.files && input.files[0];
+                document.body.removeChild(input);
+                if (!f) return resolve(undefined);
+                postFile(f).then(resolve, reject);
+            };
+            document.body.appendChild(input);
+            input.click();
+        });
+    }
+
     function normalizeText(text) {
         return (text || "")
             .replace(/\r\n/g, "\n")
@@ -967,6 +1667,31 @@ function RTE_Plugin_AIToolkit() {
         if (scopeLabel) {
             parts.push(scopeLabel);
         }
+        if (options.glanceLabels && options.glanceLabels.length) {
+            for (var glanceIndex = 0; glanceIndex < options.glanceLabels.length; glanceIndex++) {
+                if (options.glanceLabels[glanceIndex]) {
+                    parts.push(options.glanceLabels[glanceIndex]);
+                }
+            }
+        }
+        if (options.glanceDetail) {
+            parts.push(options.glanceDetail);
+        }
+        if (options.compareLabel) {
+            parts.push(options.compareLabel);
+        }
+        if (options.reasonText) {
+            parts.push("Why this suggestion: " + options.reasonText);
+        }
+        if (options.queueRoleLabel && !options.isPreviewTarget) {
+            parts.push(options.queueRoleLabel);
+        }
+        if (options.queueRoleDetail && !options.isPreviewTarget) {
+            parts.push(options.queueRoleDetail);
+        }
+        if (options.focusLabel && !options.isPreviewTarget) {
+            parts.push("Enter focuses " + options.focusLabel);
+        }
         if (options.positionLabel) {
             parts.push(options.positionLabel);
         }
@@ -994,8 +1719,12 @@ function RTE_Plugin_AIToolkit() {
         return parts.join(". ");
     }
 
-    function buildSuggestionSourceLabel(type, snapshot, language) {
-        var scopeLabel = snapshot && snapshot.hasSelection ? "Selection" : "Document";
+    function buildSuggestionSourceLabel(type, snapshot, language, scope) {
+        var scopeLabel = scope === "selection"
+            ? "Selection"
+            : (scope === "document"
+                ? "Document"
+                : (snapshot && snapshot.hasSelection ? "Selection" : "Document"));
         var typeLabel = getSuggestionTypeLabel(type);
         if (getSuggestionTypeValue(type) === "translate" && language) {
             return typeLabel + " - " + scopeLabel + " - " + getTranslateLanguageLabel(language);
@@ -1120,8 +1849,8 @@ function RTE_Plugin_AIToolkit() {
         var source = normalizeText(request.source || request.selectionText || request.documentText || "");
         var promptLower = prompt.toLowerCase();
         var requestedLanguage = request.language || extractRequestedLanguage(prompt);
-        var hasSelection = !!(request.snapshot && request.snapshot.hasSelection);
-        var previewTarget = hasSelection ? "selection-preview" : "document";
+        var usesSelectionScope = request.scope === "selection";
+        var previewTarget = usesSelectionScope ? "selection-preview" : "document";
         var editReason = "";
         var resultText = "";
         var target = previewTarget;
@@ -1181,7 +1910,7 @@ function RTE_Plugin_AIToolkit() {
         if (/\b(summarize|summary|recap)\b|\bexecutive summary\b/.test(promptLower)) {
             resultText = buildDemoResult("summarize", source);
             editReason = "This compresses the current content into a shorter, clearer version that is easier to scan or reuse.";
-            target = hasSelection ? "selection-preview" : "document";
+            target = usesSelectionScope ? "selection-preview" : "document";
             return {
                 message: "I prepared a condensed version of the current content for review.",
                 result: resultText,
@@ -1332,7 +2061,7 @@ function RTE_Plugin_AIToolkit() {
         var meta = {
             mode: request && request.mode ? request.mode : (action && action.resolverMode ? action.resolverMode : ""),
             language: request && request.language ? request.language : "",
-            sourceLabel: buildSuggestionSourceLabel(request && request.mode ? request.mode : (action && action.resolverMode ? action.resolverMode : ""), request && request.snapshot ? request.snapshot : null, request && request.language ? request.language : "")
+            sourceLabel: buildSuggestionSourceLabel(request && request.mode ? request.mode : (action && action.resolverMode ? action.resolverMode : ""), request && request.snapshot ? request.snapshot : null, request && request.language ? request.language : "", request && request.scope ? request.scope : "")
         };
         switch (fallbackTarget) {
             case "chat-panel":
@@ -1559,6 +2288,67 @@ function RTE_Plugin_AIToolkit() {
         return getOperationPlanButtonLabel({ operations: [operation] });
     }
 
+    function getSelectionRequiredPlanButtonLabel(operations) {
+        var list = operations || [];
+        if (!list.length) {
+            return "Select text to continue";
+        }
+        if (list.length > 1) {
+            return "Select text to apply plan";
+        }
+        switch (list[0].type) {
+            case "preview-suggestion":
+                return "Select text to preview";
+            case "replace-selection":
+                return "Select text to apply to selection";
+            default:
+                return "Select text to continue";
+        }
+    }
+
+    function getPlanOperationButtonDetail(operation, actionState) {
+        if (!operation || !operation.type) {
+            return "Run this prepared AI step in the editor.";
+        }
+        switch (operation.type) {
+            case "preview-suggestion":
+                return actionState && actionState.hasSelection
+                    ? "Show the prepared inline diff in the editor before deciding it."
+                    : "Select text to preview this prepared inline diff in the editor.";
+            case "replace-selection":
+                return actionState && actionState.hasSelection
+                    ? "Replace the current selection with this prepared draft."
+                    : "Select text before replacing it with this prepared draft.";
+            case "replace-document":
+                return "Replace the full document with this prepared draft.";
+            case "insert-below":
+                return actionState && actionState.hasSelection
+                    ? "Insert this prepared draft below the current selection."
+                    : "Insert this prepared draft below the current content.";
+            case "add-comment":
+                return "Add this prepared AI comment without rewriting the document body.";
+            default:
+                return "Run this prepared AI step in the editor.";
+        }
+    }
+
+    function syncPlanButtonAccessibility(button, label, detail, unavailableReason) {
+        if (!button) {
+            return;
+        }
+        var parts = [label || "Action"];
+        if (detail) {
+            parts.push(detail);
+        }
+        if (unavailableReason) {
+            parts.push(unavailableReason);
+        }
+        button.setAttribute("aria-label", parts.join(". "));
+        button.title = detail
+            ? (label || "Action") + " - " + detail + (unavailableReason ? " " + unavailableReason : "")
+            : (label || "Action") + (unavailableReason ? " - " + unavailableReason : "");
+    }
+
     function buildResolvedActionFromText(text, target, resolved, request, action) {
         return normalizeResolvedAction({
             operations: [buildLegacyOperation(target, text, resolved, request, action)],
@@ -1593,7 +2383,7 @@ function RTE_Plugin_AIToolkit() {
                 // open-dialog and produce no visible output.
                 var translateTarget = request.action && request.action.target && request.action.target !== "dialog"
                     ? request.action.target
-                    : (request.snapshot && request.snapshot.hasSelection ? "selection-preview" : "document");
+                    : (request.scope === "selection" ? "selection-preview" : "document");
                 return {
                     operations: [
                         buildLegacyOperation(translateTarget, buildDemoResult("translate", request.source, { language: request.language }), { reason: "This prepares a translated " + getTranslateLanguageLabel(request.language || "spanish") + " draft while keeping the original text available for review." }, request, request.action)
@@ -1722,6 +2512,9 @@ function RTE_Plugin_AIToolkit() {
         if (typeof config.aiToolkitResolver === "function") {
             try {
                 return Promise.resolve(config.aiToolkitResolver.call(editor, request)).then(function (resolved) {
+                    if (resolved === null || typeof resolved === "undefined") {
+                        resolved = defaultResolveAction(request);
+                    }
                     return normalizeResolvedAction(resolved, action, request);
                 });
             }
@@ -1769,6 +2562,23 @@ function RTE_Plugin_AIToolkit() {
         var startNode = range.startContainer.nodeType === 3 ? range.startContainer.parentNode : range.startContainer;
         var endNode = range.endContainer.nodeType === 3 ? range.endContainer.parentNode : range.endContainer;
         return !!(startNode && endNode && editable.contains(startNode) && editable.contains(endNode));
+    }
+
+    function areRangesEquivalent(left, right) {
+        if (!left && !right) {
+            return true;
+        }
+        if (!isRangeUsable(left) || !isRangeUsable(right)) {
+            return false;
+        }
+
+        try {
+            return left.compareBoundaryPoints(left.START_TO_START, right) === 0
+                && left.compareBoundaryPoints(left.END_TO_END, right) === 0;
+        }
+        catch (x) {
+            return false;
+        }
     }
 
     function restoreSelection(snapshot, collapseToEnd) {
@@ -3332,6 +4142,9 @@ function RTE_Plugin_AIToolkit() {
             var queueChip = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-queue") : null;
             var transitionChip = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-transition") : null;
             var followupChip = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-followup") : null;
+            var glanceNode = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-glance") : null;
+            var reasonNode = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-reason") : null;
+            var planNode = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-plan") : null;
             var undoChip = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-undo") : null;
             var undoNextChip = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-undo-next") : null;
             var redoChip = wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-redo") : null;
@@ -3360,6 +4173,22 @@ function RTE_Plugin_AIToolkit() {
             var redoInlineHistoryItems = isRedoTarget ? getRedoDecisionHistorySummaries(1) : [];
             var redoInlineNextItem = redoInlineHistoryItems.length ? redoInlineHistoryItems[0] : null;
             var queueFocusLabel = isPreviewTarget ? getReviewFocusActionDisplayLabel(suggestion, getPreferredReviewActionFocus()) : "";
+            var reviewFocusLabel = getReviewFocusActionDisplayLabel(suggestion, getPreferredReviewActionFocus()) || getReviewFocusActionDisplayLabel(suggestion, "");
+            var reviewLabel = isPreviewTarget
+                ? "Open this AI review queue" + (reviewFocusLabel ? " and focus " + reviewFocusLabel : "")
+                : "Open this AI suggestion in review" + (reviewFocusLabel ? " and focus " + reviewFocusLabel : "");
+            var typeFilter = getInlineReviewTypeFilter(suggestionId);
+            var pendingPosition = !isPreviewTarget ? getPendingSuggestionPosition(typeFilter, suggestionId) : { index: 0, total: 0 };
+            var filteredPendingSuggestions = !isPreviewTarget ? getFilteredPendingSuggestions(typeFilter) : [];
+            var queuePositionData = !isPreviewTarget ? buildReviewQueuePositionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion) : null;
+            var queueTransitionData = !isPreviewTarget ? buildReviewQueueTransitionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion) : null;
+            var glanceData = !isPreviewTarget ? buildReviewChangeGlanceData(suggestion) : null;
+            var compareGlanceData = !isPreviewTarget ? buildInlinePreviewCompareGlanceData(glanceData) : null;
+            var reasonText = buildCompletionPreviewReason(suggestion);
+            var previousSuggestionId = !isPreviewTarget ? getPreviousInlineReviewSuggestionId(suggestionId) : "";
+            var nextSuggestionId = !isPreviewTarget ? getNextInlineReviewSuggestionId(suggestionId) : "";
+            var previousLabel = previousSuggestionId ? "Previous AI review item" : "No previous AI review item in the current queue";
+            var nextLabel = nextSuggestionId ? "Next AI review item" : "No next AI review item in the current queue";
             if (editor.__aiActiveSuggestionId && suggestionId === editor.__aiActiveSuggestionId) {
                 wrappers[i].classList.add("is-review-active");
                 wrappers[i].classList.toggle("is-review-preview", isPreviewTarget);
@@ -3383,14 +4212,6 @@ function RTE_Plugin_AIToolkit() {
                         redoInlineContext: redoInlineContext
                     });
                 }
-                var typeFilter = getInlineReviewTypeFilter(suggestionId);
-                var pendingPosition = getPendingSuggestionPosition(typeFilter, suggestionId);
-                var queueTransitionData = !isPreviewTarget ? buildReviewQueueTransitionData(getFilteredPendingSuggestions(typeFilter), editor.__aiActiveSuggestionId, suggestion) : null;
-                var previousSuggestionId = getPreviousInlineReviewSuggestionId(suggestionId);
-                var nextSuggestionId = getNextInlineReviewSuggestionId(suggestionId);
-                var reviewLabel = isPreviewTarget ? "Open this AI review queue" : "Open this AI suggestion in review";
-                var previousLabel = previousSuggestionId ? "Previous AI review item" : "No previous AI review item in the current queue";
-                var nextLabel = nextSuggestionId ? "Next AI review item" : "No next AI review item in the current queue";
                 var acceptActionPresentation = getPendingReviewActionPresentation(suggestion, "accept", typeFilter) || { text: "Accept", label: "Accept this AI change" };
                 var rejectActionPresentation = getPendingReviewActionPresentation(suggestion, "reject", typeFilter) || { text: "Reject", label: "Reject this AI change" };
                 var acceptLabel = acceptActionPresentation.label;
@@ -3600,6 +4421,30 @@ function RTE_Plugin_AIToolkit() {
                     sharedSeenButton = null;
                 }
                 setInlinePreviewActionGroupVisibility(wrappers[i], "recovery", !!(undoInlineContext || (isRedoTarget && redoInlineContext) || sharedUpdateCount));
+                syncInlinePreviewActionSummaryNode(wrappers[i], {
+                    suggestion: suggestion,
+                    isPreviewTarget: isPreviewTarget,
+                    sharedUpdateCount: sharedUpdateCount,
+                    undoInlineContext: undoInlineContext,
+                    redoInlineContext: redoInlineContext,
+                    queueTransitionData: queueTransitionData,
+                    undoInlineSummaryText: undoInlineSummaryText,
+                    redoInlineSummaryText: redoInlineSummaryText
+                });
+                syncInlinePreviewActionGroupHeaders(wrappers[i], {
+                    suggestion: suggestion,
+                    isPreviewTarget: isPreviewTarget,
+                    sharedUpdateCount: sharedUpdateCount,
+                    undoInlineContext: undoInlineContext,
+                    redoInlineContext: redoInlineContext
+                });
+                syncInlinePreviewEnterTargetButtonState(wrappers[i], {
+                    suggestion: suggestion,
+                    isPreviewTarget: isPreviewTarget,
+                    sharedUpdateCount: sharedUpdateCount,
+                    undoInlineContext: undoInlineContext,
+                    redoInlineContext: redoInlineContext
+                });
                 if (pendingPosition.total && pendingPosition.index) {
                     if (!queueChip) {
                         queueChip = document.createElement("span");
@@ -3640,7 +4485,7 @@ function RTE_Plugin_AIToolkit() {
                         }
                     }
                     transitionChip.textContent = queueTransitionData.statusLabel + " - " + queueTransitionData.queueLabel;
-                    transitionChip.setAttribute("aria-label", queueTransitionData.title + ". " + queueTransitionData.detail + " " + queueTransitionData.preview);
+                    transitionChip.setAttribute("aria-label", queueTransitionData.title + ". " + queueTransitionData.detail + " " + getQueueTransitionPreviewSummary(queueTransitionData));
                     if (queueTransitionData.followupTitle) {
                         if (!followupChip) {
                             followupChip = document.createElement("span");
@@ -3773,6 +4618,7 @@ function RTE_Plugin_AIToolkit() {
                     redoInlineContext: redoInlineContext,
                     suggestion: suggestion
                 };
+                var inlineWrapperFocusLabel = getInlineReviewWrapperFocusLabel(inlineShortcutDisplayOptions);
                 shortcutsChip.id = getInlineReviewShortcutDisplayId(wrappers[i]);
                 setInlineReviewShortcutDisplay(shortcutsChip, isPreviewTarget ? "preview" : "wrapper", inlineShortcutDisplayOptions);
                 bindInlineReviewWrapperShortcutFocus(wrappers[i], shortcutsChip, inlineShortcutDisplayOptions);
@@ -3789,12 +4635,23 @@ function RTE_Plugin_AIToolkit() {
                     ? activeInlineNode.getAttribute("data-rte-ai-action") || ""
                     : "";
                 setInlineReviewShortcutDisplay(shortcutsChip, isPreviewTarget ? "preview" : (activeInlineAction || "wrapper"), inlineShortcutDisplayOptions);
+                syncInlinePreviewCompareHeaderNode(wrappers[i], suggestion);
+                syncInlinePreviewCompareMetaNode(wrappers[i], suggestion);
+                syncInlinePreviewCompareGlanceNode(wrappers[i], compareGlanceData);
+                reasonNode = syncInlinePreviewReasonNode(wrappers[i], reasonNode, suggestion);
+                planNode = syncInlinePreviewPlanNode(wrappers[i], planNode, suggestion);
+                shortcutsChip = syncInlinePreviewShortcutNode(wrappers[i], shortcutsChip);
                 wrappers[i].setAttribute("aria-label", buildInlineSuggestionAriaLabel(suggestion, {
                     isCurrent: !isPreviewTarget,
                     isPreviewTarget: isPreviewTarget,
                     queueOpened: isQueueOpened,
+                    glanceLabels: glanceData ? glanceData.pills.map(function (pill) { return pill.text; }) : [],
+                    glanceDetail: glanceData ? glanceData.detail : "",
+                    compareLabel: "Proposed edit. Current and suggested text.",
+                    reasonText: reasonText,
+                    focusLabel: inlineWrapperFocusLabel,
                     positionLabel: pendingPosition.total && pendingPosition.index ? "Item " + pendingPosition.index + " of " + pendingPosition.total : "",
-                    transitionLabel: queueTransitionData ? (queueTransitionData.statusLabel + ". " + queueTransitionData.queueLabel + ". " + queueTransitionData.preview) : "",
+                    transitionLabel: queueTransitionData ? (queueTransitionData.statusLabel + ". " + queueTransitionData.queueLabel + ". " + getQueueTransitionPreviewSummary(queueTransitionData)) : "",
                     followupLabel: queueTransitionData && queueTransitionData.followupTitle ? (queueTransitionData.followupTitle + ". " + queueTransitionData.followupDetail) : "",
                     remoteUpdateCount: sharedUpdateCount,
                     undoLabel: undoInlineSummaryText,
@@ -3815,12 +4672,30 @@ function RTE_Plugin_AIToolkit() {
                 wrappers[i].onfocus = null;
                 wrappers[i].onfocusout = null;
                 clearInlineReviewShortcutDisplayTarget(wrappers[i]);
-                wrappers[i].setAttribute("aria-label", buildInlineSuggestionAriaLabel(suggestion, { remoteUpdateCount: sharedUpdateCount }));
-                updateInlineReviewActionButtonState(reviewButton, "Review", "Open this AI suggestion in review");
-                updateInlineReviewButtonState(previousButton, false, "Previous AI review item");
-                updateInlineReviewButtonState(nextButton, false, "Next AI review item");
-                updateInlineReviewActionButtonState(acceptButton, "Accept", "Accept this AI change");
-                updateInlineReviewActionButtonState(rejectButton, "Reject", "Reject this AI change");
+                syncInlinePreviewCompareMetaNode(wrappers[i], suggestion);
+                syncInlinePreviewCompareGlanceNode(wrappers[i], compareGlanceData);
+                reasonNode = syncInlinePreviewReasonNode(wrappers[i], reasonNode, suggestion);
+                planNode = syncInlinePreviewPlanNode(wrappers[i], planNode, suggestion);
+                wrappers[i].setAttribute("aria-label", buildInlineSuggestionAriaLabel(suggestion, {
+                    remoteUpdateCount: sharedUpdateCount,
+                    glanceLabels: glanceData ? glanceData.pills.map(function (pill) { return pill.text; }) : [],
+                    glanceDetail: glanceData ? glanceData.detail : "",
+                    compareLabel: "Proposed edit. Current and suggested text.",
+                    reasonText: reasonText,
+                    focusLabel: reviewFocusLabel,
+                    queueRoleLabel: queuePositionData ? queuePositionData.roleLabel : "",
+                    queueRoleDetail: queuePositionData ? queuePositionData.detail : "",
+                    transitionLabel: queueTransitionData ? (queueTransitionData.title + ". " + queueTransitionData.statusLabel + ". " + queueTransitionData.queueLabel + ". " + getQueueTransitionPreviewSummary(queueTransitionData)) : "",
+                    followupLabel: queueTransitionData && queueTransitionData.followupTitle ? (queueTransitionData.followupTitle + ". " + queueTransitionData.followupDetail) : ""
+                }));
+                var inactiveTypeFilter = getInlineReviewTypeFilter(suggestionId);
+                var inactiveAcceptActionPresentation = getPendingReviewActionPresentation(suggestion, "accept", inactiveTypeFilter) || { text: "Accept", label: "Accept this AI change" };
+                var inactiveRejectActionPresentation = getPendingReviewActionPresentation(suggestion, "reject", inactiveTypeFilter) || { text: "Reject", label: "Reject this AI change" };
+                updateInlineReviewActionButtonState(reviewButton, "Review", reviewLabel);
+                updateInlineReviewButtonState(previousButton, !previousSuggestionId, previousLabel);
+                updateInlineReviewButtonState(nextButton, !nextSuggestionId, nextLabel);
+                updateInlineReviewActionButtonState(acceptButton, inactiveAcceptActionPresentation.text, inactiveAcceptActionPresentation.label);
+                updateInlineReviewActionButtonState(rejectButton, inactiveRejectActionPresentation.text, inactiveRejectActionPresentation.label);
                 clearInlineReviewButtonShortcutState(reviewButton);
                 clearInlineReviewButtonShortcutState(previousButton);
                 clearInlineReviewButtonShortcutState(nextButton);
@@ -3847,6 +4722,22 @@ function RTE_Plugin_AIToolkit() {
                     sharedSeenButton.parentNode.removeChild(sharedSeenButton);
                 }
                 setInlinePreviewActionGroupVisibility(wrappers[i], "recovery", false);
+                syncInlinePreviewActionSummaryNode(wrappers[i], {
+                    suggestion: suggestion,
+                    isPreviewTarget: isPreviewTarget,
+                    sharedUpdateCount: sharedUpdateCount,
+                    queueTransitionData: queueTransitionData
+                });
+                syncInlinePreviewActionGroupHeaders(wrappers[i], {
+                    suggestion: suggestion,
+                    isPreviewTarget: isPreviewTarget,
+                    sharedUpdateCount: sharedUpdateCount
+                });
+                syncInlinePreviewEnterTargetButtonState(wrappers[i], {
+                    suggestion: suggestion,
+                    isPreviewTarget: isPreviewTarget,
+                    sharedUpdateCount: sharedUpdateCount
+                });
                 if (currentChip && currentChip.parentNode) {
                     currentChip.parentNode.removeChild(currentChip);
                 }
@@ -3871,14 +4762,118 @@ function RTE_Plugin_AIToolkit() {
                     sharedUpdateCount,
                     wrappers[i].querySelector ? wrappers[i].querySelector(".rte-ai-inline-preview-actions") : null
                 );
-                if (queueChip && queueChip.parentNode) {
+                if (!isPreviewTarget && reviewFocusLabel) {
+                    if (!focusChip) {
+                        focusChip = document.createElement("span");
+                        focusChip.className = "rte-ai-inline-preview-focus";
+                        var inactiveFocusAnchor = remoteChip || scopeChip || languageChip || typeChip || currentChip;
+                        if (inactiveFocusAnchor && inactiveFocusAnchor.nextSibling) {
+                            wrappers[i].insertBefore(focusChip, inactiveFocusAnchor.nextSibling);
+                        }
+                        else {
+                            wrappers[i].appendChild(focusChip);
+                        }
+                    }
+                    focusChip.textContent = "Focus " + reviewFocusLabel;
+                    focusChip.setAttribute("aria-label", "Review opens on " + reviewFocusLabel);
+                }
+                else if (focusChip && focusChip.parentNode) {
+                    focusChip.parentNode.removeChild(focusChip);
+                    focusChip = null;
+                }
+                if (!isPreviewTarget && glanceData && glanceData.pills && glanceData.pills.length) {
+                    if (!glanceNode) {
+                        glanceNode = document.createElement("span");
+                        glanceNode.className = "rte-ai-inline-preview-glance";
+                        var glanceAnchor = scopeChip || typeChip || currentChip;
+                        if (glanceAnchor && glanceAnchor.nextSibling) {
+                            wrappers[i].insertBefore(glanceNode, glanceAnchor.nextSibling);
+                        }
+                        else {
+                            wrappers[i].appendChild(glanceNode);
+                        }
+                    }
+                    while (glanceNode.firstChild) {
+                        glanceNode.removeChild(glanceNode.firstChild);
+                    }
+                    for (var glanceIndex = 0; glanceIndex < glanceData.pills.length; glanceIndex++) {
+                        var glancePill = glanceData.pills[glanceIndex];
+                        if (!glancePill || !glancePill.text || glancePill.kind === "scope") {
+                            continue;
+                        }
+                        append(glanceNode, "span", "", "rte-ai-review-item-glance-pill is-" + glancePill.kind, glancePill.text);
+                    }
+                    if (!glanceNode.childNodes.length && glanceNode.parentNode) {
+                        glanceNode.parentNode.removeChild(glanceNode);
+                        glanceNode = null;
+                    }
+                }
+                else if (glanceNode && glanceNode.parentNode) {
+                    glanceNode.parentNode.removeChild(glanceNode);
+                    glanceNode = null;
+                }
+                if (!isPreviewTarget && queuePositionData && queuePositionData.role !== "current") {
+                    if (!queueChip) {
+                        queueChip = document.createElement("span");
+                        queueChip.className = "rte-ai-inline-preview-queue";
+                        var inactiveQueueAnchor = focusChip || remoteChip || glanceNode || scopeChip || languageChip || typeChip || currentChip;
+                        if (inactiveQueueAnchor && inactiveQueueAnchor.nextSibling) {
+                            wrappers[i].insertBefore(queueChip, inactiveQueueAnchor.nextSibling);
+                        }
+                        else {
+                            wrappers[i].appendChild(queueChip);
+                        }
+                    }
+                    queueChip.textContent = queuePositionData.roleLabel + " - " + queuePositionData.queueLabel;
+                    queueChip.setAttribute("aria-label", queuePositionData.detail);
+                }
+                else if (queueChip && queueChip.parentNode) {
                     queueChip.parentNode.removeChild(queueChip);
+                    queueChip = null;
                 }
-                if (transitionChip && transitionChip.parentNode) {
-                    transitionChip.parentNode.removeChild(transitionChip);
+                if (!isPreviewTarget && queueTransitionData) {
+                    if (!transitionChip) {
+                        transitionChip = document.createElement("span");
+                        transitionChip.className = "rte-ai-inline-preview-transition";
+                        var inactiveTransitionAnchor = queueChip || focusChip || remoteChip || glanceNode || scopeChip || languageChip || typeChip || currentChip;
+                        if (inactiveTransitionAnchor && inactiveTransitionAnchor.nextSibling) {
+                            wrappers[i].insertBefore(transitionChip, inactiveTransitionAnchor.nextSibling);
+                        }
+                        else {
+                            wrappers[i].appendChild(transitionChip);
+                        }
+                    }
+                    transitionChip.textContent = queueTransitionData.statusLabel;
+                    transitionChip.setAttribute("aria-label", queueTransitionData.title + ". " + queueTransitionData.detail + " " + getQueueTransitionPreviewSummary(queueTransitionData));
+                    if (queueTransitionData.followupTitle) {
+                        if (!followupChip) {
+                            followupChip = document.createElement("span");
+                            followupChip.className = "rte-ai-inline-preview-followup";
+                            var inactiveFollowupAnchor = transitionChip || queueChip || focusChip || remoteChip || scopeChip || languageChip || typeChip || currentChip;
+                            if (inactiveFollowupAnchor && inactiveFollowupAnchor.nextSibling) {
+                                wrappers[i].insertBefore(followupChip, inactiveFollowupAnchor.nextSibling);
+                            }
+                            else {
+                                wrappers[i].appendChild(followupChip);
+                            }
+                        }
+                        followupChip.textContent = queueTransitionData.followupTitle;
+                        followupChip.setAttribute("aria-label", queueTransitionData.followupTitle + ". " + queueTransitionData.followupDetail);
+                    }
+                    else if (followupChip && followupChip.parentNode) {
+                        followupChip.parentNode.removeChild(followupChip);
+                        followupChip = null;
+                    }
                 }
-                if (followupChip && followupChip.parentNode) {
-                    followupChip.parentNode.removeChild(followupChip);
+                else {
+                    if (transitionChip && transitionChip.parentNode) {
+                        transitionChip.parentNode.removeChild(transitionChip);
+                        transitionChip = null;
+                    }
+                    if (followupChip && followupChip.parentNode) {
+                        followupChip.parentNode.removeChild(followupChip);
+                        followupChip = null;
+                    }
                 }
                 if (undoChip && undoChip.parentNode) {
                     undoChip.parentNode.removeChild(undoChip);
@@ -3914,43 +4909,71 @@ function RTE_Plugin_AIToolkit() {
         return true;
     }
 
-    function getInlineReviewButtonShortcutKeys(options) {
+    function getInlineReviewButtonShortcutKeys(actionName, options) {
         options = options || {};
         if (options.isPreviewTarget) {
             return "Enter Space";
         }
-        var keys = "Enter Space J K Home End A R";
-        if (options.undoInlineContext) {
-            keys += " U";
+        switch (actionName) {
+            case "previous":
+                return "Enter Space K ArrowLeft";
+            case "next":
+                return "Enter Space J ArrowRight";
+            case "accept":
+                return "Enter Space A";
+            case "reject":
+                return "Enter Space R";
+            case "undo":
+                return options.undoInlineContext ? "Enter Space U" : "Enter Space";
+            case "redo":
+                return options.redoInlineContext ? "Enter Space Shift+U" : "Enter Space";
+            case "shared-seen":
+                return options.sharedUpdateCount ? "Enter Space G" : "Enter Space";
+            default:
+                return "Enter Space";
         }
-        if (options.sharedUpdateCount) {
-            keys += " G";
-        }
-        if (options.redoInlineContext) {
-            keys += " Shift+U";
-        }
-        return keys;
     }
 
-    function getInlineReviewButtonShortcutTitle(label, options) {
+    function getInlineReviewButtonShortcutTitle(actionName, label, options) {
         options = options || {};
         var title = label || "";
         if (!title) {
             return title;
         }
+        title = title.replace(/\.$/, "");
         if (options.isPreviewTarget) {
-            return title;
+            return title + ". Enter or Space activates this action.";
         }
         var decisionCopy = getReviewShortcutDecisionCopy(options.suggestion);
-        title = title.replace(/\.$/, "") + ". J/K move review items. Home/End jump. A uses " + decisionCopy.acceptLabel + ". R uses " + decisionCopy.rejectLabel + ".";
-        if (options.undoInlineContext) {
-            title += " U " + options.undoInlineContext.shortcutLabel + ".";
-        }
-        if (options.sharedUpdateCount) {
-            title += " G clears shared.";
-        }
-        if (options.redoInlineContext) {
-            title += " Shift+U " + options.redoInlineContext.shortcutLabel + ".";
+        title += ". Enter or Space activates this action.";
+        switch (actionName) {
+            case "previous":
+                title += " K or Left moves to the previous review item.";
+                break;
+            case "next":
+                title += " J or Right moves to the next review item.";
+                break;
+            case "accept":
+                title += " A uses " + decisionCopy.acceptLabel + ".";
+                break;
+            case "reject":
+                title += " R uses " + decisionCopy.rejectLabel + ".";
+                break;
+            case "undo":
+                if (options.undoInlineContext) {
+                    title += " U " + options.undoInlineContext.shortcutLabel + ".";
+                }
+                break;
+            case "redo":
+                if (options.redoInlineContext) {
+                    title += " Shift+U " + options.redoInlineContext.shortcutLabel + ".";
+                }
+                break;
+            case "shared-seen":
+                if (options.sharedUpdateCount) {
+                    title += " G clears shared.";
+                }
+                break;
         }
         return title;
     }
@@ -3960,14 +4983,9 @@ function RTE_Plugin_AIToolkit() {
         if (options.isPreviewTarget) {
             return getSuggestionQueueShortcutHint(options.suggestion);
         }
-        var defaultActionName = options.defaultActionName || getDefaultInlineReviewActionName(options.suggestion);
         var decisionCopy = getReviewShortcutDecisionCopy(options.suggestion);
-        var acceptDisplayLabel = decisionCopy.acceptLabel;
-        var hint = defaultActionName === "redo"
-            ? "Enter focus Redo - A " + decisionCopy.acceptHint + " - R " + decisionCopy.rejectHint + " - J/K move - Home/End jump"
-            : defaultActionName === "accept"
-                ? "Enter focus " + acceptDisplayLabel + " - A " + decisionCopy.acceptHint + " - R " + decisionCopy.rejectHint + " - J/K move - Home/End jump"
-                : "Enter focus Review - A " + decisionCopy.acceptHint + " - R " + decisionCopy.rejectHint + " - J/K move - Home/End jump";
+        var focusLabel = getInlineReviewWrapperFocusLabel(options);
+        var hint = "Enter focus " + focusLabel + " - A " + decisionCopy.acceptHint + " - R " + decisionCopy.rejectHint + " - J/K move - Home/End jump";
         if (options.sharedUpdateCount) {
             hint += " - G clear shared";
         }
@@ -3985,14 +5003,9 @@ function RTE_Plugin_AIToolkit() {
         if (options.isPreviewTarget) {
             return getSuggestionQueueActionTitle(options.suggestion);
         }
-        var defaultActionName = options.defaultActionName || getDefaultInlineReviewActionName(options.suggestion);
         var decisionCopy = getReviewShortcutDecisionCopy(options.suggestion);
-        var acceptDisplayLabel = decisionCopy.acceptLabel;
-        var title = defaultActionName === "redo"
-            ? "Shortcuts: J or Right next, K or Left previous, Home/End jump, Enter focus Redo, A " + decisionCopy.acceptHint + ", R " + decisionCopy.rejectHint
-            : defaultActionName === "accept"
-                ? "Shortcuts: J or Right next, K or Left previous, Home/End jump, Enter focus " + acceptDisplayLabel + ", A " + decisionCopy.acceptHint + ", R " + decisionCopy.rejectHint
-                : "Shortcuts: J or Right next, K or Left previous, Home/End jump, Enter focus Review, A " + decisionCopy.acceptHint + ", R " + decisionCopy.rejectHint;
+        var focusLabel = getInlineReviewWrapperFocusLabel(options);
+        var title = "Shortcuts: J or Right next, K or Left previous, Home/End jump, Enter focus " + focusLabel + ", A " + decisionCopy.acceptHint + ", R " + decisionCopy.rejectHint;
         if (options.sharedUpdateCount) {
             title += ", G clear shared";
         }
@@ -4005,6 +5018,89 @@ function RTE_Plugin_AIToolkit() {
         return title;
     }
 
+    function getInlinePreviewFocusedActionName(options) {
+        options = options || {};
+        if (options.isPreviewTarget) {
+            return "review";
+        }
+        var suggestion = options.suggestion;
+        if (!suggestion) {
+            return "";
+        }
+        var preferredAction = options.preferredAction || getPreferredReviewActionFocus();
+        if ((preferredAction === "accept" || preferredAction === "reject") && suggestion.status === "pending") {
+            return preferredAction;
+        }
+        if (preferredAction === "undo" && options.undoInlineContext) {
+            return "undo";
+        }
+        if (preferredAction === "redo" && options.redoInlineContext) {
+            return "redo";
+        }
+        if (preferredAction === "review") {
+            return "review";
+        }
+        if (preferredAction === "shared-seen" && options.sharedUpdateCount) {
+            return "shared-seen";
+        }
+        var defaultActionName = options.defaultActionName || getDefaultInlineReviewActionName(suggestion);
+        if (defaultActionName === "redo" && options.redoInlineContext) {
+            return "redo";
+        }
+        if (defaultActionName === "accept") {
+            return "accept";
+        }
+        return "review";
+    }
+
+    function getInlinePreviewActionGroupName(actionName) {
+        switch (actionName) {
+            case "accept":
+            case "reject":
+                return "decision";
+            case "undo":
+            case "redo":
+            case "shared-seen":
+                return "recovery";
+            case "review":
+                return "review";
+            default:
+                return "";
+        }
+    }
+
+    function getInlineReviewWrapperFocusLabel(options) {
+        options = options || {};
+        var suggestion = options.suggestion;
+        if (!suggestion) {
+            return "Review";
+        }
+        if (options.isPreviewTarget) {
+            return "Open queue";
+        }
+        var decisionCopy = getReviewShortcutDecisionCopy(suggestion);
+        var focusedActionName = getInlinePreviewFocusedActionName(options);
+        if (focusedActionName === "accept") {
+            return decisionCopy.acceptLabel;
+        }
+        if (focusedActionName === "reject") {
+            return decisionCopy.rejectLabel;
+        }
+        if (focusedActionName === "undo" && options.undoInlineContext) {
+            return options.undoInlineContext.actionLabel || "Undo";
+        }
+        if (focusedActionName === "redo" && options.redoInlineContext) {
+            return options.redoInlineContext.actionLabel || "Redo";
+        }
+        if (focusedActionName === "review") {
+            return "Review";
+        }
+        if (focusedActionName === "shared-seen" && options.sharedUpdateCount) {
+            return "Clear shared";
+        }
+        return "Review";
+    }
+
     function getInlineReviewActionShortcutHint(actionName, options) {
         options = options || {};
         if (options.isPreviewTarget) {
@@ -4014,9 +5110,10 @@ function RTE_Plugin_AIToolkit() {
         var decisionCopy = getReviewShortcutDecisionCopy(options.suggestion);
         var acceptDisplayLabel = decisionCopy.acceptLabel;
         var rejectDisplayLabel = decisionCopy.rejectLabel;
+        var reviewFocusLabel = options.reviewFocusLabel || getReviewFocusActionDisplayLabel(options.suggestion, getPreferredReviewActionFocus()) || getReviewFocusActionDisplayLabel(options.suggestion, "");
         switch (actionName) {
             case "review":
-                hint = "Enter review - J/K move - Home/End jump - A " + decisionCopy.acceptHint + " - R " + decisionCopy.rejectHint;
+                hint = "Enter focus " + (reviewFocusLabel || "Review") + " - J/K move - Home/End jump - A " + decisionCopy.acceptHint + " - R " + decisionCopy.rejectHint;
                 break;
             case "previous":
                 hint = "Enter previous - J/K move - Home/End jump - A " + decisionCopy.acceptHint + " - R " + decisionCopy.rejectHint;
@@ -4084,17 +5181,29 @@ function RTE_Plugin_AIToolkit() {
         return true;
     }
 
-    function renderInlineReviewShortcutDisplayContent(shortcutsChip, text) {
+    function renderInlineReviewShortcutDisplayContent(shortcutsChip, title, text) {
         if (!shortcutsChip) {
             return false;
         }
         while (shortcutsChip.firstChild) {
             shortcutsChip.removeChild(shortcutsChip.firstChild);
         }
-        if (!text) {
+        if (!title && !text) {
             return true;
         }
         var ownerDocument = shortcutsChip.ownerDocument || document;
+        if (title) {
+            var titleNode = ownerDocument.createElement("span");
+            titleNode.className = "rte-ai-inline-preview-shortcuts-title";
+            titleNode.innerText = title;
+            shortcutsChip.appendChild(titleNode);
+        }
+        if (!text) {
+            return true;
+        }
+        var bodyNode = ownerDocument.createElement("span");
+        bodyNode.className = "rte-ai-inline-preview-shortcuts-body";
+        shortcutsChip.appendChild(bodyNode);
         var pieces = String(text || "").split(/(\s+·\s+|\s+-\s+)/);
         for (var pieceIndex = 0; pieceIndex < pieces.length; pieceIndex++) {
             var piece = pieces[pieceIndex];
@@ -4105,7 +5214,7 @@ function RTE_Plugin_AIToolkit() {
                 var separator = ownerDocument.createElement("span");
                 separator.className = "rte-ai-inline-preview-shortcuts-separator";
                 separator.innerText = piece.replace(/^\s+|\s+$/g, "");
-                shortcutsChip.appendChild(separator);
+                bodyNode.appendChild(separator);
                 continue;
             }
             var segment = ownerDocument.createElement("span");
@@ -4126,7 +5235,7 @@ function RTE_Plugin_AIToolkit() {
             else {
                 segment.innerText = segmentText;
             }
-            shortcutsChip.appendChild(segment);
+            bodyNode.appendChild(segment);
         }
         return true;
     }
@@ -4139,17 +5248,17 @@ function RTE_Plugin_AIToolkit() {
         shortcutsChip.classList.remove("is-action");
         shortcutsChip.classList.toggle("is-preview", state === "preview");
         if (state === "preview") {
-            renderInlineReviewShortcutDisplayContent(shortcutsChip, getSuggestionQueueShortcutHint(options.suggestion));
+            renderInlineReviewShortcutDisplayContent(shortcutsChip, "Queue shortcut", getSuggestionQueueShortcutHint(options.suggestion));
             shortcutsChip.setAttribute("aria-label", "Inline queue preview shortcut");
             return true;
         }
         if (state && state !== "wrapper") {
             shortcutsChip.classList.add("is-action");
-            renderInlineReviewShortcutDisplayContent(shortcutsChip, getInlineReviewActionShortcutHint(state, options));
+            renderInlineReviewShortcutDisplayContent(shortcutsChip, "Keyboard guide", getInlineReviewActionShortcutHint(state, options));
             shortcutsChip.setAttribute("aria-label", "Inline AI review action shortcuts");
             return true;
         }
-        renderInlineReviewShortcutDisplayContent(shortcutsChip, getInlineReviewWrapperShortcutHint(options));
+        renderInlineReviewShortcutDisplayContent(shortcutsChip, "Keyboard guide", getInlineReviewWrapperShortcutHint(options));
         shortcutsChip.setAttribute("aria-label", "Inline AI review shortcuts");
         return true;
     }
@@ -4202,8 +5311,9 @@ function RTE_Plugin_AIToolkit() {
         if (!button) {
             return false;
         }
-        button.setAttribute("aria-keyshortcuts", getInlineReviewButtonShortcutKeys(options));
-        button.title = getInlineReviewButtonShortcutTitle(label, options);
+        var actionName = button.getAttribute ? (button.getAttribute("data-rte-ai-action") || "") : "";
+        button.setAttribute("aria-keyshortcuts", getInlineReviewButtonShortcutKeys(actionName, options));
+        button.title = getInlineReviewButtonShortcutTitle(actionName, label, options);
         return true;
     }
 
@@ -4309,8 +5419,14 @@ function RTE_Plugin_AIToolkit() {
             + "<span class=\"rte-ai-inline-preview-action-group is-" + groupClass + "\""
             + " data-rte-ai-inline-action-group=\"" + groupClass + "\""
             + " data-rte-ai-inline-action-group-label=\"" + escapeHtml(label) + "\""
+            + " data-rte-ai-inline-action-group-current=\"false\""
             + hiddenAttr
             + " role=\"group\" aria-label=\"" + escapeHtml(label) + " actions\">"
+            + "<span class=\"rte-ai-inline-preview-action-group-header\">"
+            + "<span class=\"rte-ai-inline-preview-action-group-title\">" + escapeHtml(label) + "</span>"
+            + "<span class=\"rte-ai-inline-preview-action-group-badge\" style=\"display:none\"></span>"
+            + "</span>"
+            + "<span class=\"rte-ai-inline-preview-action-group-detail\"></span>"
             + "<span class=\"rte-ai-inline-preview-action-group-body\">"
             + (innerHtml || "")
             + "</span>"
@@ -4341,13 +5457,966 @@ function RTE_Plugin_AIToolkit() {
         groupNode.style.display = isVisible ? "" : "none";
     }
 
+    function getInlinePreviewFocusedActionGroupName(options) {
+        options = options || {};
+        if (options.isPreviewTarget) {
+            return "review";
+        }
+        var suggestion = options.suggestion;
+        if (!suggestion) {
+            return "";
+        }
+        return getInlinePreviewActionGroupName(getInlinePreviewFocusedActionName(options));
+    }
+
+    function getInlinePreviewActionGroupDisplayLabel(groupName) {
+        switch (groupName) {
+            case "review":
+                return "Open";
+            case "move":
+                return "Move";
+            case "decision":
+                return "Decide";
+            case "recovery":
+                return "Recover";
+            default:
+                return "";
+        }
+    }
+
+    function getInlinePreviewActionGroupDisplayOrder(groupName, currentGroupName) {
+        var baseOrder = ["review", "move", "decision", "recovery"];
+        var defaultIndex = baseOrder.indexOf(groupName);
+        if (defaultIndex === -1) {
+            return baseOrder.length + 1;
+        }
+        var currentIndex = baseOrder.indexOf(currentGroupName);
+        if (currentIndex === -1) {
+            return defaultIndex + 1;
+        }
+        if (groupName === currentGroupName) {
+            return 1;
+        }
+        var displayOrder = 2;
+        for (var orderIndex = 0; orderIndex < baseOrder.length; orderIndex++) {
+            if (baseOrder[orderIndex] === currentGroupName) {
+                continue;
+            }
+            if (baseOrder[orderIndex] === groupName) {
+                return displayOrder;
+            }
+            displayOrder++;
+        }
+        return defaultIndex + 1;
+    }
+
+    function getInlinePreviewActionButtonDisplayOrder(groupName, actionName, targetActionName) {
+        var baseOrder;
+        switch (groupName) {
+            case "review":
+                baseOrder = ["review"];
+                break;
+            case "move":
+                baseOrder = ["previous", "next"];
+                break;
+            case "decision":
+                baseOrder = ["accept", "reject"];
+                break;
+            case "recovery":
+                baseOrder = ["shared-seen", "undo", "redo"];
+                break;
+            default:
+                baseOrder = [];
+                break;
+        }
+        var defaultIndex = baseOrder.indexOf(actionName);
+        if (defaultIndex === -1) {
+            return baseOrder.length + 1;
+        }
+        if (!targetActionName) {
+            return defaultIndex + 1;
+        }
+        var targetIndex = baseOrder.indexOf(targetActionName);
+        if (targetIndex === -1) {
+            return defaultIndex + 1;
+        }
+        if (actionName === targetActionName) {
+            return 1;
+        }
+        var displayOrder = 2;
+        for (var orderIndex = 0; orderIndex < baseOrder.length; orderIndex++) {
+            if (baseOrder[orderIndex] === targetActionName) {
+                continue;
+            }
+            if (baseOrder[orderIndex] === actionName) {
+                return displayOrder;
+            }
+            displayOrder++;
+        }
+        return defaultIndex + 1;
+    }
+
+    function buildInlinePreviewActionGroupDetail(groupName, options) {
+        options = options || {};
+        if (options.isPreviewTarget) {
+            if (groupName === "review") {
+                return "Open the next review queue from this handoff surface.";
+            }
+            return "";
+        }
+        var suggestion = options.suggestion;
+        if (!suggestion) {
+            return "";
+        }
+        var queueTransitionData = options.queueTransitionData || null;
+        switch (groupName) {
+            case "review":
+                return "Reopen this suggestion in the current review lane.";
+            case "move":
+                return "Jump earlier or later in this queue before deciding.";
+            case "decision":
+                if (queueTransitionData && queueTransitionData.detail) {
+                    return queueTransitionData.detail;
+                }
+                return "Apply or dismiss this AI change.";
+            case "recovery":
+                if (options.redoInlineContext && options.redoInlineSummaryText) {
+                    return options.redoInlineSummaryText;
+                }
+                if (options.undoInlineContext && options.undoInlineSummaryText) {
+                    return options.undoInlineSummaryText;
+                }
+                if (options.sharedUpdateCount) {
+                    return "Clear collaboration updates and keep reviewing this suggestion.";
+                }
+                return "";
+            default:
+                return "";
+        }
+    }
+
+    function buildInlinePreviewActionSummaryData(options) {
+        options = options || {};
+        if (options.isPreviewTarget) {
+            return null;
+        }
+        var suggestion = options.suggestion;
+        if (!suggestion) {
+            return null;
+        }
+        var focusGroupName = getInlinePreviewFocusedActionGroupName(options);
+        var focusLabel = getInlineReviewWrapperFocusLabel(options);
+        var groupLabel = getInlinePreviewActionGroupDisplayLabel(focusGroupName);
+        if (!focusGroupName || !focusLabel || !groupLabel) {
+            return null;
+        }
+        var queueTransitionData = options.queueTransitionData || null;
+        if (!queueTransitionData && suggestion.id) {
+            var typeFilter = getInlineReviewTypeFilter(suggestion.id);
+            var filteredPendingSuggestions = getFilteredPendingSuggestions(typeFilter);
+            queueTransitionData = buildReviewQueueTransitionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion);
+        }
+        var detail = "";
+        if (focusGroupName === "decision" && queueTransitionData) {
+            detail = queueTransitionData.statusLabel + ". " + queueTransitionData.detail;
+        }
+        else if (focusGroupName === "recovery") {
+            if (options.preferredAction === "undo" && options.undoInlineSummaryText) {
+                detail = options.undoInlineSummaryText;
+            }
+            else if (options.preferredAction === "redo" && options.redoInlineSummaryText) {
+                detail = options.redoInlineSummaryText;
+            }
+            else if (options.sharedUpdateCount) {
+                detail = "Clear the shared update notice and continue reviewing this suggestion.";
+            }
+            else {
+                detail = "Recover from a recent AI review action without leaving this suggestion.";
+            }
+        }
+        else if (focusGroupName === "review") {
+            detail = "Open this suggestion in review and keep the current inline lane ready.";
+        }
+        else if (focusGroupName === "move") {
+            detail = "Move through the current queue before choosing a decision.";
+        }
+        return {
+            title: "Action handoff",
+            pills: [groupLabel + " lane", "Enter focuses " + focusLabel],
+            detail: detail
+        };
+    }
+
+    function buildInlinePreviewActionSummaryAriaLabel(summaryData) {
+        if (!summaryData) {
+            return "";
+        }
+        var parts = [];
+        if (summaryData.title) {
+            parts.push(summaryData.title);
+        }
+        if (summaryData.pills && summaryData.pills.length) {
+            for (var pillIndex = 0; pillIndex < summaryData.pills.length; pillIndex++) {
+                if (summaryData.pills[pillIndex]) {
+                    parts.push(summaryData.pills[pillIndex]);
+                }
+            }
+        }
+        if (summaryData.detail) {
+            parts.push(summaryData.detail);
+        }
+        return parts.join(". ");
+    }
+
+    function createInlinePreviewActionSummaryHtml(previewState) {
+        var summaryData = buildInlinePreviewActionSummaryData({ suggestion: previewState });
+        if (!summaryData) {
+            return "";
+        }
+        var html = "<span class=\"rte-ai-inline-preview-action-summary\" aria-label=\"" + escapeHtml(buildInlinePreviewActionSummaryAriaLabel(summaryData)) + "\">"
+            + "<span class=\"rte-ai-inline-preview-action-summary-title\">" + escapeHtml(summaryData.title) + "</span>";
+        if (summaryData.pills && summaryData.pills.length) {
+            html += "<span class=\"rte-ai-inline-preview-action-summary-pills\">";
+            for (var pillIndex = 0; pillIndex < summaryData.pills.length; pillIndex++) {
+                if (!summaryData.pills[pillIndex]) {
+                    continue;
+                }
+                html += "<span class=\"rte-ai-inline-preview-action-summary-pill\">" + escapeHtml(summaryData.pills[pillIndex]) + "</span>";
+            }
+            html += "</span>";
+        }
+        if (summaryData.detail) {
+            html += "<span class=\"rte-ai-inline-preview-action-summary-detail\">" + escapeHtml(summaryData.detail) + "</span>";
+        }
+        html += "</span>";
+        return html;
+    }
+
+    function syncInlinePreviewActionSummaryNode(wrapper, options) {
+        if (!wrapper || !wrapper.querySelector) {
+            return null;
+        }
+        var actionsNode = wrapper.querySelector(".rte-ai-inline-preview-actions");
+        var summaryData = buildInlinePreviewActionSummaryData(options);
+        var summaryNode = actionsNode && actionsNode.querySelector ? actionsNode.querySelector(".rte-ai-inline-preview-action-summary") : null;
+        if (!actionsNode || !summaryData) {
+            if (summaryNode && summaryNode.parentNode) {
+                summaryNode.parentNode.removeChild(summaryNode);
+            }
+            if (actionsNode) {
+                actionsNode.setAttribute("aria-label", "AI suggestion actions");
+            }
+            return null;
+        }
+        var ownerDocument = actionsNode.ownerDocument || document;
+        if (!summaryNode) {
+            summaryNode = ownerDocument.createElement("span");
+            summaryNode.className = "rte-ai-inline-preview-action-summary";
+            if (actionsNode.firstChild) {
+                actionsNode.insertBefore(summaryNode, actionsNode.firstChild);
+            }
+            else {
+                actionsNode.appendChild(summaryNode);
+            }
+        }
+        else if (actionsNode.firstChild !== summaryNode) {
+            actionsNode.insertBefore(summaryNode, actionsNode.firstChild);
+        }
+        while (summaryNode.firstChild) {
+            summaryNode.removeChild(summaryNode.firstChild);
+        }
+        summaryNode.setAttribute("aria-label", buildInlinePreviewActionSummaryAriaLabel(summaryData));
+        append(summaryNode, "span", "", "rte-ai-inline-preview-action-summary-title", summaryData.title);
+        if (summaryData.pills && summaryData.pills.length) {
+            var pillsNode = append(summaryNode, "span", "", "rte-ai-inline-preview-action-summary-pills");
+            for (var pillIndex = 0; pillIndex < summaryData.pills.length; pillIndex++) {
+                if (!summaryData.pills[pillIndex]) {
+                    continue;
+                }
+                append(pillsNode, "span", "", "rte-ai-inline-preview-action-summary-pill", summaryData.pills[pillIndex]);
+            }
+        }
+        if (summaryData.detail) {
+            append(summaryNode, "span", "", "rte-ai-inline-preview-action-summary-detail", summaryData.detail);
+        }
+        actionsNode.setAttribute("aria-label", "AI suggestion actions. " + buildInlinePreviewActionSummaryAriaLabel(summaryData));
+        return summaryNode;
+    }
+
+    function syncInlinePreviewActionGroupHeaders(wrapper, options) {
+        if (!wrapper || !wrapper.querySelectorAll) {
+            return false;
+        }
+        options = options || {};
+        var ownerDocument = wrapper.ownerDocument || document;
+        var actionsNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-actions") : null;
+        var focusGroupName = getInlinePreviewFocusedActionGroupName(options);
+        var focusLabel = options.isPreviewTarget ? "Open queue" : getInlineReviewWrapperFocusLabel(options);
+        var badgeText = focusLabel ? "Enter: " + focusLabel : "";
+        var groups = wrapper.querySelectorAll(".rte-ai-inline-preview-action-group");
+        var orderedGroups = [];
+        for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+            var groupNode = groups[groupIndex];
+            if (!groupNode) {
+                continue;
+            }
+            orderedGroups.push(groupNode);
+            var groupName = groupNode.getAttribute("data-rte-ai-inline-action-group") || "";
+            var label = groupNode.getAttribute("data-rte-ai-inline-action-group-label") || "";
+            var headerNode = groupNode.querySelector ? groupNode.querySelector(".rte-ai-inline-preview-action-group-header") : null;
+            if (!headerNode) {
+                headerNode = ownerDocument.createElement("span");
+                headerNode.className = "rte-ai-inline-preview-action-group-header";
+                if (groupNode.firstChild) {
+                    groupNode.insertBefore(headerNode, groupNode.firstChild);
+                }
+                else {
+                    groupNode.appendChild(headerNode);
+                }
+            }
+            var titleNode = headerNode.querySelector ? headerNode.querySelector(".rte-ai-inline-preview-action-group-title") : null;
+            if (!titleNode) {
+                titleNode = ownerDocument.createElement("span");
+                titleNode.className = "rte-ai-inline-preview-action-group-title";
+                headerNode.appendChild(titleNode);
+            }
+            titleNode.textContent = label;
+            var badgeNode = headerNode.querySelector ? headerNode.querySelector(".rte-ai-inline-preview-action-group-badge") : null;
+            if (!badgeNode) {
+                badgeNode = ownerDocument.createElement("span");
+                badgeNode.className = "rte-ai-inline-preview-action-group-badge";
+                headerNode.appendChild(badgeNode);
+            }
+            var detailNode = groupNode.querySelector ? groupNode.querySelector(".rte-ai-inline-preview-action-group-detail") : null;
+            if (!detailNode) {
+                detailNode = ownerDocument.createElement("span");
+                detailNode.className = "rte-ai-inline-preview-action-group-detail";
+                var bodyNode = groupNode.querySelector ? groupNode.querySelector(".rte-ai-inline-preview-action-group-body") : null;
+                if (bodyNode) {
+                    groupNode.insertBefore(detailNode, bodyNode);
+                }
+                else {
+                    groupNode.appendChild(detailNode);
+                }
+            }
+            var isCurrentGroup = !!badgeText && !!focusGroupName && focusGroupName === groupName;
+            var detailText = buildInlinePreviewActionGroupDetail(groupName, options);
+            groupNode.style.removeProperty("order");
+            groupNode.setAttribute("data-rte-ai-inline-action-group-current", isCurrentGroup ? "true" : "false");
+            groupNode.classList.toggle("is-current-lane", isCurrentGroup);
+            if (isCurrentGroup) {
+                badgeNode.textContent = badgeText;
+                badgeNode.style.display = "";
+                badgeNode.setAttribute("aria-label", "Current action lane. " + badgeText);
+            }
+            else {
+                badgeNode.textContent = "";
+                badgeNode.style.display = "none";
+                badgeNode.removeAttribute("aria-label");
+            }
+            if (detailText) {
+                detailNode.textContent = detailText;
+                detailNode.style.display = "";
+            }
+            else {
+                detailNode.textContent = "";
+                detailNode.style.display = "none";
+            }
+            var ariaLabel = label ? (label + " actions") : "AI suggestion actions";
+            if (detailText) {
+                ariaLabel += ". " + detailText;
+            }
+            if (isCurrentGroup && badgeText) {
+                ariaLabel += ". Current lane. " + badgeText;
+            }
+            groupNode.setAttribute("aria-label", ariaLabel);
+        }
+        if (actionsNode && orderedGroups.length) {
+            orderedGroups.sort(function (a, b) {
+                var aGroupName = a.getAttribute("data-rte-ai-inline-action-group") || "";
+                var bGroupName = b.getAttribute("data-rte-ai-inline-action-group") || "";
+                return getInlinePreviewActionGroupDisplayOrder(aGroupName, focusGroupName) - getInlinePreviewActionGroupDisplayOrder(bGroupName, focusGroupName);
+            });
+            for (var orderedIndex = 0; orderedIndex < orderedGroups.length; orderedIndex++) {
+                actionsNode.appendChild(orderedGroups[orderedIndex]);
+            }
+        }
+        return true;
+    }
+
+    function syncInlinePreviewEnterTargetButtonState(wrapper, options) {
+        if (!wrapper || !wrapper.querySelectorAll) {
+            return false;
+        }
+        options = options || {};
+        var targetActionName = getInlinePreviewFocusedActionName(options);
+        var groupedButtons = {};
+        var buttons = wrapper.querySelectorAll(".rte-ai-inline-preview-button[data-rte-ai-action]");
+        for (var buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
+            var button = buttons[buttonIndex];
+            if (!button || !button.getAttribute) {
+                continue;
+            }
+            var buttonActionName = button.getAttribute("data-rte-ai-action") || "";
+            var groupNode = button.closest ? button.closest(".rte-ai-inline-preview-action-group") : null;
+            var groupName = groupNode && groupNode.getAttribute ? (groupNode.getAttribute("data-rte-ai-inline-action-group") || "") : "";
+            if (groupName) {
+                if (!groupedButtons[groupName]) {
+                    groupedButtons[groupName] = [];
+                }
+                groupedButtons[groupName].push(button);
+            }
+            var isTarget = !!targetActionName && buttonActionName === targetActionName && !button.disabled;
+            var ariaLabel = (button.getAttribute("aria-label") || button.textContent || "").replace(/\.\s*Current Enter target\.$/i, "");
+            var title = (button.getAttribute("title") || ariaLabel).replace(/\.\s*Current Enter target\.$/i, "");
+            button.setAttribute("data-rte-ai-enter-target", isTarget ? "true" : "false");
+            button.classList.toggle("is-enter-target", isTarget);
+            if (isTarget) {
+                button.setAttribute("data-rte-ai-enter-target-label", "Enter");
+                if (ariaLabel && !/current enter target/i.test(ariaLabel)) {
+                    button.setAttribute("aria-label", ariaLabel + ". Current Enter target.");
+                }
+                if (title && !/current enter target/i.test(title)) {
+                    button.title = title + ". Current Enter target.";
+                }
+            }
+            else {
+                button.removeAttribute("data-rte-ai-enter-target-label");
+                if (ariaLabel) {
+                    button.setAttribute("aria-label", ariaLabel);
+                }
+                if (title) {
+                    button.title = title;
+                }
+            }
+        }
+        for (var groupName in groupedButtons) {
+            if (!groupedButtons.hasOwnProperty(groupName)) {
+                continue;
+            }
+            var groupBodyNode = getInlinePreviewActionContainer(wrapper, groupName);
+            var groupButtons = groupedButtons[groupName];
+            if (!groupBodyNode || !groupButtons || !groupButtons.length) {
+                continue;
+            }
+            groupButtons.sort(function (a, b) {
+                var aActionName = a.getAttribute("data-rte-ai-action") || "";
+                var bActionName = b.getAttribute("data-rte-ai-action") || "";
+                return getInlinePreviewActionButtonDisplayOrder(groupName, aActionName, targetActionName) - getInlinePreviewActionButtonDisplayOrder(groupName, bActionName, targetActionName);
+            });
+            for (var orderedButtonIndex = 0; orderedButtonIndex < groupButtons.length; orderedButtonIndex++) {
+                groupBodyNode.appendChild(groupButtons[orderedButtonIndex]);
+            }
+        }
+        return true;
+    }
+
+    function syncInlinePreviewReasonNode(wrapper, reasonNode, suggestion) {
+        if (!wrapper) {
+            return null;
+        }
+        var compareNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-compare") : null;
+        var reasonText = buildCompletionPreviewReason(suggestion);
+        if (!compareNode || !reasonText) {
+            if (reasonNode && reasonNode.parentNode) {
+                reasonNode.parentNode.removeChild(reasonNode);
+            }
+            return null;
+        }
+        if (!reasonNode || reasonNode.parentNode !== compareNode) {
+            if (reasonNode && reasonNode.parentNode) {
+                reasonNode.parentNode.removeChild(reasonNode);
+            }
+            reasonNode = document.createElement("span");
+            reasonNode.className = "rte-ai-inline-preview-reason";
+            var oldNode = compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-old") : null;
+            var newNode = !oldNode && compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-new") : null;
+            var anchorNode = oldNode || newNode;
+            if (anchorNode) {
+                compareNode.insertBefore(reasonNode, anchorNode);
+            }
+            else {
+                compareNode.appendChild(reasonNode);
+            }
+        }
+        var labelNode = reasonNode.querySelector ? reasonNode.querySelector(".rte-ai-inline-preview-reason-label") : null;
+        var copyNode = reasonNode.querySelector ? reasonNode.querySelector(".rte-ai-inline-preview-reason-copy") : null;
+        if (!labelNode || !copyNode) {
+            while (reasonNode.firstChild) {
+                reasonNode.removeChild(reasonNode.firstChild);
+            }
+            labelNode = null;
+            copyNode = null;
+        }
+        if (!labelNode) {
+            labelNode = document.createElement("span");
+            labelNode.className = "rte-ai-inline-preview-reason-label";
+            reasonNode.appendChild(labelNode);
+        }
+        labelNode.textContent = "Why";
+        if (!copyNode) {
+            copyNode = document.createElement("span");
+            copyNode.className = "rte-ai-inline-preview-reason-copy";
+            reasonNode.appendChild(copyNode);
+        }
+        copyNode.textContent = reasonText;
+        reasonNode.setAttribute("aria-label", "Why this suggestion: " + reasonText);
+        reasonNode.title = reasonText;
+        return reasonNode;
+    }
+
+    function syncInlinePreviewPlanNode(wrapper, planNode, suggestion) {
+        if (!wrapper) {
+            return null;
+        }
+        var compareNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-compare") : null;
+        var planData = buildInlinePreviewPlanData(suggestion);
+        if (!compareNode || !planData) {
+            if (planNode && planNode.parentNode) {
+                planNode.parentNode.removeChild(planNode);
+            }
+            return null;
+        }
+        if (!planNode || planNode.parentNode !== compareNode) {
+            if (planNode && planNode.parentNode) {
+                planNode.parentNode.removeChild(planNode);
+            }
+            planNode = document.createElement("span");
+            planNode.className = "rte-ai-inline-preview-plan";
+            compareNode.appendChild(planNode);
+        }
+        while (planNode.firstChild) {
+            planNode.removeChild(planNode.firstChild);
+        }
+        append(planNode, "span", "", "rte-ai-inline-preview-plan-title", planData.title);
+        var itemsNode = append(planNode, "span", "", "rte-ai-inline-preview-plan-items");
+        for (var itemIndex = 0; itemIndex < planData.items.length; itemIndex++) {
+            if (!planData.items[itemIndex]) {
+                continue;
+            }
+            append(itemsNode, "span", "", "rte-ai-inline-preview-plan-item", planData.items[itemIndex]);
+        }
+        if (planData.detail) {
+            append(planNode, "span", "", "rte-ai-inline-preview-plan-detail", planData.detail);
+        }
+        appendInlinePlanPreviewNode(planNode, planData);
+        if (planData.followupTitle || planData.followupDetail) {
+            var followupNode = append(planNode, "span", "", "rte-ai-inline-preview-plan-followup");
+            if (planData.followupTitle) {
+                append(followupNode, "span", "", "rte-ai-inline-preview-plan-followup-title", planData.followupTitle);
+            }
+            if (planData.followupDetail) {
+                append(followupNode, "span", "", "rte-ai-inline-preview-plan-followup-detail", planData.followupDetail);
+            }
+        }
+        return planNode;
+    }
+
+    function syncInlinePreviewShortcutNode(wrapper, shortcutsChip) {
+        if (!wrapper || !shortcutsChip) {
+            return shortcutsChip;
+        }
+        var compareNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-compare") : null;
+        if (!compareNode) {
+            return shortcutsChip;
+        }
+        var planNode = compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-plan") : null;
+        if (planNode && planNode.parentNode === compareNode) {
+            if (planNode.nextSibling !== shortcutsChip) {
+                if (planNode.nextSibling) {
+                    compareNode.insertBefore(shortcutsChip, planNode.nextSibling);
+                }
+                else {
+                    compareNode.appendChild(shortcutsChip);
+                }
+            }
+            return shortcutsChip;
+        }
+        if (compareNode.lastChild !== shortcutsChip) {
+            compareNode.appendChild(shortcutsChip);
+        }
+        return shortcutsChip;
+    }
+
+    function syncInlinePreviewCompareMetaNode(wrapper, suggestion) {
+        if (!wrapper) {
+            return null;
+        }
+        var compareNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-compare") : null;
+        if (!compareNode) {
+            return null;
+        }
+        var proposalData = buildInlinePreviewProposalData(suggestion);
+        var metaNode = compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-compare-meta") : null;
+        if (!proposalData) {
+            if (metaNode && metaNode.parentNode) {
+                metaNode.parentNode.removeChild(metaNode);
+            }
+            return null;
+        }
+        if (!metaNode) {
+            metaNode = document.createElement("span");
+            metaNode.className = "rte-ai-inline-preview-compare-meta";
+            var headerNode = compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-compare-header") : null;
+            if (headerNode && headerNode.nextSibling) {
+                compareNode.insertBefore(metaNode, headerNode.nextSibling);
+            }
+            else {
+                compareNode.appendChild(metaNode);
+            }
+        }
+        while (metaNode.firstChild) {
+            metaNode.removeChild(metaNode.firstChild);
+        }
+        append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-status", proposalData.statusLabel);
+        if (proposalData.openedLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-opened", proposalData.openedLabel);
+        }
+        if (proposalData.remoteLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-remote", proposalData.remoteLabel);
+        }
+        if (proposalData.entryLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-entry", proposalData.entryLabel);
+        }
+        if (proposalData.queueRoleLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-queue", proposalData.queueRoleLabel);
+        }
+        if (proposalData.queueLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-position", proposalData.queueLabel);
+        }
+        if (proposalData.typeLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-type", proposalData.typeLabel);
+        }
+        if (proposalData.languageLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-language", proposalData.languageLabel);
+        }
+        append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-scope", proposalData.scopeLabel);
+        append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-steps", proposalData.stepLabel);
+        if (proposalData.targetLabel) {
+            append(metaNode, "span", "", "rte-ai-inline-preview-compare-pill is-target", proposalData.targetLabel);
+        }
+        return metaNode;
+    }
+
+    function buildInlinePreviewCompareGlanceData(source) {
+        var glanceData = source && source.pills ? source : buildReviewChangeGlanceData(source);
+        if (!glanceData) {
+            return null;
+        }
+        var pills = [];
+        if (glanceData.pills && glanceData.pills.length) {
+            for (var pillIndex = 0; pillIndex < glanceData.pills.length; pillIndex++) {
+                var glancePill = glanceData.pills[pillIndex];
+                if (!glancePill || !glancePill.text || glancePill.kind === "scope") {
+                    continue;
+                }
+                pills.push(glancePill);
+            }
+        }
+        if (!pills.length && !glanceData.detail) {
+            return null;
+        }
+        return {
+            title: glanceData.title || "Change at a glance",
+            pills: pills,
+            detail: glanceData.detail || ""
+        };
+    }
+
+    function syncInlinePreviewCompareGlanceNode(wrapper, source) {
+        if (!wrapper) {
+            return null;
+        }
+        var compareNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-compare") : null;
+        var compareGlanceData = buildInlinePreviewCompareGlanceData(source);
+        var glanceNode = compareNode && compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-compare-glance") : null;
+        if (!compareNode || !compareGlanceData) {
+            if (glanceNode && glanceNode.parentNode) {
+                glanceNode.parentNode.removeChild(glanceNode);
+            }
+            return null;
+        }
+        if (!glanceNode) {
+            glanceNode = document.createElement("span");
+            glanceNode.className = "rte-ai-inline-preview-compare-glance";
+            var compareContentNode = compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-old") : null;
+            if (compareContentNode) {
+                compareNode.insertBefore(glanceNode, compareContentNode);
+            }
+            else {
+                compareNode.appendChild(glanceNode);
+            }
+        }
+        while (glanceNode.firstChild) {
+            glanceNode.removeChild(glanceNode.firstChild);
+        }
+        append(glanceNode, "span", "", "rte-ai-inline-preview-compare-glance-title", compareGlanceData.title);
+        if (compareGlanceData.pills && compareGlanceData.pills.length) {
+            var pillsNode = append(glanceNode, "span", "", "rte-ai-inline-preview-compare-glance-pills");
+            for (var glancePillIndex = 0; glancePillIndex < compareGlanceData.pills.length; glancePillIndex++) {
+                var pill = compareGlanceData.pills[glancePillIndex];
+                if (!pill || !pill.text) {
+                    continue;
+                }
+                append(pillsNode, "span", "", "rte-ai-review-item-glance-pill is-" + (pill.kind || "other"), pill.text);
+            }
+        }
+        if (compareGlanceData.detail) {
+            append(glanceNode, "span", "", "rte-ai-inline-preview-compare-glance-detail", compareGlanceData.detail);
+        }
+        return glanceNode;
+    }
+
+    function createInlinePreviewComparePartHtml(tagName, partClass, label, contentHtml) {
+        var resolvedTag = tagName || "span";
+        return ""
+            + "<" + resolvedTag + " class=\"" + partClass + "\" aria-label=\"" + escapeHtml(label) + " text\">"
+            + "<span class=\"rte-ai-inline-preview-compare-label\">" + escapeHtml(label) + "</span>"
+            + "<" + resolvedTag + " class=\"rte-ai-inline-preview-compare-text\">" + contentHtml + "</" + resolvedTag + ">"
+            + "</" + resolvedTag + ">";
+    }
+
+    function buildInlinePreviewCompareHeaderData(previewState) {
+        var isPreviewTarget = !!(previewState && previewState.id && editor.__aiReviewEmptyPreviewSuggestionId === previewState.id);
+        if (isPreviewTarget) {
+            return {
+                title: "Queue handoff",
+                detail: "Open the next review queue"
+            };
+        }
+        return {
+            title: "Proposed edit",
+            detail: "Current and suggested text"
+        };
+    }
+
+    function syncInlinePreviewCompareHeaderNode(wrapper, previewState) {
+        if (!wrapper) {
+            return null;
+        }
+        var compareNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-compare") : null;
+        if (!compareNode) {
+            return null;
+        }
+        var headerData = buildInlinePreviewCompareHeaderData(previewState);
+        var headerNode = compareNode.querySelector ? compareNode.querySelector(".rte-ai-inline-preview-compare-header") : null;
+        if (!headerNode) {
+            headerNode = document.createElement("span");
+            headerNode.className = "rte-ai-inline-preview-compare-header";
+            if (compareNode.firstChild) {
+                compareNode.insertBefore(headerNode, compareNode.firstChild);
+            }
+            else {
+                compareNode.appendChild(headerNode);
+            }
+        }
+        var titleNode = headerNode.querySelector ? headerNode.querySelector(".rte-ai-inline-preview-compare-title") : null;
+        var detailNode = headerNode.querySelector ? headerNode.querySelector(".rte-ai-inline-preview-compare-detail") : null;
+        if (!titleNode) {
+            titleNode = document.createElement("span");
+            titleNode.className = "rte-ai-inline-preview-compare-title";
+            headerNode.appendChild(titleNode);
+        }
+        if (!detailNode) {
+            detailNode = document.createElement("span");
+            detailNode.className = "rte-ai-inline-preview-compare-detail";
+            headerNode.appendChild(detailNode);
+        }
+        titleNode.textContent = headerData.title;
+        detailNode.textContent = headerData.detail;
+        compareNode.setAttribute("aria-label", headerData.title + ". " + headerData.detail);
+        return headerNode;
+    }
+
+    function buildInlinePreviewProposalData(previewState) {
+        if (!previewState) {
+            return null;
+        }
+        var isPreviewTarget = !!(previewState.id && editor.__aiReviewEmptyPreviewSuggestionId === previewState.id);
+        var typeFilter = previewState.id ? getInlineReviewTypeFilter(previewState.id) : "";
+        var filteredPendingSuggestions = previewState.id ? getFilteredPendingSuggestions(typeFilter) : [];
+        var queuePositionData = previewState.id ? buildReviewQueuePositionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, previewState) : null;
+        var remoteUpdateCount = previewState.id ? getSuggestionRemoteUpdateCount(previewState.id) : 0;
+        var focusLabel = isPreviewTarget
+            ? (getReviewFocusActionDisplayLabel(previewState, getPreferredReviewActionFocus()) || getReviewFocusActionDisplayLabel(previewState, ""))
+            : getInlineReviewWrapperFocusLabel({ suggestion: previewState });
+        var typeLabel = previewState.suggestionType && getSuggestionTypeValue(previewState.suggestionType) !== "other"
+            ? getSuggestionTypeLabel(previewState.suggestionType)
+            : "";
+        var languageLabel = previewState.language ? getTranslateLanguageLabel(previewState.language) : "";
+        return {
+            statusLabel: isPreviewTarget ? "Queue handoff" : "Ready to review",
+            openedLabel: editor.__aiRecentlyOpenedQueueSuggestionId === previewState.id ? "Queue opened" : "",
+            remoteLabel: remoteUpdateCount > 1 ? remoteUpdateCount + " shared updates" : (remoteUpdateCount ? "Shared update" : ""),
+            queueRoleLabel: isPreviewTarget ? "Next queue" : (queuePositionData ? queuePositionData.roleLabel : ""),
+            queueLabel: !isPreviewTarget && queuePositionData ? queuePositionData.queueLabel : "",
+            typeLabel: typeLabel,
+            languageLabel: languageLabel,
+            scopeLabel: (getSuggestionScopeLabel(previewState) || "Selection") + " draft",
+            stepLabel: "1 step",
+            entryLabel: isPreviewTarget ? getSuggestionQueueActionLabel(previewState) : "",
+            targetLabel: focusLabel ? "Focus " + focusLabel : ""
+        };
+    }
+
+    function buildInlinePreviewPlanData(previewState) {
+        if (!previewState || !previewState.id) {
+            return null;
+        }
+        var typeFilter = getInlineReviewTypeFilter(previewState.id);
+        var filteredPendingSuggestions = getFilteredPendingSuggestions(typeFilter);
+        var queueTransitionData = buildReviewQueueTransitionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, previewState);
+        if (!queueTransitionData) {
+            return null;
+        }
+        var items = [queueTransitionData.statusLabel, queueTransitionData.queueLabel];
+        if (queueTransitionData.followupStatusLabel) {
+            items.push(queueTransitionData.followupStatusLabel);
+        }
+        return {
+            title: "What happens next",
+            items: items,
+            detail: queueTransitionData.detail || "",
+            previewLabel: queueTransitionData.previewLabel || "",
+            previewText: queueTransitionData.previewText || "",
+            preview: getQueueTransitionPreviewSummary(queueTransitionData),
+            followupTitle: queueTransitionData.followupTitle || "",
+            followupDetail: queueTransitionData.followupDetail || ""
+        };
+    }
+
+    function appendInlinePlanPreviewNode(planNode, planData) {
+        if (!planNode || !planData || (!planData.preview && !planData.previewLabel && !planData.previewText)) {
+            return null;
+        }
+        var previewNode = append(planNode, "span", "", "rte-ai-inline-preview-plan-preview");
+        if (planData.previewLabel) {
+            append(previewNode, "span", "", "rte-ai-inline-preview-plan-preview-label", planData.previewLabel + ":");
+        }
+        if (planData.previewText) {
+            append(previewNode, "span", "", "rte-ai-inline-preview-plan-preview-text", planData.previewText);
+        }
+        if (!planData.previewLabel && !planData.previewText && planData.preview) {
+            previewNode.textContent = planData.preview;
+        }
+        return previewNode;
+    }
+
+    function buildInlinePlanPreviewHtml(planData) {
+        if (!planData || (!planData.preview && !planData.previewLabel && !planData.previewText)) {
+            return "";
+        }
+        var html = "<span class=\"rte-ai-inline-preview-plan-preview\">";
+        if (planData.previewLabel) {
+            html += "<span class=\"rte-ai-inline-preview-plan-preview-label\">" + escapeHtml(planData.previewLabel) + ":</span>";
+        }
+        if (planData.previewText) {
+            html += "<span class=\"rte-ai-inline-preview-plan-preview-text\">" + escapeHtml(planData.previewText) + "</span>";
+        }
+        if (!planData.previewLabel && !planData.previewText && planData.preview) {
+            html += escapeHtml(planData.preview);
+        }
+        html += "</span>";
+        return html;
+    }
+
+    function createInlinePreviewCompareHtml(tagName, oldHtml, newHtml, previewState) {
+        var resolvedTag = tagName || "span";
+        var headerData = buildInlinePreviewCompareHeaderData(previewState);
+        var proposalData = buildInlinePreviewProposalData(previewState);
+        var compareGlanceData = buildInlinePreviewCompareGlanceData(previewState);
+        var reasonText = buildCompletionPreviewReason(previewState);
+        var planData = buildInlinePreviewPlanData(previewState);
+        var metaHtml = proposalData
+            ? "<span class=\"rte-ai-inline-preview-compare-meta\">"
+                + "<span class=\"rte-ai-inline-preview-compare-pill is-status\">" + escapeHtml(proposalData.statusLabel) + "</span>"
+                + (proposalData.openedLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-opened\">" + escapeHtml(proposalData.openedLabel) + "</span>" : "")
+                + (proposalData.remoteLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-remote\">" + escapeHtml(proposalData.remoteLabel) + "</span>" : "")
+                + (proposalData.entryLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-entry\">" + escapeHtml(proposalData.entryLabel) + "</span>" : "")
+                + (proposalData.queueRoleLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-queue\">" + escapeHtml(proposalData.queueRoleLabel) + "</span>" : "")
+                + (proposalData.queueLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-position\">" + escapeHtml(proposalData.queueLabel) + "</span>" : "")
+                + (proposalData.typeLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-type\">" + escapeHtml(proposalData.typeLabel) + "</span>" : "")
+                + (proposalData.languageLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-language\">" + escapeHtml(proposalData.languageLabel) + "</span>" : "")
+                + "<span class=\"rte-ai-inline-preview-compare-pill is-scope\">" + escapeHtml(proposalData.scopeLabel) + "</span>"
+                + "<span class=\"rte-ai-inline-preview-compare-pill is-steps\">" + escapeHtml(proposalData.stepLabel) + "</span>"
+                + (proposalData.targetLabel ? "<span class=\"rte-ai-inline-preview-compare-pill is-target\">" + escapeHtml(proposalData.targetLabel) + "</span>" : "")
+            + "</span>"
+            : "";
+        var glanceHtml = "";
+        if (compareGlanceData) {
+            glanceHtml = "<span class=\"rte-ai-inline-preview-compare-glance\">"
+                + "<span class=\"rte-ai-inline-preview-compare-glance-title\">" + escapeHtml(compareGlanceData.title) + "</span>";
+            if (compareGlanceData.pills && compareGlanceData.pills.length) {
+                glanceHtml += "<span class=\"rte-ai-inline-preview-compare-glance-pills\">";
+                for (var pillIndex = 0; pillIndex < compareGlanceData.pills.length; pillIndex++) {
+                    var glancePill = compareGlanceData.pills[pillIndex];
+                    if (!glancePill || !glancePill.text) {
+                        continue;
+                    }
+                    glanceHtml += "<span class=\"rte-ai-review-item-glance-pill is-" + escapeHtml(glancePill.kind || "other") + "\">" + escapeHtml(glancePill.text) + "</span>";
+                }
+                glanceHtml += "</span>";
+            }
+            if (compareGlanceData.detail) {
+                glanceHtml += "<span class=\"rte-ai-inline-preview-compare-glance-detail\">" + escapeHtml(compareGlanceData.detail) + "</span>";
+            }
+            glanceHtml += "</span>";
+        }
+        var reasonHtml = reasonText
+            ? "<span class=\"rte-ai-inline-preview-reason\" aria-label=\"Why this suggestion: " + escapeHtml(reasonText) + "\" title=\"" + escapeHtml(reasonText) + "\">"
+                + "<span class=\"rte-ai-inline-preview-reason-label\">Why</span>"
+                + "<span class=\"rte-ai-inline-preview-reason-copy\">" + escapeHtml(reasonText) + "</span>"
+            + "</span>"
+            : "";
+        var planHtml = "";
+        if (planData) {
+            planHtml = "<span class=\"rte-ai-inline-preview-plan\">"
+                + "<span class=\"rte-ai-inline-preview-plan-title\">" + escapeHtml(planData.title) + "</span>"
+                + "<span class=\"rte-ai-inline-preview-plan-items\">";
+            for (var itemIndex = 0; itemIndex < planData.items.length; itemIndex++) {
+                if (!planData.items[itemIndex]) {
+                    continue;
+                }
+                planHtml += "<span class=\"rte-ai-inline-preview-plan-item\">" + escapeHtml(planData.items[itemIndex]) + "</span>";
+            }
+            planHtml += "</span>";
+            if (planData.detail) {
+                planHtml += "<span class=\"rte-ai-inline-preview-plan-detail\">" + escapeHtml(planData.detail) + "</span>";
+            }
+            planHtml += buildInlinePlanPreviewHtml(planData);
+            if (planData.followupTitle || planData.followupDetail) {
+                planHtml += "<span class=\"rte-ai-inline-preview-plan-followup\">";
+                if (planData.followupTitle) {
+                    planHtml += "<span class=\"rte-ai-inline-preview-plan-followup-title\">" + escapeHtml(planData.followupTitle) + "</span>";
+                }
+                if (planData.followupDetail) {
+                    planHtml += "<span class=\"rte-ai-inline-preview-plan-followup-detail\">" + escapeHtml(planData.followupDetail) + "</span>";
+                }
+                planHtml += "</span>";
+            }
+            planHtml += "</span>";
+        }
+        return ""
+            + "<" + resolvedTag + " class=\"rte-ai-inline-preview-compare\" aria-label=\"" + escapeHtml(headerData.title + ". " + headerData.detail) + "\">"
+            + "<span class=\"rte-ai-inline-preview-compare-header\">"
+            + "<span class=\"rte-ai-inline-preview-compare-title\">" + escapeHtml(headerData.title) + "</span>"
+            + "<span class=\"rte-ai-inline-preview-compare-detail\">" + escapeHtml(headerData.detail) + "</span>"
+            + "</span>"
+            + metaHtml
+            + glanceHtml
+            + reasonHtml
+            + createInlinePreviewComparePartHtml(resolvedTag, "rte-ai-inline-preview-old", "Current", oldHtml)
+            + createInlinePreviewComparePartHtml(resolvedTag, "rte-ai-inline-preview-new", "Suggested", newHtml)
+            + planHtml
+            + "</" + resolvedTag + ">";
+    }
+
     function createInlinePreviewHtml(previewState) {
         var isBlock = !!previewState.isBlock;
         var wrapperTag = isBlock ? "div" : "span";
         var partTag = isBlock ? "div" : "span";
         var oldHtml = previewState.originalHtml || textToInlineHtml(previewState.originalText || "");
         var newHtml = previewState.resultHtml || textToInlineHtml(previewState.resultText || "");
-        var reasonHtml = previewState.reason ? "<span class=\"rte-ai-inline-preview-reason\">" + escapeHtml(previewState.reason) + "</span>" : "";
         var reviewActionsHtml = createInlinePreviewActionGroupHtml("review", "Open",
             "<button type=\"button\" class=\"rte-ai-inline-preview-button is-review\" data-rte-ai-action=\"review\">Review</button>"
         );
@@ -4360,18 +6429,18 @@ function RTE_Plugin_AIToolkit() {
             + "<button type=\"button\" class=\"rte-ai-inline-preview-button is-reject\" data-rte-ai-action=\"reject\">Reject</button>"
         );
         var recoveryActionsHtml = createInlinePreviewActionGroupHtml("recovery", "Recover", "");
+        var actionSummaryHtml = createInlinePreviewActionSummaryHtml(previewState);
 
         return ""
-            + "<" + wrapperTag + " class=\"rte-ai-inline-preview" + (isBlock ? " is-block" : " is-inline") + "\" contenteditable=\"false\" tabindex=\"-1\" role=\"group\" aria-label=\"AI suggestion preview\" data-rte-ai-preview-id=\"" + previewState.id + "\" data-rte-ai-suggestion-id=\"" + previewState.id + "\">"
+            + "<" + wrapperTag + " class=\"rte-ai-inline-preview is-review-surface" + (isBlock ? " is-block" : " is-inline") + "\" contenteditable=\"false\" tabindex=\"-1\" role=\"group\" aria-label=\"AI suggestion preview\" data-rte-ai-preview-id=\"" + previewState.id + "\" data-rte-ai-suggestion-id=\"" + previewState.id + "\">"
+            + createInlinePreviewCompareHtml(partTag, oldHtml, newHtml, previewState)
             + "<span class=\"rte-ai-inline-preview-actions\" role=\"group\" aria-label=\"AI suggestion actions\">"
+            + actionSummaryHtml
             + reviewActionsHtml
             + moveActionsHtml
             + decisionActionsHtml
             + recoveryActionsHtml
             + "</span>"
-            + reasonHtml
-            + "<" + partTag + " class=\"rte-ai-inline-preview-old\">" + oldHtml + "</" + partTag + ">"
-            + "<" + partTag + " class=\"rte-ai-inline-preview-new\">" + newHtml + "</" + partTag + ">"
             + "</" + wrapperTag + ">";
     }
 
@@ -4454,33 +6523,88 @@ function RTE_Plugin_AIToolkit() {
     function renderActionMenu(panel) {
         panel.classList.add("rte-panel-aiassist-menu");
 
-        var info = append(panel, "div", "", "rte-ai-menu-info");
+        // 2026-05-09 (v20260509j): menu opens FROM the toolbar AI button
+        // which already shows the gradient AI icon + "Ask AI" tooltip, so
+        // the in-menu title row was just delaying the user's eye from
+        // landing on the actual action grid. Title nodes are kept
+        // detached so any external integration that walks
+        // `.rte-ai-menu-info` / `.rte-ai-menu-title` selectors still
+        // resolves without throwing. Click-outside dismisses via the
+        // editor's standard popup handler; ESC dismisses via keydown.
+        // Same shape Notion AI's slash menu / Linear's command palette
+        // use — the menu opens straight onto the choices.
+        var info = document.createElement("div");
+        info.className = "rte-ai-menu-info is-minimal is-detached";
         var titleRow = append(info, "div", "", "rte-ai-menu-title-row");
         var titleIcon = append(titleRow, "span", "", "rte-ai-menu-title-icon");
         titleIcon.innerHTML = config.svgCode_aiassist || "";
         append(titleRow, "div", "", "rte-ai-menu-title", config.text_aiassist || "Ask AI");
-        var closeButton = append(titleRow, "button", "", "rte-ai-menu-close-button");
-        closeButton.type = "button";
-        closeButton.setAttribute("aria-label", "Close");
-        closeButton.title = "Close";
-        closeButton.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>';
-        closeButton.onclick = function (e) {
-            if (e && e.preventDefault) e.preventDefault();
-            if (e && e.stopPropagation) e.stopPropagation();
-            if (editor.closeCurrentPopup) editor.closeCurrentPopup();
-        };
-        append(info, "div", "", "rte-ai-menu-copy", "Open AI Chat for multi-turn help, run quick actions like proofread or translate, or jump into the full review dialog.");
+
+        // 2026-05-27 (v20260527a): type-to-filter search bar pinned to the
+        // top of the menu. Pre-pass the 9 default actions sat as a flat
+        // 2-column grid with no keyboard navigation — mouse users had to
+        // visually scan the grid, and keyboard users had to tab through
+        // every item. Every reference inline AI surface ships a filter
+        // input at the top of the action menu: Notion AI slash menu
+        // ("Filter…"), Linear command palette, ChatGPT `/` suggestions,
+        // VS Code command palette, GitHub command bar. Auto-focused on
+        // open so a user can immediately type to narrow the list. Arrow
+        // up/down cycles through the visible items with an active-row
+        // highlight; Enter invokes the highlighted item; ESC clears the
+        // query and unfocuses. The 9-item grid is small enough that the
+        // filter is mostly a power-user / a11y win, but it costs ~30px
+        // of vertical chrome and turns a mouse-only surface into a
+        // keyboard-first one — exactly the kind of "easy to use" lift
+        // the AI window passes have been chasing.
+        var searchRow = append(panel, "div", "", "rte-ai-menu-search-row");
+        var searchInput = panel.ownerDocument.createElement("input");
+        searchInput.type = "text";
+        searchInput.className = "rte-ai-menu-search-input";
+        searchInput.placeholder = "Filter actions…";
+        searchInput.setAttribute("aria-label", "Filter AI actions");
+        searchInput.setAttribute("autocomplete", "off");
+        searchInput.setAttribute("spellcheck", "false");
+        searchRow.appendChild(searchInput);
 
         var actions = getActionDefinitions();
         var lastSection = "";
+        var itemEntries = [];
         for (var i = 0; i < actions.length; i++) {
             (function (action) {
+                // 2026-05-13 (v20260513c): "Start" / "Quick edit" / "Insert"
+                // section labels dropped. With 9 items the menu has always
+                // fit on one screen, and the labels were 9px uppercase caps
+                // claiming ~22px each (66px total) above choices the icons
+                // already typed visually (chat/dialog/review at the top,
+                // proofread/rewrite/translate/justify in the middle, comment/
+                // paragraph at the bottom). Same flat-list shape Notion AI's
+                // slash menu, Linear's command palette, and ChatGPT's `/`
+                // suggestions ship — they sort by use frequency without
+                // pretending three items per category is a category. Section
+                // nodes still appended as detached helpers so any external
+                // integration that walks `.rte-ai-menu-section` resolves.
                 if (action.section && action.section !== lastSection) {
-                    append(panel, "div", "", "rte-ai-menu-section", action.section);
+                    var sectionNode = document.createElement("div");
+                    sectionNode.className = "rte-ai-menu-section is-detached";
+                    sectionNode.textContent = action.section;
                     lastSection = action.section;
                 }
                 var button = append(panel, "button", "", "rte-ai-menu-item");
                 button.type = "button";
+                // 2026-06-02 (v20260602a): expose the action description via
+                // the native title attribute so hover surfaces what each item
+                // does without restoring the inline `display:none` copy span.
+                // Pre-pass the title-only rows were dense but ambiguous —
+                // "Justify", "Explain", "Add note" gave first-time users no
+                // signal about what AI would actually do. Same shape Notion
+                // AI slash menu / Linear command palette / VS Code command
+                // palette ship — terse visible labels backed by a hover
+                // tooltip that names the side effect. Zero layout cost; the
+                // 26px row floor and 2-col grid measure identically.
+                if (action.description) {
+                    button.title = action.description;
+                    button.setAttribute("aria-label", (action.title || action.id) + " — " + action.description);
+                }
                 var icon = append(button, "span", "", "rte-ai-menu-item-icon");
                 icon.innerHTML = getActionIconSvg(action);
                 var body = append(button, "span", "", "rte-ai-menu-item-body");
@@ -4492,8 +6616,130 @@ function RTE_Plugin_AIToolkit() {
                     if (editor.closeCurrentPopup) editor.closeCurrentPopup();
                     runQuickAction(action.id);
                 };
+                button.addEventListener("mouseenter", function () {
+                    setActiveButton(button);
+                });
+                itemEntries.push({ button: button, action: action });
             })(actions[i]);
         }
+
+        function setActiveButton(target) {
+            for (var k = 0; k < itemEntries.length; k++) {
+                var entry = itemEntries[k];
+                var isActive = entry.button === target;
+                if (isActive) {
+                    entry.button.classList.add("is-active");
+                }
+                else {
+                    entry.button.classList.remove("is-active");
+                }
+            }
+            if (target && typeof target.scrollIntoView === "function") {
+                try {
+                    target.scrollIntoView({ block: "nearest" });
+                }
+                catch (ignoreScroll) {
+                    target.scrollIntoView();
+                }
+            }
+        }
+
+        function getVisibleButtons() {
+            var visible = [];
+            for (var k = 0; k < itemEntries.length; k++) {
+                if (!itemEntries[k].button.hidden) {
+                    visible.push(itemEntries[k].button);
+                }
+            }
+            return visible;
+        }
+
+        function applyFilter(rawQuery) {
+            var query = (rawQuery || "").trim().toLowerCase();
+            var firstMatch = null;
+            for (var k = 0; k < itemEntries.length; k++) {
+                var entry = itemEntries[k];
+                var haystack = ((entry.action.title || "") + " " + (entry.action.description || "") + " " + (entry.action.id || "")).toLowerCase();
+                var matches = !query || haystack.indexOf(query) !== -1;
+                entry.button.hidden = !matches;
+                if (matches && !firstMatch) {
+                    firstMatch = entry.button;
+                }
+            }
+            // Empty-state hint when no item matches the query.
+            if (!firstMatch) {
+                if (!searchRow.__aiEmptyHint) {
+                    var hint = panel.ownerDocument.createElement("div");
+                    hint.className = "rte-ai-menu-empty-hint";
+                    hint.textContent = "No actions match.";
+                    panel.appendChild(hint);
+                    searchRow.__aiEmptyHint = hint;
+                }
+                searchRow.__aiEmptyHint.hidden = false;
+            }
+            else if (searchRow.__aiEmptyHint) {
+                searchRow.__aiEmptyHint.hidden = true;
+            }
+            setActiveButton(firstMatch);
+        }
+
+        searchInput.addEventListener("input", function () {
+            applyFilter(searchInput.value);
+        });
+        searchInput.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                var visible = getVisibleButtons();
+                if (!visible.length) return;
+                var idx = -1;
+                for (var k = 0; k < visible.length; k++) {
+                    if (visible[k].classList.contains("is-active")) { idx = k; break; }
+                }
+                var next;
+                if (e.key === "ArrowDown") {
+                    next = idx < 0 ? 0 : (idx + 1) % visible.length;
+                }
+                else {
+                    next = idx <= 0 ? visible.length - 1 : idx - 1;
+                }
+                setActiveButton(visible[next]);
+            }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+                var visibleEnter = getVisibleButtons();
+                var activeButton = null;
+                for (var m = 0; m < visibleEnter.length; m++) {
+                    if (visibleEnter[m].classList.contains("is-active")) {
+                        activeButton = visibleEnter[m];
+                        break;
+                    }
+                }
+                if (!activeButton) activeButton = visibleEnter[0];
+                if (activeButton) activeButton.click();
+            }
+            else if (e.key === "Escape") {
+                if (searchInput.value) {
+                    e.preventDefault();
+                    searchInput.value = "";
+                    applyFilter("");
+                }
+            }
+        });
+
+        applyFilter("");
+        // Auto-focus the search input on open so users can immediately type
+        // to filter. Wrapped in setTimeout so the dropdown's own positioning
+        // / focus-traversal code (which fires synchronously after this
+        // render returns) doesn't clobber the focus we set.
+        setTimeout(function () {
+            if (searchInput && typeof searchInput.focus === "function" && searchInput.isConnected !== false) {
+                try { searchInput.focus({ preventScroll: true }); }
+                catch (ignoreFocus) {
+                    try { searchInput.focus(); }
+                    catch (ignoreFocusFallback) { }
+                }
+            }
+        }, 30);
     }
 
     function runAgent(prompt, options) {
@@ -5273,7 +7519,11 @@ function RTE_Plugin_AIToolkit() {
                 typeLabel: "",
                 scopeLabel: "",
                 detail: "Accepting or rejecting this final pending item finishes the current review run.",
-                preview: "Recovery and next queues appear next so you can undo the last decision or open another queue."
+                previewLabel: "Queue state",
+                previewText: "No later pending items remain in this queue.",
+                followupTitle: "Then recovery and next queues appear",
+                followupStatusLabel: "Recovery ready",
+                followupDetail: "Undo the last decision or open another queue."
             };
         }
         if (activeIndex === -1 || activeIndex >= pendingSuggestions.length - 1) {
@@ -5290,11 +7540,45 @@ function RTE_Plugin_AIToolkit() {
             typeLabel: nextSuggestion.suggestionType && getSuggestionTypeValue(nextSuggestion.suggestionType) !== "other" ? getSuggestionTypeLabel(nextSuggestion.suggestionType) : "",
             scopeLabel: getSuggestionScopeLabel(nextSuggestion),
             detail: "Accepting or rejecting this item moves review straight to the next pending suggestion.",
-            preview: summarizeSuggestionText(nextSuggestion.originalText || nextSuggestion.resultText || "Next review item", 84),
+            previewLabel: "Next item",
+            previewText: summarizeSuggestionText(nextSuggestion.originalText || nextSuggestion.resultText || "Next review item", 84),
             followupTitle: activeIndex + 1 === pendingSuggestions.length - 1 ? "Then queue complete" : "",
             followupStatusLabel: activeIndex + 1 === pendingSuggestions.length - 1 ? "Queue complete" : "",
             followupDetail: activeIndex + 1 === pendingSuggestions.length - 1 ? "After reviewing the final pending item, recovery and next queues appear." : ""
         };
+    }
+
+    function getQueueTransitionPreviewSummary(queueTransitionData) {
+        if (!queueTransitionData) {
+            return "";
+        }
+        var previewLabel = queueTransitionData.previewLabel || "";
+        var previewText = queueTransitionData.previewText || "";
+        if (previewLabel && previewText) {
+            return previewLabel + ": " + previewText;
+        }
+        return previewText || previewLabel;
+    }
+
+    function appendQueueTransitionPreview(parent, className, queueTransitionData) {
+        if (!parent || !className || !queueTransitionData) {
+            return null;
+        }
+        var previewSummary = getQueueTransitionPreviewSummary(queueTransitionData);
+        if (!previewSummary) {
+            return null;
+        }
+        var previewNode = append(parent, "div", "", className);
+        if (queueTransitionData.previewLabel) {
+            append(previewNode, "span", "", className + "-label", queueTransitionData.previewLabel + ":");
+        }
+        if (queueTransitionData.previewText) {
+            append(previewNode, "span", "", className + "-text", " " + queueTransitionData.previewText);
+        }
+        if (!queueTransitionData.previewLabel && !queueTransitionData.previewText) {
+            previewNode.textContent = previewSummary;
+        }
+        return previewNode;
     }
 
     function markQueueOpenedSuggestion(suggestionId) {
@@ -5622,6 +7906,7 @@ function RTE_Plugin_AIToolkit() {
         }
         var item = preview.closest ? preview.closest(".rte-ai-review-item") : null;
         var actionNode = preview.querySelector(".rte-ai-review-item-condensed-open-pill");
+        var detailNode = preview.querySelector(".rte-ai-review-item-condensed-entry-detail");
         if (!actionNode) {
             return;
         }
@@ -5629,11 +7914,235 @@ function RTE_Plugin_AIToolkit() {
             || getReviewFocusActionDisplayLabel(suggestion, "")
             || "Locate";
         actionNode.innerText = focusLabel;
+        if (detailNode) {
+            detailNode.innerText = "Press Enter to reopen this suggestion and land on " + focusLabel + ".";
+        }
         if (item && item.setAttribute) {
             item.setAttribute("data-rte-ai-review-open-action-label", focusLabel);
-            var baseAria = item.getAttribute("data-rte-ai-review-base-aria-label") || item.getAttribute("aria-label") || "";
-            item.setAttribute("aria-label", baseAria ? (baseAria + ". Open on " + focusLabel + ".") : ("Open on " + focusLabel + "."));
         }
+    }
+
+    function syncReviewCondensedPreviewShortcutModule(preview, suggestion, panel) {
+        if (!preview || !suggestion) {
+            return;
+        }
+        var moduleNode = preview.querySelector ? preview.querySelector(".rte-ai-review-item-condensed-shortcuts") : null;
+        var shortcutText = getReviewCardSupplementalShortcutHint(suggestion, getPreferredReviewActionFocus(panel));
+        if (!shortcutText) {
+            if (moduleNode && moduleNode.parentNode) {
+                moduleNode.parentNode.removeChild(moduleNode);
+            }
+            return;
+        }
+        if (!moduleNode) {
+            moduleNode = append(preview, "div", "", "rte-ai-review-item-condensed-shortcuts");
+        }
+        var titleNode = moduleNode.querySelector ? moduleNode.querySelector(".rte-ai-review-item-condensed-shortcuts-title") : null;
+        if (!titleNode) {
+            titleNode = append(moduleNode, "span", "", "rte-ai-review-item-condensed-shortcuts-title");
+        }
+        titleNode.textContent = "More keys";
+        var bodyNode = moduleNode.querySelector ? moduleNode.querySelector(".rte-ai-review-item-condensed-shortcuts-body") : null;
+        if (!bodyNode) {
+            bodyNode = append(moduleNode, "div", "", "rte-ai-review-shortcuts rte-ai-review-item-condensed-shortcuts-body");
+        }
+        renderReviewShortcutDisplayContent(bodyNode, shortcutText);
+        applyReviewShortcutDisplayState(bodyNode, "card");
+        moduleNode.setAttribute("aria-label", "More keys. " + (bodyNode.textContent || ""));
+    }
+
+    function appendReviewCondensedPreviewQueueSection(parent, queuePositionData) {
+        if (!parent || !queuePositionData) {
+            return null;
+        }
+        var queueNode = append(parent, "div", "", "rte-ai-review-item-condensed-queue is-" + (queuePositionData.role || ""));
+        append(queueNode, "div", "", "rte-ai-review-item-condensed-queue-title", queuePositionData.roleLabel);
+        var queueMeta = append(queueNode, "div", "", "rte-ai-review-item-condensed-queue-meta");
+        append(queueMeta, "span", "", "rte-ai-review-item-queue-pill is-role", queuePositionData.roleLabel);
+        append(queueMeta, "span", "", "rte-ai-review-item-queue-pill is-position", queuePositionData.queueLabel);
+        append(queueNode, "div", "", "rte-ai-review-item-condensed-queue-detail", queuePositionData.detail);
+        return queueNode;
+    }
+
+    function appendReviewCondensedPreviewTransitionSection(parent, queueTransitionData) {
+        if (!parent || !queueTransitionData) {
+            return null;
+        }
+        var transitionNode = append(parent, "div", "", "rte-ai-review-item-condensed-transition");
+        append(transitionNode, "div", "", "rte-ai-review-item-condensed-transition-title", queueTransitionData.title);
+        var transitionMeta = append(transitionNode, "div", "", "rte-ai-review-item-condensed-transition-meta");
+        append(transitionMeta, "span", "", "rte-ai-review-item-transition-pill is-status", queueTransitionData.statusLabel);
+        append(transitionMeta, "span", "", "rte-ai-review-item-transition-pill is-position", queueTransitionData.queueLabel);
+        if (queueTransitionData.typeLabel) {
+            append(transitionMeta, "span", "", "rte-ai-review-item-transition-pill is-type", queueTransitionData.typeLabel);
+        }
+        if (queueTransitionData.scopeLabel) {
+            append(transitionMeta, "span", "", "rte-ai-review-item-transition-pill is-scope", queueTransitionData.scopeLabel);
+        }
+        append(transitionNode, "div", "", "rte-ai-review-item-condensed-transition-detail", queueTransitionData.detail);
+        appendQueueTransitionPreview(transitionNode, "rte-ai-review-item-condensed-transition-preview", queueTransitionData);
+        if (queueTransitionData.followupTitle) {
+            var followupNode = append(transitionNode, "div", "", "rte-ai-review-item-condensed-transition-followup");
+            append(followupNode, "div", "", "rte-ai-review-item-condensed-transition-followup-title", queueTransitionData.followupTitle);
+            var followupMeta = append(followupNode, "div", "", "rte-ai-review-item-condensed-transition-followup-meta");
+            if (queueTransitionData.followupStatusLabel) {
+                append(followupMeta, "span", "", "rte-ai-review-item-transition-pill is-followup", queueTransitionData.followupStatusLabel);
+            }
+            append(followupNode, "div", "", "rte-ai-review-item-condensed-transition-followup-detail", queueTransitionData.followupDetail);
+        }
+        return transitionNode;
+    }
+
+    function buildReviewCondensedPreviewMetaData(suggestion, options) {
+        if (!suggestion) {
+            return [];
+        }
+        options = options || {};
+        var sharedUpdateCount = options.sharedUpdateCount || 0;
+        var pills = [];
+        pills.push({
+            kind: "status",
+            text: suggestion.status === "pending" ? "Ready to review" : getSuggestionStatusLabel(suggestion.status)
+        });
+        if (sharedUpdateCount) {
+            pills.push({
+                kind: "remote",
+                text: sharedUpdateCount > 1 ? sharedUpdateCount + " shared updates" : "Shared update"
+            });
+        }
+        if (suggestion.suggestionType && getSuggestionTypeValue(suggestion.suggestionType) !== "other") {
+            pills.push({
+                kind: "type",
+                text: getSuggestionTypeLabel(suggestion.suggestionType)
+            });
+        }
+        if (suggestion.language) {
+            pills.push({
+                kind: "language",
+                text: getTranslateLanguageLabel(suggestion.language)
+            });
+        }
+        var scopeLabel = getSuggestionScopeLabel(suggestion);
+        if (scopeLabel) {
+            pills.push({
+                kind: "scope",
+                text: suggestion.status === "pending" ? scopeLabel + " draft" : scopeLabel
+            });
+        }
+        if (suggestion.status === "pending") {
+            pills.push({
+                kind: "steps",
+                text: "1 step"
+            });
+        }
+        return pills;
+    }
+
+    function buildReviewCondensedPreviewAriaLabel(suggestion, options) {
+        if (!suggestion) {
+            return "";
+        }
+        options = options || {};
+        var parts = ["Proposed edit", "Current and suggested text"];
+        var originalText = options.originalText || summarizeSuggestionText(suggestion.originalText || "", 72) || "Original selection unavailable.";
+        var resultText = options.resultText || summarizeSuggestionText(suggestion.resultText || "", 72) || "Suggested text unavailable.";
+        var metaData = options.previewMetaData || buildReviewCondensedPreviewMetaData(suggestion, options);
+        if (metaData && metaData.length) {
+            for (var metaIndex = 0; metaIndex < metaData.length; metaIndex++) {
+                if (metaData[metaIndex] && metaData[metaIndex].text) {
+                    parts.push(metaData[metaIndex].text);
+                }
+            }
+        }
+        parts.push("Current");
+        parts.push(originalText);
+        parts.push("Suggested");
+        parts.push(resultText);
+        var reasonText = options.reasonText || buildCompletionPreviewReason(suggestion);
+        if (reasonText) {
+            parts.push("Why");
+            parts.push(reasonText);
+        }
+        if (options.changeGlance) {
+            parts.push(options.changeGlance.title);
+            if (options.changeGlance.pills && options.changeGlance.pills.length) {
+                for (var glanceIndex = 0; glanceIndex < options.changeGlance.pills.length; glanceIndex++) {
+                    if (options.changeGlance.pills[glanceIndex] && options.changeGlance.pills[glanceIndex].text) {
+                        parts.push(options.changeGlance.pills[glanceIndex].text);
+                    }
+                }
+            }
+            if (options.changeGlance.detail) {
+                parts.push(options.changeGlance.detail);
+            }
+        }
+        if (options.queuePositionData) {
+            parts.push(options.queuePositionData.roleLabel);
+            parts.push(options.queuePositionData.queueLabel);
+            parts.push(options.queuePositionData.detail);
+        }
+        parts.push("Review handoff");
+        var focusLabel = getReviewFocusActionDisplayLabel(suggestion, options.preferredAction || getPreferredReviewActionFocus(options.panel))
+            || getReviewFocusActionDisplayLabel(suggestion, "")
+            || "Locate";
+        parts.push("Enter target " + focusLabel);
+        parts.push("Press Enter to reopen this suggestion and land on " + focusLabel);
+        var shortcutText = getReviewCardSupplementalShortcutHint(suggestion, options.preferredAction || getPreferredReviewActionFocus(options.panel));
+        if (shortcutText) {
+            parts.push("More keys");
+            parts.push(shortcutText);
+        }
+        if (options.queueTransitionData) {
+            parts.push(options.queueTransitionData.title);
+            parts.push(options.queueTransitionData.statusLabel);
+            parts.push(options.queueTransitionData.queueLabel);
+            if (options.queueTransitionData.typeLabel) {
+                parts.push(options.queueTransitionData.typeLabel);
+            }
+            if (options.queueTransitionData.scopeLabel) {
+                parts.push(options.queueTransitionData.scopeLabel);
+            }
+            parts.push(options.queueTransitionData.detail);
+            parts.push(getQueueTransitionPreviewSummary(options.queueTransitionData));
+            if (options.queueTransitionData.followupTitle) {
+                parts.push(options.queueTransitionData.followupTitle);
+            }
+            if (options.queueTransitionData.followupDetail) {
+                parts.push(options.queueTransitionData.followupDetail);
+            }
+        }
+        return parts.join(". ");
+    }
+
+    function updateReviewCondensedPreviewAria(item, suggestion, panel) {
+        if (!item || !suggestion || !item.setAttribute) {
+            return;
+        }
+        var preferredAction = getPreferredReviewActionFocus(panel);
+        var typeFilter = getReviewSuggestionTypeFilter(suggestion);
+        var filteredPendingSuggestions = getFilteredPendingSuggestions(typeFilter);
+        if (!filteredPendingSuggestions.length && typeFilter !== "all") {
+            filteredPendingSuggestions = getFilteredPendingSuggestions("all");
+        }
+        var queuePositionData = buildReviewQueuePositionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion);
+        var queueTransitionData = buildReviewQueueTransitionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion);
+        var changeGlance = buildReviewChangeGlanceData(suggestion);
+        var sharedUpdateCount = getSuggestionRemoteUpdateCount(suggestion.id);
+        var originalText = summarizeSuggestionText(suggestion.originalText || "", 72) || "Original selection unavailable.";
+        var resultText = summarizeSuggestionText(suggestion.resultText || "", 72) || "Suggested text unavailable.";
+        var baseAria = buildReviewCondensedPreviewAriaLabel(suggestion, {
+            panel: panel,
+            preferredAction: preferredAction,
+            previewMetaData: buildReviewCondensedPreviewMetaData(suggestion, { sharedUpdateCount: sharedUpdateCount }),
+            queuePositionData: queuePositionData,
+            queueTransitionData: queueTransitionData,
+            changeGlance: changeGlance,
+            originalText: originalText,
+            resultText: resultText,
+            reasonText: buildCompletionPreviewReason(suggestion)
+        });
+        item.setAttribute("data-rte-ai-review-base-aria-label", baseAria);
+        item.setAttribute("aria-label", baseAria);
     }
 
     function updateVisibleReviewCondensedPreviewOpenHints(panel) {
@@ -5652,34 +8161,156 @@ function RTE_Plugin_AIToolkit() {
                 continue;
             }
             var suggestion = findSuggestionById(suggestionId);
+            updateReviewCondensedPreviewAria(item, suggestion, panelNode);
             updateReviewCondensedPreviewOpenHint(item, suggestion, panelNode);
+            syncReviewCondensedPreviewShortcutModule(item, suggestion, panelNode);
             item.title = getReviewCardShortcutTitle(suggestion, preferredAction);
         }
     }
 
-    function appendReviewCondensedPreview(parent, suggestion, panel) {
+    function updateVisibleInlineReviewFocusHints() {
+        var editable = editor.getEditable ? editor.getEditable() : null;
+        if (!editable || !editable.querySelectorAll) {
+            return;
+        }
+        var wrappers = editable.querySelectorAll(".rte-ai-inline-preview");
+        for (var i = 0; i < wrappers.length; i++) {
+            var wrapper = wrappers[i];
+            if (!wrapper || wrapper.classList.contains("is-review-active")) {
+                continue;
+            }
+            var suggestionId = wrapper.getAttribute("data-rte-ai-suggestion-id") || "";
+            if (!suggestionId || (editor.__aiReviewEmptyPreviewSuggestionId && suggestionId === editor.__aiReviewEmptyPreviewSuggestionId)) {
+                continue;
+            }
+            var suggestion = findSuggestionById(suggestionId);
+            if (!suggestion) {
+                continue;
+            }
+            var typeFilter = getInlineReviewTypeFilter(suggestionId);
+            var filteredPendingSuggestions = getFilteredPendingSuggestions(typeFilter);
+            var queuePositionData = buildReviewQueuePositionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion);
+            var queueTransitionData = buildReviewQueueTransitionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion);
+            var reviewFocusLabel = getReviewFocusActionDisplayLabel(suggestion, getPreferredReviewActionFocus()) || getReviewFocusActionDisplayLabel(suggestion, "");
+            var reviewLabel = "Open this AI suggestion in review" + (reviewFocusLabel ? " and focus " + reviewFocusLabel : "");
+            var reasonText = buildCompletionPreviewReason(suggestion);
+            var reviewButton = wrapper.querySelector ? wrapper.querySelector("[data-rte-ai-action=\"review\"]") : null;
+            if (reviewButton) {
+                updateInlineReviewActionButtonState(reviewButton, "Review", reviewLabel);
+            }
+            var glanceData = buildReviewChangeGlanceData(suggestion);
+            var compareGlanceData = buildInlinePreviewCompareGlanceData(glanceData);
+            var focusChip = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-focus") : null;
+            var currentChip = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-current") : null;
+            var typeChip = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-type") : null;
+            var languageChip = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-language") : null;
+            var scopeChip = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-scope") : null;
+            var remoteChip = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-remote") : null;
+            var glanceNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-glance") : null;
+            var reasonNode = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-reason") : null;
+            var shortcutsChip = wrapper.querySelector ? wrapper.querySelector(".rte-ai-inline-preview-shortcuts") : null;
+            if (reviewFocusLabel) {
+                if (!focusChip) {
+                    focusChip = document.createElement("span");
+                    focusChip.className = "rte-ai-inline-preview-focus";
+                    var focusAnchor = remoteChip || scopeChip || languageChip || typeChip || currentChip;
+                    if (focusAnchor && focusAnchor.nextSibling) {
+                        wrapper.insertBefore(focusChip, focusAnchor.nextSibling);
+                    }
+                    else {
+                        wrapper.appendChild(focusChip);
+                    }
+                }
+                focusChip.textContent = "Focus " + reviewFocusLabel;
+                focusChip.setAttribute("aria-label", "Review opens on " + reviewFocusLabel);
+            }
+            else if (focusChip && focusChip.parentNode) {
+                focusChip.parentNode.removeChild(focusChip);
+            }
+            if (glanceData && glanceData.pills && glanceData.pills.length) {
+                if (!glanceNode) {
+                    glanceNode = document.createElement("span");
+                    glanceNode.className = "rte-ai-inline-preview-glance";
+                    var glanceAnchor = scopeChip || typeChip || currentChip;
+                    if (glanceAnchor && glanceAnchor.nextSibling) {
+                        wrapper.insertBefore(glanceNode, glanceAnchor.nextSibling);
+                    }
+                    else {
+                        wrapper.appendChild(glanceNode);
+                    }
+                }
+                while (glanceNode.firstChild) {
+                    glanceNode.removeChild(glanceNode.firstChild);
+                }
+                for (var glanceIndex = 0; glanceIndex < glanceData.pills.length; glanceIndex++) {
+                    var glancePill = glanceData.pills[glanceIndex];
+                    if (!glancePill || !glancePill.text || glancePill.kind === "scope") {
+                        continue;
+                    }
+                    append(glanceNode, "span", "", "rte-ai-review-item-glance-pill is-" + glancePill.kind, glancePill.text);
+                }
+                if (!glanceNode.childNodes.length && glanceNode.parentNode) {
+                    glanceNode.parentNode.removeChild(glanceNode);
+                    glanceNode = null;
+                }
+            }
+            else if (glanceNode && glanceNode.parentNode) {
+                glanceNode.parentNode.removeChild(glanceNode);
+            }
+            syncInlinePreviewCompareHeaderNode(wrapper, suggestion);
+            syncInlinePreviewCompareMetaNode(wrapper, suggestion);
+            syncInlinePreviewCompareGlanceNode(wrapper, compareGlanceData);
+            reasonNode = syncInlinePreviewReasonNode(wrapper, reasonNode, suggestion);
+            shortcutsChip = syncInlinePreviewShortcutNode(wrapper, shortcutsChip);
+            syncInlinePreviewActionSummaryNode(wrapper, {
+                suggestion: suggestion,
+                sharedUpdateCount: getSuggestionRemoteUpdateCount(suggestionId),
+                queueTransitionData: queueTransitionData
+            });
+            syncInlinePreviewActionGroupHeaders(wrapper, {
+                suggestion: suggestion,
+                sharedUpdateCount: getSuggestionRemoteUpdateCount(suggestionId)
+            });
+            wrapper.setAttribute("aria-label", buildInlineSuggestionAriaLabel(suggestion, {
+                remoteUpdateCount: getSuggestionRemoteUpdateCount(suggestionId),
+                glanceLabels: glanceData ? glanceData.pills.map(function (pill) { return pill.text; }) : [],
+                glanceDetail: glanceData ? glanceData.detail : "",
+                compareLabel: "Proposed edit. Current and suggested text.",
+                reasonText: reasonText,
+                focusLabel: reviewFocusLabel,
+                queueRoleLabel: queuePositionData ? queuePositionData.roleLabel : "",
+                queueRoleDetail: queuePositionData ? queuePositionData.detail : "",
+                transitionLabel: queueTransitionData ? (queueTransitionData.title + ". " + queueTransitionData.statusLabel + ". " + queueTransitionData.queueLabel + ". " + getQueueTransitionPreviewSummary(queueTransitionData)) : "",
+                followupLabel: queueTransitionData && queueTransitionData.followupTitle ? (queueTransitionData.followupTitle + ". " + queueTransitionData.followupDetail) : ""
+            }));
+        }
+    }
+
+    function appendReviewCondensedPreview(parent, suggestion, panel, options) {
         if (!parent || !suggestion) {
             return null;
         }
+        options = options || {};
+        var queuePositionData = options.queuePositionData || null;
+        var queueTransitionData = options.queueTransitionData || null;
+        var previewMetaData = buildReviewCondensedPreviewMetaData(suggestion, options);
         var glanceData = buildReviewChangeGlanceData(suggestion);
         var originalText = summarizeSuggestionText(suggestion.originalText || "", 72) || "Original selection unavailable.";
         var resultText = summarizeSuggestionText(suggestion.resultText || "", 72) || "Suggested text unavailable.";
         var reasonText = buildCompletionPreviewReason(suggestion);
         var diffParts = buildCompletionPreviewDiffParts(originalText, resultText);
         var preview = append(parent, "div", "", "rte-ai-review-item-condensed-preview");
-        var openHint = append(preview, "div", "", "rte-ai-review-item-condensed-open");
-        append(openHint, "span", "", "rte-ai-review-item-condensed-open-label", "Open on");
-        append(openHint, "span", "", "rte-ai-review-item-condensed-open-pill");
-        updateReviewCondensedPreviewOpenHint(preview, suggestion, panel);
-        if (glanceData && glanceData.pills && glanceData.pills.length) {
-            var glance = append(preview, "div", "", "rte-ai-review-item-condensed-glance");
-            var glanceMeta = append(glance, "div", "", "rte-ai-review-item-condensed-glance-meta");
-            for (var glanceIndex = 0; glanceIndex < glanceData.pills.length; glanceIndex++) {
-                var glancePill = glanceData.pills[glanceIndex];
-                append(glanceMeta, "span", "", "rte-ai-review-item-glance-pill is-" + glancePill.kind, glancePill.text);
-            }
-            if (glanceData.detail) {
-                append(glance, "div", "", "rte-ai-review-item-condensed-glance-detail", glanceData.detail);
+        var previewHeader = append(preview, "div", "", "rte-ai-review-item-condensed-preview-header");
+        append(previewHeader, "div", "", "rte-ai-review-item-condensed-preview-title", "Proposed edit");
+        append(previewHeader, "div", "", "rte-ai-review-item-condensed-preview-detail", "Current and suggested text");
+        if (previewMetaData && previewMetaData.length) {
+            var previewMeta = append(preview, "div", "", "rte-ai-review-item-condensed-preview-meta");
+            for (var metaIndex = 0; metaIndex < previewMetaData.length; metaIndex++) {
+                var metaPill = previewMetaData[metaIndex];
+                if (!metaPill || !metaPill.text) {
+                    continue;
+                }
+                append(previewMeta, "span", "", "rte-ai-review-item-condensed-preview-pill is-" + (metaPill.kind || "other"), metaPill.text);
             }
         }
         var currentLine = append(preview, "div", "", "rte-ai-review-item-condensed-preview-line is-current");
@@ -5693,6 +8324,28 @@ function RTE_Plugin_AIToolkit() {
             append(reason, "span", "", "rte-ai-review-item-condensed-reason-label", "Why");
             append(reason, "div", "", "rte-ai-review-item-condensed-reason-copy", reasonText);
         }
+        if (glanceData && glanceData.pills && glanceData.pills.length) {
+            var glance = append(preview, "div", "", "rte-ai-review-item-condensed-glance");
+            append(glance, "div", "", "rte-ai-review-item-condensed-glance-title", "Change at a glance");
+            var glanceMeta = append(glance, "div", "", "rte-ai-review-item-condensed-glance-meta");
+            for (var glanceIndex = 0; glanceIndex < glanceData.pills.length; glanceIndex++) {
+                var glancePill = glanceData.pills[glanceIndex];
+                append(glanceMeta, "span", "", "rte-ai-review-item-glance-pill is-" + glancePill.kind, glancePill.text);
+            }
+            if (glanceData.detail) {
+                append(glance, "div", "", "rte-ai-review-item-condensed-glance-detail", glanceData.detail);
+            }
+        }
+        appendReviewCondensedPreviewQueueSection(preview, queuePositionData);
+        var entry = append(preview, "div", "", "rte-ai-review-item-condensed-entry");
+        append(entry, "div", "", "rte-ai-review-item-condensed-entry-title", "Review handoff");
+        var openHint = append(entry, "div", "", "rte-ai-review-item-condensed-open");
+        append(openHint, "span", "", "rte-ai-review-item-condensed-open-label", "Enter target");
+        append(openHint, "span", "", "rte-ai-review-item-condensed-open-pill");
+        append(entry, "div", "", "rte-ai-review-item-condensed-entry-detail");
+        updateReviewCondensedPreviewOpenHint(entry, suggestion, panel);
+        syncReviewCondensedPreviewShortcutModule(entry, suggestion, panel);
+        appendReviewCondensedPreviewTransitionSection(preview, queueTransitionData);
         return preview;
     }
 
@@ -6026,10 +8679,22 @@ function RTE_Plugin_AIToolkit() {
                 draft: "",
                 scope: snapshot.hasSelection ? "selection" : "document",
                 busy: false,
-                status: ""
+                status: "",
+                sessionVersion: 0
             };
         }
         return editor.__aiChatState;
+    }
+
+    function resetChatConversationState(state, statusText) {
+        if (!state) {
+            return;
+        }
+        state.messages = [];
+        state.draft = "";
+        state.busy = false;
+        state.status = statusText || "";
+        state.sessionVersion = (state.sessionVersion || 0) + 1;
     }
 
     function resolveChatScope() {
@@ -6064,6 +8729,166 @@ function RTE_Plugin_AIToolkit() {
         editor.__aiChatOriginalMinHeight = null;
     }
 
+    function captureChatPanelFocusState(panel) {
+        if (!panel || !panel.contains || !document.activeElement || !panel.contains(document.activeElement)) {
+            return null;
+        }
+        var active = document.activeElement;
+        if (active.classList && active.classList.contains("rte-ai-chat-input")) {
+            return { kind: "composer" };
+        }
+        var headerAction = active.getAttribute("data-rte-ai-chat-header-action");
+        if (headerAction) {
+            return { kind: "header-action", value: headerAction };
+        }
+        var scopeTarget = active.getAttribute("data-rte-ai-chat-scope-target");
+        if (scopeTarget) {
+            return { kind: "scope", value: scopeTarget };
+        }
+        var promptId = active.getAttribute("data-rte-ai-chat-prompt-id");
+        if (promptId) {
+            return { kind: "quick", value: promptId };
+        }
+        var actionId = active.getAttribute("data-rte-ai-chat-action");
+        if (actionId) {
+            if (active.closest && active.closest(".rte-ai-chat-composer-actions")) {
+                return { kind: "composer-action", value: actionId };
+            }
+            var messageNode = active.closest ? active.closest(".rte-ai-chat-message") : null;
+            if (messageNode) {
+                return {
+                    kind: "message-action",
+                    value: actionId,
+                    exchangeIndex: messageNode.getAttribute("data-rte-ai-chat-exchange-index") || "",
+                    threadRole: messageNode.getAttribute("data-rte-ai-chat-thread-role") || ""
+                };
+            }
+        }
+        if (active === panel) {
+            return { kind: "panel" };
+        }
+        return null;
+    }
+
+    function findChatPanelFocusTarget(panel, descriptor) {
+        if (!panel || !descriptor || !descriptor.kind) {
+            return null;
+        }
+        var i = 0;
+        var nodes;
+        switch (descriptor.kind) {
+        case "composer":
+            return panel.querySelector(".rte-ai-chat-input");
+        case "panel":
+            return panel;
+        case "header-action":
+            nodes = panel.querySelectorAll("[data-rte-ai-chat-header-action]");
+            for (i = 0; i < nodes.length; i++) {
+                if ((nodes[i].getAttribute("data-rte-ai-chat-header-action") || "") === descriptor.value) {
+                    return nodes[i];
+                }
+            }
+            return null;
+        case "scope":
+            nodes = panel.querySelectorAll("[data-rte-ai-chat-scope-target]");
+            for (i = 0; i < nodes.length; i++) {
+                if ((nodes[i].getAttribute("data-rte-ai-chat-scope-target") || "") === descriptor.value) {
+                    return nodes[i];
+                }
+            }
+            return null;
+        case "quick":
+            nodes = panel.querySelectorAll("[data-rte-ai-chat-prompt-id]");
+            for (i = 0; i < nodes.length; i++) {
+                if ((nodes[i].getAttribute("data-rte-ai-chat-prompt-id") || "") === descriptor.value) {
+                    return nodes[i];
+                }
+            }
+            return null;
+        case "composer-action":
+            nodes = panel.querySelectorAll(".rte-ai-chat-composer-actions [data-rte-ai-chat-action]");
+            for (i = 0; i < nodes.length; i++) {
+                if ((nodes[i].getAttribute("data-rte-ai-chat-action") || "") === descriptor.value) {
+                    return nodes[i];
+                }
+            }
+            return null;
+        case "message-action":
+            nodes = panel.querySelectorAll(".rte-ai-chat-message [data-rte-ai-chat-action]");
+            for (i = 0; i < nodes.length; i++) {
+                var messageNode = nodes[i].closest ? nodes[i].closest(".rte-ai-chat-message") : null;
+                if (!messageNode) {
+                    continue;
+                }
+                if ((nodes[i].getAttribute("data-rte-ai-chat-action") || "") !== descriptor.value) {
+                    continue;
+                }
+                if ((messageNode.getAttribute("data-rte-ai-chat-exchange-index") || "") !== (descriptor.exchangeIndex || "")) {
+                    continue;
+                }
+                if ((messageNode.getAttribute("data-rte-ai-chat-thread-role") || "") !== (descriptor.threadRole || "")) {
+                    continue;
+                }
+                return nodes[i];
+            }
+            return null;
+        default:
+            return null;
+        }
+    }
+
+    function restoreChatPanelFocus(panel, descriptor) {
+        var target = findChatPanelFocusTarget(panel, descriptor);
+        if (!target || target.disabled) {
+            return false;
+        }
+        try {
+            target.focus({ preventScroll: true });
+        }
+        catch (ignore) {
+            try {
+                target.focus();
+            }
+            catch (focusError) {
+                return false;
+            }
+        }
+        return document.activeElement === target;
+    }
+
+    function captureChatFeedScrollState(panel) {
+        if (!panel || !panel.querySelector) {
+            return null;
+        }
+        var feed = panel.querySelector(".rte-ai-chat-feed");
+        if (!feed || typeof feed.scrollTop === "undefined") {
+            return null;
+        }
+        var maxScroll = Math.max(0, (feed.scrollHeight || 0) - (feed.clientHeight || 0));
+        var scrollTop = Math.max(0, feed.scrollTop || 0);
+        return {
+            scrollTop: scrollTop,
+            stickToBottom: maxScroll <= 0 || (maxScroll - scrollTop) <= 24
+        };
+    }
+
+    function restoreChatFeedScroll(feed, scrollState) {
+        if (!feed || !scrollState || typeof feed.scrollTop === "undefined") {
+            return false;
+        }
+        if (scrollState.stickToBottom) {
+            feed.scrollTop = feed.scrollHeight;
+            return true;
+        }
+        var maxScroll = Math.max(0, (feed.scrollHeight || 0) - (feed.clientHeight || 0));
+        feed.scrollTop = Math.max(0, Math.min(scrollState.scrollTop || 0, maxScroll));
+        return true;
+    }
+
+    function isChatPanelOpen() {
+        return !!(editor.__aiChatPanel && editor.__aiChatPanel.isConnected);
+    }
+
     function openChatPanel(options) {
         options = options || {};
         closeReviewPanel();
@@ -6092,6 +8917,7 @@ function RTE_Plugin_AIToolkit() {
         state.status = context.scope === "selection"
             ? "Thinking about the current selection..."
             : "Thinking about the current document...";
+        var requestSessionVersion = state.sessionVersion || 0;
         state.messages.push({
             role: "user",
             text: cleanPrompt,
@@ -6108,6 +8934,9 @@ function RTE_Plugin_AIToolkit() {
             mode: "chat",
             scope: context.scope
         }).then(function (resolved) {
+            if ((state.sessionVersion || 0) !== requestSessionVersion) {
+                return;
+            }
             state.busy = false;
             state.status = resolved && resolved.operations && resolved.operations.length
                 ? "AI response ready. Preview or apply the suggested change from the chat."
@@ -6120,9 +8949,14 @@ function RTE_Plugin_AIToolkit() {
                 snapshot: context.snapshot,
                 timestamp: new Date().getTime()
             });
-            renderChatPanel(true);
+            if (isChatPanelOpen()) {
+                renderChatPanel(false);
+            }
         }).catch(function (error) {
             console.error("AI chat failed", error);
+            if ((state.sessionVersion || 0) !== requestSessionVersion) {
+                return;
+            }
             state.busy = false;
             state.status = "AI chat failed.";
             state.messages.push({
@@ -6132,7 +8966,9 @@ function RTE_Plugin_AIToolkit() {
                 isError: true,
                 timestamp: new Date().getTime()
             });
-            renderChatPanel(true);
+            if (isChatPanelOpen()) {
+                renderChatPanel(false);
+            }
         });
 
         return true;
@@ -6142,10 +8978,33 @@ function RTE_Plugin_AIToolkit() {
         if (!message || !message.resolved) {
             return false;
         }
-        var snapshot = message.snapshot || captureSelectionSnapshot();
+        var snapshot = captureSelectionSnapshot();
         var resolved = message.resolved;
         var resultText = getPrimaryResolvedText(resolved);
         var applied = false;
+        var selectionRequiredModes = {
+            preview: true,
+            selection: true
+        };
+
+        if (selectionRequiredModes[mode] && !snapshot.hasSelection) {
+            getChatState().status = mode === "preview"
+                ? "Select text before previewing this chat suggestion inline."
+                : "Select text before replacing selection from chat.";
+            renderChatPanel(false);
+            return false;
+        }
+
+        if (mode === "plan" && resolved && resolved.operations && resolved.operations.length) {
+            for (var operationIndex = 0; operationIndex < resolved.operations.length; operationIndex++) {
+                var operation = resolved.operations[operationIndex];
+                if (operation && (operation.type === "preview-suggestion" || operation.type === "replace-selection") && !snapshot.hasSelection) {
+                    getChatState().status = "Select text before applying this selection-based chat suggestion.";
+                    renderChatPanel(false);
+                    return false;
+                }
+            }
+        }
 
         if (mode === "plan") {
             applied = executeResolvedAction(resolved, { snapshot: snapshot });
@@ -6200,6 +9059,16 @@ function RTE_Plugin_AIToolkit() {
             return false;
         }
 
+        var previousActive = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+        var previousSelectionStart = null;
+        var previousSelectionEnd = null;
+        if (previousActive && typeof previousActive.selectionStart === "number" && typeof previousActive.selectionEnd === "number") {
+            previousSelectionStart = previousActive.selectionStart;
+            previousSelectionEnd = previousActive.selectionEnd;
+        }
+
         var textarea = document.createElement("textarea");
         textarea.value = text;
         textarea.setAttribute("readonly", "readonly");
@@ -6221,6 +9090,27 @@ function RTE_Plugin_AIToolkit() {
         }
 
         document.body.removeChild(textarea);
+        if (previousActive && previousActive.focus && previousActive.isConnected !== false) {
+            try {
+                previousActive.focus({ preventScroll: true });
+            }
+            catch (ignoreFocus) {
+                try {
+                    previousActive.focus();
+                }
+                catch (ignoreFocusFallback) {
+                }
+            }
+            if (previousSelectionStart !== null
+                && previousSelectionEnd !== null
+                && previousActive.setSelectionRange) {
+                try {
+                    previousActive.setSelectionRange(previousSelectionStart, previousSelectionEnd);
+                }
+                catch (ignoreSelection) {
+                }
+            }
+        }
         return copied;
     }
 
@@ -6240,6 +9130,16 @@ function RTE_Plugin_AIToolkit() {
             return "Issue";
         }
         return message && message.role === "user" ? "You" : "AI";
+    }
+
+    function getChatMessageThreadRoleLabel(threadRole) {
+        if (threadRole === "request") {
+            return "Request";
+        }
+        if (threadRole === "response") {
+            return "Response";
+        }
+        return "";
     }
 
     function getChatMessageScopeLabel(message) {
@@ -6312,6 +9212,29 @@ function RTE_Plugin_AIToolkit() {
         };
     }
 
+    function buildChatMessageContextCardAriaLabel(contextCardData) {
+        if (!contextCardData) {
+            return "";
+        }
+        var parts = [];
+        if (contextCardData.title) {
+            parts.push(contextCardData.title);
+        }
+        if (contextCardData.scopeLabel) {
+            parts.push(contextCardData.scopeLabel);
+        }
+        if (contextCardData.wordLabel) {
+            parts.push(contextCardData.wordLabel);
+        }
+        if (contextCardData.paragraphLabel) {
+            parts.push(contextCardData.paragraphLabel);
+        }
+        if (contextCardData.copy) {
+            parts.push(contextCardData.copy);
+        }
+        return parts.join(". ");
+    }
+
     function getChatMessageStateTitle(message) {
         if (!message) {
             return "";
@@ -6357,33 +9280,64 @@ function RTE_Plugin_AIToolkit() {
         return "Read the answer grounded in the current " + scopeLabel + " context.";
     }
 
-    function getChatMessageActionSummary(message) {
+    function buildChatMessageActionState(message, currentSnapshot) {
+        var resolved = message && message.resolved ? message.resolved : null;
+        var operations = resolved && resolved.operations ? resolved.operations : [];
+        var resultText = resolved ? getPrimaryResolvedText(resolved) : "";
+        var hasSelection = currentSnapshot && typeof currentSnapshot.hasSelection === "boolean"
+            ? !!currentSnapshot.hasSelection
+            : !!(message && message.snapshot && message.snapshot.hasSelection);
+        var selectionDependentPlan = false;
+        for (var operationIndex = 0; operationIndex < operations.length; operationIndex++) {
+            var operation = operations[operationIndex];
+            if (operation && (operation.type === "preview-suggestion" || operation.type === "replace-selection")) {
+                selectionDependentPlan = true;
+                break;
+            }
+        }
+        return {
+            operations: operations,
+            resultText: resultText,
+            hasSelection: hasSelection,
+            selectionDependentPlan: selectionDependentPlan,
+            canApplyPlan: !!operations.length && (!selectionDependentPlan || hasSelection),
+            canPreview: !!resultText && hasSelection,
+            canReplaceSelection: !!resultText && hasSelection,
+            canInsert: !!resultText,
+            canReplaceDocument: !!resultText && !hasSelection
+        };
+    }
+
+    function getChatMessageActionSummary(message, currentSnapshot) {
         if (!message || !message.resolved) {
             return null;
         }
-        var resolved = message.resolved || null;
-        var operations = resolved && resolved.operations ? resolved.operations : [];
-        var resultText = resolved ? getPrimaryResolvedText(resolved) : "";
-        var hasSelection = !!(message.snapshot && message.snapshot.hasSelection);
-        if (operations.length && hasSelection) {
+        var actionState = buildChatMessageActionState(message, currentSnapshot);
+        if (actionState.operations.length && actionState.canPreview) {
             return {
                 title: "Best next step: Preview inline",
                 detail: "Check the inline diff first, then replace the selection or apply the prepared plan if it looks right."
             };
         }
-        if (operations.length) {
+        if (actionState.operations.length && actionState.canApplyPlan) {
             return {
                 title: "Best next step: Apply the prepared plan",
                 detail: "Run the structured change directly or use the insert and document actions below if you want a different handoff."
             };
         }
-        if (resultText && hasSelection) {
+        if (actionState.operations.length && actionState.canInsert) {
+            return {
+                title: "Best next step: Insert below",
+                detail: "Select text to preview or replace this change inline, or insert the prepared draft below the current content."
+            };
+        }
+        if (actionState.resultText && actionState.canReplaceSelection) {
             return {
                 title: "Best next step: Replace or preview",
                 detail: "Use the prepared draft to preview inline, replace the selection, or insert a follow-up below."
             };
         }
-        if (resultText) {
+        if (actionState.resultText) {
             return {
                 title: "Best next step: Reuse this draft",
                 detail: "Insert the draft below or replace the full document, depending on how broad the change should be."
@@ -6392,24 +9346,24 @@ function RTE_Plugin_AIToolkit() {
         return null;
     }
 
-    function getChatRecommendedActionId(message) {
+    function getChatRecommendedActionId(message, currentSnapshot) {
         if (!message || !message.resolved) {
             return "";
         }
-        var resolved = message.resolved || null;
-        var operations = resolved && resolved.operations ? resolved.operations : [];
-        var resultText = resolved ? getPrimaryResolvedText(resolved) : "";
-        var hasSelection = !!(message.snapshot && message.snapshot.hasSelection);
-        if (operations.length && hasSelection) {
+        var actionState = buildChatMessageActionState(message, currentSnapshot);
+        if (actionState.operations.length && actionState.canPreview) {
             return "preview";
         }
-        if (operations.length) {
+        if (actionState.operations.length && actionState.canApplyPlan) {
             return "apply";
         }
-        if (resultText && hasSelection) {
+        if (actionState.operations.length && actionState.canInsert) {
+            return "insert";
+        }
+        if (actionState.resultText && actionState.canReplaceSelection) {
             return "selection";
         }
-        if (resultText) {
+        if (actionState.resultText && actionState.canInsert) {
             return "insert";
         }
         return "";
@@ -6434,33 +9388,171 @@ function RTE_Plugin_AIToolkit() {
         return "";
     }
 
-    function getChatActionGroupInfo(groupKey, recommendedActionId) {
+    function getChatActionButtonDisplayLabel(actionId) {
+        if (actionId === "copy") {
+            return "Copy text";
+        }
+        return getChatRecommendedActionLabel(actionId);
+    }
+
+    function getChatActionButtonDetail(actionId, message, currentSnapshot) {
+        var actionState = buildChatMessageActionState(message, currentSnapshot);
+        if (actionId === "copy") {
+            return "Copy this prepared AI reply without changing the document.";
+        }
+        if (actionId === "apply") {
+            return "Run the prepared plan directly in the editor.";
+        }
+        if (actionId === "preview") {
+            return actionState.hasSelection
+                ? "Show this change inline in the editor before deciding it."
+                : "Select text to preview this change inline in the editor.";
+        }
+        if (actionId === "selection") {
+            return actionState.hasSelection
+                ? "Replace the current selection with this prepared draft."
+                : "Select text before replacing selection with this prepared draft.";
+        }
+        if (actionId === "insert") {
+            return actionState.hasSelection
+                ? "Insert this prepared draft below the current selection."
+                : "Insert this prepared draft below the current content.";
+        }
+        if (actionId === "document") {
+            return "Replace the full document with this prepared draft.";
+        }
+        return "";
+    }
+
+    function syncChatActionButtonAccessibility(button, actionId, message, recommendedActionId, currentSnapshot) {
+        if (!button) {
+            return;
+        }
+        var label = getChatActionButtonDisplayLabel(actionId)
+            || (button.innerText || button.textContent || "").replace(/\s+/g, " ").trim()
+            || "Action";
+        var detail = getChatActionButtonDetail(actionId, message, currentSnapshot);
+        var isRecommended = !!(actionId && recommendedActionId && actionId === recommendedActionId);
+        var parts = [label];
+        if (detail) {
+            parts.push(detail);
+        }
+        if (isRecommended) {
+            parts.push("Recommended next step.");
+        }
+        button.setAttribute("aria-label", parts.join(". "));
+        button.title = detail
+            ? label + " - " + detail + (isRecommended ? " Recommended next step." : "")
+            : label + (isRecommended ? " - Recommended next step." : "");
+    }
+
+    function getChatRecommendedGroupKey(recommendedActionId) {
+        if (recommendedActionId === "apply" || recommendedActionId === "preview" || recommendedActionId === "selection") {
+            return "primary";
+        }
+        if (recommendedActionId === "insert" || recommendedActionId === "document") {
+            return "secondary";
+        }
+        return "";
+    }
+
+    function getChatActionGroupDetail(groupKey, message, recommendedActionId, currentSnapshot) {
+        if (groupKey === "utility") {
+            return "Copy this prepared reply without changing the document.";
+        }
+        if (!message || !message.resolved) {
+            return "";
+        }
+        var actionState = buildChatMessageActionState(message, currentSnapshot);
+        if (groupKey === "primary") {
+            if (recommendedActionId === "preview") {
+                return "Check the inline diff first, then apply or replace the selection from this group.";
+            }
+            if (recommendedActionId === "apply") {
+                return "Run the prepared plan directly, or switch to the document handoff actions below if you want a different outcome.";
+            }
+            if (recommendedActionId === "selection") {
+                return "Replace the selection first, or preview the inline diff before writing this change back.";
+            }
+            if (actionState.operations.length) {
+                return "Run the prepared plan directly from this group.";
+            }
+            if (actionState.resultText && actionState.hasSelection) {
+                return "Preview the draft or write it back into the current selection from this group.";
+            }
+            return "Use this group to preview or apply the prepared change.";
+        }
+        if (groupKey === "secondary") {
+            if (actionState.resultText && actionState.hasSelection) {
+                return "Insert this prepared draft below the selection when you want a follow-up instead of a replacement.";
+            }
+            if (recommendedActionId === "insert") {
+                return "Insert this draft below first, or replace the full document if the whole page should change.";
+            }
+            if (recommendedActionId === "document") {
+                return "Replace the full document, or insert this draft below if you want a lighter handoff.";
+            }
+            if (actionState.resultText) {
+                return "Insert this prepared draft below or replace the full document without opening inline review.";
+            }
+        }
+        return "";
+    }
+
+    function getChatActionGroupTitle(groupKey, message, recommendedActionId) {
+        var recommendedGroupKey = getChatRecommendedGroupKey(recommendedActionId);
+        if (recommendedGroupKey && groupKey === recommendedGroupKey) {
+            return "Recommended next step";
+        }
+        if (groupKey === "utility") {
+            return "Copy only";
+        }
+        if (!message || !message.resolved) {
+            if (groupKey === "primary") {
+                return "Preview and apply";
+            }
+            if (groupKey === "secondary") {
+                return "Other ways to use";
+            }
+            return "";
+        }
+        var resolved = message.resolved || null;
+        var operations = resolved && resolved.operations ? resolved.operations : [];
+        var resultText = resolved ? getPrimaryResolvedText(resolved) : "";
+        if (groupKey === "primary") {
+            if (operations.length) {
+                return "Apply in editor";
+            }
+            if (resultText) {
+                return "Use this draft";
+            }
+            return "Preview and apply";
+        }
+        if (groupKey === "secondary") {
+            if (operations.length) {
+                return "Other ways to apply";
+            }
+            if (resultText) {
+                return "Other ways to use this draft";
+            }
+        }
+        return "";
+    }
+
+    function getChatActionGroupInfo(groupKey, recommendedActionId, message, currentSnapshot) {
         var info = {
             title: "",
             badge: "",
-            recommended: false
+            recommended: false,
+            detail: ""
         };
-        if (groupKey === "utility") {
-            info.title = "Utility";
-        }
-        else if (groupKey === "primary") {
-            info.title = "Preview and apply";
-        }
-        else if (groupKey === "secondary") {
-            info.title = "Insert or replace";
-        }
-        var recommendedGroupKey = "";
-        if (recommendedActionId === "apply" || recommendedActionId === "preview" || recommendedActionId === "selection") {
-            recommendedGroupKey = "primary";
-        }
-        else if (recommendedActionId === "insert" || recommendedActionId === "document") {
-            recommendedGroupKey = "secondary";
-        }
+        info.title = getChatActionGroupTitle(groupKey, message, recommendedActionId);
+        var recommendedGroupKey = getChatRecommendedGroupKey(recommendedActionId);
         if (recommendedGroupKey && groupKey === recommendedGroupKey) {
-            info.title = "Recommended next step";
             info.badge = getChatRecommendedActionLabel(recommendedActionId);
             info.recommended = !!info.badge;
         }
+        info.detail = getChatActionGroupDetail(groupKey, message, recommendedActionId, currentSnapshot);
         return info;
     }
 
@@ -6487,20 +9579,166 @@ function RTE_Plugin_AIToolkit() {
         if (group.firstChild !== header) {
             group.insertBefore(header, group.firstChild);
         }
+        if (groupInfo.detail) {
+            var detailNode = append(group, "div", "", "rte-ai-chat-message-action-group-detail", groupInfo.detail);
+            if (header.nextSibling !== detailNode) {
+                group.insertBefore(detailNode, header.nextSibling);
+            }
+        }
         return header;
     }
 
-    function getChatMessageSourcePreviewText(message) {
+    function orderChatActionGroups(actionsNode, recommendedActionId) {
+        if (!actionsNode || !actionsNode.querySelectorAll) {
+            return;
+        }
+        var recommendedGroupKey = getChatRecommendedGroupKey(recommendedActionId);
+        var groups = actionsNode.querySelectorAll(".rte-ai-chat-message-action-group");
+        if (!groups || !groups.length) {
+            return;
+        }
+        var byKey = {};
+        for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+            var groupNode = groups[groupIndex];
+            var groupKey = groupNode.getAttribute("data-rte-ai-chat-group-key") || "";
+            if (groupKey) {
+                byKey[groupKey] = groupNode;
+            }
+        }
+        var order = [];
+        if (recommendedGroupKey) {
+            order.push(recommendedGroupKey);
+        }
+        var defaultOrder = ["primary", "secondary", "utility"];
+        for (var orderIndex = 0; orderIndex < defaultOrder.length; orderIndex++) {
+            if (order.indexOf(defaultOrder[orderIndex]) === -1) {
+                order.push(defaultOrder[orderIndex]);
+            }
+        }
+        for (var appendIndex = 0; appendIndex < order.length; appendIndex++) {
+            if (byKey[order[appendIndex]]) {
+                actionsNode.appendChild(byKey[order[appendIndex]]);
+            }
+        }
+    }
+
+    function orderChatRecommendedActionButton(actionsNode, recommendedActionId) {
+        if (!actionsNode || !recommendedActionId || !actionsNode.querySelector) {
+            return;
+        }
+        var recommendedGroupKey = getChatRecommendedGroupKey(recommendedActionId);
+        if (!recommendedGroupKey) {
+            return;
+        }
+        var recommendedGroup = actionsNode.querySelector('.rte-ai-chat-message-action-group[data-rte-ai-chat-group-key="' + recommendedGroupKey + '"]');
+        if (!recommendedGroup || !recommendedGroup.querySelector) {
+            return;
+        }
+        var recommendedButton = recommendedGroup.querySelector('.rte-ai-chat-action-button[data-rte-ai-chat-action="' + recommendedActionId + '"]');
+        if (!recommendedButton) {
+            return;
+        }
+        var groupHeader = recommendedGroup.querySelector(".rte-ai-chat-message-action-group-header");
+        var firstButton = recommendedGroup.querySelector(".rte-ai-chat-action-button");
+        if (!firstButton || firstButton === recommendedButton) {
+            return;
+        }
+        if (groupHeader && groupHeader.nextSibling) {
+            recommendedGroup.insertBefore(recommendedButton, groupHeader.nextSibling);
+            return;
+        }
+        recommendedGroup.insertBefore(recommendedButton, firstButton);
+    }
+
+    function buildChatActionGroupAriaLabel(groupNode, groupInfo) {
+        if (!groupNode) {
+            return "";
+        }
+        var parts = [];
+        if (groupInfo && groupInfo.title) {
+            parts.push(groupInfo.title + " group");
+        }
+        if (groupInfo && groupInfo.recommended && groupInfo.badge) {
+            parts.push(groupInfo.badge + " recommended");
+        }
+        if (groupInfo && groupInfo.detail) {
+            parts.push(groupInfo.detail);
+        }
+        var actionButtons = groupNode.querySelectorAll ? groupNode.querySelectorAll(".rte-ai-chat-action-button") : [];
+        var actionLabels = [];
+        for (var actionIndex = 0; actionIndex < actionButtons.length; actionIndex++) {
+            var buttonLabel = (actionButtons[actionIndex].innerText || actionButtons[actionIndex].textContent || "").replace(/\s+/g, " ").trim();
+            if (buttonLabel) {
+                actionLabels.push(buttonLabel);
+            }
+        }
+        if (actionLabels.length) {
+            parts.push("Actions: " + actionLabels.join(", "));
+        }
+        return parts.join(". ");
+    }
+
+    function syncChatActionAccessibility(actionsNode, recommendedActionId, message, currentSnapshot) {
+        if (!actionsNode || !actionsNode.querySelectorAll) {
+            return;
+        }
+        var recommendedLabel = getChatRecommendedActionLabel(recommendedActionId);
+        actionsNode.setAttribute("role", "group");
+        actionsNode.setAttribute("aria-label", recommendedLabel
+            ? "AI chat actions. Recommended next step: " + recommendedLabel + "."
+            : "AI chat actions");
+        var groupNodes = actionsNode.querySelectorAll(".rte-ai-chat-message-action-group");
+        for (var groupIndex = 0; groupIndex < groupNodes.length; groupIndex++) {
+            var groupNode = groupNodes[groupIndex];
+            var groupKey = groupNode.getAttribute("data-rte-ai-chat-group-key") || "";
+            var firstButton = groupNode.querySelector ? groupNode.querySelector(".rte-ai-chat-action-button") : null;
+            var groupInfo = getChatActionGroupInfo(groupKey, recommendedActionId, message, currentSnapshot);
+            if (!firstButton) {
+                groupNode.removeAttribute("role");
+                groupNode.removeAttribute("aria-label");
+                continue;
+            }
+            groupNode.setAttribute("role", "group");
+            var groupAriaLabel = buildChatActionGroupAriaLabel(groupNode, groupInfo);
+            if (groupAriaLabel) {
+                groupNode.setAttribute("aria-label", groupAriaLabel);
+            }
+            else {
+                groupNode.removeAttribute("aria-label");
+            }
+        }
+    }
+
+    function getChatMessageSourceText(message) {
         if (!message || !message.snapshot) {
             return "";
         }
-        var source = message.scope === "selection"
+        return message.scope === "selection"
             ? (message.snapshot.text || message.snapshot.wholeText || "")
             : (message.snapshot.wholeText || "");
-        return summarizeSuggestionText(source, 120);
     }
 
-    function buildChatResolvedPreviewData(message) {
+    function getChatMessageSourcePreviewText(message) {
+        return summarizeSuggestionText(getChatMessageSourceText(message), 120);
+    }
+
+    function buildChatResolvedPreviewGlanceData(message) {
+        if (!message || !message.resolved) {
+            return null;
+        }
+        var suggestionType = message.resolved.request && message.resolved.request.mode
+            ? getSuggestionTypeValue(message.resolved.request.mode)
+            : "";
+        return buildInlinePreviewCompareGlanceData({
+            originalText: getChatMessageSourceText(message),
+            resultText: getPrimaryResolvedText(message.resolved),
+            suggestionType: suggestionType,
+            snapshot: message.snapshot || null,
+            scope: message.scope || ""
+        });
+    }
+
+    function buildChatResolvedPreviewData(message, currentSnapshot) {
         if (!message || !message.resolved) {
             return null;
         }
@@ -6513,6 +9751,10 @@ function RTE_Plugin_AIToolkit() {
         var operationMeta = operations.length ? getOperationDisplayMeta(operations[0]) : null;
         var operationCount = operations.length;
         var targetLabel = operationMeta && operationMeta.title ? operationMeta.title : (message.scope === "selection" ? "Selection draft" : "Document draft");
+        var recommendedActionId = getChatRecommendedActionId(message, currentSnapshot);
+        var actionSummary = getChatMessageActionSummary(message, currentSnapshot);
+        var previewPlanItems = buildChatPreviewPlanItems(message, recommendedActionId, currentSnapshot);
+        var changeGlance = buildChatResolvedPreviewGlanceData(message);
         return {
             title: operationMeta && operationMeta.title ? operationMeta.title : "Prepared draft",
             sourceText: sourceText,
@@ -6523,12 +9765,181 @@ function RTE_Plugin_AIToolkit() {
             stepLabel: (operationCount || 1) + " step" + ((operationCount || 1) === 1 ? "" : "s"),
             targetLabel: targetLabel,
             diffParts: sourceText && sourceText !== resultText ? buildCompletionPreviewDiffParts(sourceText, resultText) : null,
-            planItems: operations.slice(0, 3).map(function (operation) {
-                var meta = getOperationDisplayMeta(operation);
-                return meta && meta.title ? meta.title : "AI step";
-            }),
-            hiddenPlanCount: Math.max(0, operations.length - 3)
+            changeGlance: changeGlance,
+            planLeadTitle: actionSummary ? "Best next step" : "",
+            planLeadLabel: recommendedActionId ? getChatRecommendedActionLabel(recommendedActionId) : "",
+            planLeadDetail: actionSummary ? actionSummary.detail : "",
+            planItems: previewPlanItems.slice(0, 3),
+            planFollowupTitle: buildChatPreviewPlanFollowupTitle(message, previewPlanItems),
+            hiddenPlanCount: Math.max(0, previewPlanItems.length - 3)
         };
+    }
+
+    function buildChatPreviewPlanFollowupTitle(message, previewPlanItems) {
+        if (!previewPlanItems || !previewPlanItems.length) {
+            return "";
+        }
+        var resolved = message && message.resolved ? message.resolved : null;
+        var operations = resolved && resolved.operations ? resolved.operations : [];
+        if (operations.length) {
+            return "Other ways to apply this change";
+        }
+        return "Other ways to use this draft";
+    }
+
+    function buildChatPreviewPlanItemData(message, actionId, currentSnapshot) {
+        if (!actionId) {
+            return null;
+        }
+        var label = getChatRecommendedActionLabel(actionId);
+        if (!label) {
+            return null;
+        }
+        return {
+            label: label,
+            detail: getChatActionButtonDetail(actionId, message, currentSnapshot)
+        };
+    }
+
+    function buildChatPreviewPlanItemAriaLabel(planItem) {
+        if (!planItem) {
+            return "";
+        }
+        var parts = [];
+        if (planItem.label) {
+            parts.push(planItem.label);
+        }
+        if (planItem.detail) {
+            parts.push(planItem.detail);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatPreviewPlanItems(message, recommendedActionId, currentSnapshot) {
+        if (!message || !message.resolved) {
+            return [];
+        }
+        var actionState = buildChatMessageActionState(message, currentSnapshot);
+        var actionIds = [];
+        if (actionState.canApplyPlan) {
+            actionIds.push("apply");
+        }
+        if (actionState.canPreview) {
+            actionIds.push("preview");
+        }
+        if (actionState.canReplaceSelection) {
+            actionIds.push("selection");
+        }
+        if (actionState.canInsert) {
+            actionIds.push("insert");
+        }
+        if (actionState.canReplaceDocument) {
+            actionIds.push("document");
+        }
+        var items = [];
+        for (var actionIndex = 0; actionIndex < actionIds.length; actionIndex++) {
+            var actionId = actionIds[actionIndex];
+            if (!actionId || actionId === recommendedActionId) {
+                continue;
+            }
+            var itemData = buildChatPreviewPlanItemData(message, actionId, currentSnapshot);
+            if (!itemData || !itemData.label) {
+                continue;
+            }
+            var exists = false;
+            for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+                if (items[itemIndex] && items[itemIndex].label === itemData.label) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                items.push(itemData);
+            }
+        }
+        return items;
+    }
+
+    function buildChatResolvedPreviewAriaLabel(resolvedPreview) {
+        if (!resolvedPreview) {
+            return "";
+        }
+        var parts = [];
+        if (resolvedPreview.title) {
+            parts.push(resolvedPreview.title);
+        }
+        if (resolvedPreview.statusLabel) {
+            parts.push(resolvedPreview.statusLabel);
+        }
+        if (resolvedPreview.scopeLabel) {
+            parts.push(resolvedPreview.scopeLabel);
+        }
+        if (resolvedPreview.stepLabel) {
+            parts.push(resolvedPreview.stepLabel);
+        }
+        if (resolvedPreview.targetLabel) {
+            parts.push(resolvedPreview.targetLabel);
+        }
+        parts.push("Proposed edit");
+        parts.push("Current and suggested text");
+        if (resolvedPreview.sourceText && resolvedPreview.sourceText !== resolvedPreview.resultText) {
+            parts.push("Current");
+            parts.push(resolvedPreview.sourceText);
+        }
+        parts.push("Suggested");
+        parts.push(resolvedPreview.resultText);
+        if (resolvedPreview.reasonText) {
+            parts.push("Why this change");
+            parts.push(resolvedPreview.reasonText);
+        }
+        if (resolvedPreview.changeGlance) {
+            if (resolvedPreview.changeGlance.title) {
+                parts.push(resolvedPreview.changeGlance.title);
+            }
+            if (resolvedPreview.changeGlance.pills && resolvedPreview.changeGlance.pills.length) {
+                for (var glancePillIndex = 0; glancePillIndex < resolvedPreview.changeGlance.pills.length; glancePillIndex++) {
+                    if (resolvedPreview.changeGlance.pills[glancePillIndex] && resolvedPreview.changeGlance.pills[glancePillIndex].text) {
+                        parts.push(resolvedPreview.changeGlance.pills[glancePillIndex].text);
+                    }
+                }
+            }
+            if (resolvedPreview.changeGlance.detail) {
+                parts.push(resolvedPreview.changeGlance.detail);
+            }
+        }
+        if (resolvedPreview.planLeadTitle || resolvedPreview.planLeadLabel || resolvedPreview.planLeadDetail || (resolvedPreview.planItems && resolvedPreview.planItems.length)) {
+            parts.push("What happens next");
+            if (resolvedPreview.planLeadTitle) {
+                parts.push(resolvedPreview.planLeadTitle);
+            }
+            if (resolvedPreview.planLeadLabel) {
+                parts.push(resolvedPreview.planLeadLabel);
+            }
+            if (resolvedPreview.planLeadDetail) {
+                parts.push(resolvedPreview.planLeadDetail);
+            }
+            if (resolvedPreview.planFollowupTitle) {
+                parts.push(resolvedPreview.planFollowupTitle);
+            }
+            if (resolvedPreview.planItems && resolvedPreview.planItems.length) {
+                for (var planIndex = 0; planIndex < resolvedPreview.planItems.length; planIndex++) {
+                    var planItem = resolvedPreview.planItems[planIndex];
+                    if (!planItem) {
+                        continue;
+                    }
+                    if (planItem.label) {
+                        parts.push(planItem.label);
+                    }
+                    if (planItem.detail) {
+                        parts.push(planItem.detail);
+                    }
+                }
+            }
+            if (resolvedPreview.hiddenPlanCount) {
+                parts.push("+" + resolvedPreview.hiddenPlanCount + " more");
+            }
+        }
+        return parts.join(". ");
     }
 
     function summarizeChatPromptCopy(text) {
@@ -6607,6 +10018,144 @@ function RTE_Plugin_AIToolkit() {
         };
     }
 
+    function buildChatUserPromptCardAriaLabel(message, messages, messageIndex) {
+        if (!message || message.isError || message.role !== "user") {
+            return "";
+        }
+        var parts = ["What you asked"];
+        var promptBadge = getChatUserPromptBadgeLabel(message);
+        if (promptBadge) {
+            parts.push(promptBadge);
+        }
+        var scopeLabel = getChatMessageScopeLabel(message);
+        if (scopeLabel) {
+            parts.push(scopeLabel);
+        }
+        var promptExchangeLabel = getChatMessageExchangeLabel(messages, messageIndex);
+        if (promptExchangeLabel) {
+            parts.push(promptExchangeLabel);
+        }
+        if (message.text) {
+            parts.push(message.text);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatAssistantRequestCardAriaLabel(requestCardData, exchangeLabel) {
+        if (!requestCardData) {
+            return "";
+        }
+        var parts = [];
+        if (requestCardData.title) {
+            parts.push(requestCardData.title);
+        }
+        if (requestCardData.scopeLabel) {
+            parts.push(requestCardData.scopeLabel);
+        }
+        if (requestCardData.detail) {
+            parts.push(requestCardData.detail);
+        }
+        if (exchangeLabel) {
+            parts.push(exchangeLabel);
+        }
+        if (requestCardData.promptText) {
+            parts.push(requestCardData.promptText);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatMessageAriaLabel(messages, messageIndex, currentSnapshot) {
+        if (!messages || typeof messageIndex !== "number" || !messages[messageIndex]) {
+            return "";
+        }
+        var message = messages[messageIndex];
+        var parts = [];
+        var roleLabel = getChatMessageRoleLabel(message);
+        var threadRoleLabel = getChatMessageThreadRoleLabel(getChatMessageThreadRole(messages, messageIndex));
+        var scopeLabel = getChatMessageScopeLabel(message);
+        var typeLabel = getChatMessageTypeLabel(message);
+        var exchangeLabel = getChatMessageExchangeLabel(messages, messageIndex);
+        var stateTitle = getChatMessageStateTitle(message);
+        var stateDetail = getChatMessageStateDetail(message);
+        if (roleLabel) {
+            parts.push(roleLabel);
+        }
+        parts.push("Turn " + (messageIndex + 1));
+        if (threadRoleLabel) {
+            parts.push(threadRoleLabel);
+        }
+        if (scopeLabel) {
+            parts.push(scopeLabel);
+        }
+        if (typeLabel) {
+            parts.push(typeLabel);
+        }
+        if (exchangeLabel) {
+            parts.push(exchangeLabel);
+        }
+        if (isCurrentChatExchange(messages, messageIndex)) {
+            parts.push("Current exchange");
+        }
+        if (stateTitle) {
+            parts.push(stateTitle);
+        }
+        if (stateDetail) {
+            parts.push(stateDetail);
+        }
+        if (message.role === "user" && !message.isError) {
+            parts.push("What you asked");
+            if (message.text) {
+                parts.push(summarizeChatPromptCopy(message.text) || message.text);
+            }
+            var contextCardData = buildChatMessageContextCardData(message);
+            if (contextCardData) {
+                if (contextCardData.title) {
+                    parts.push(contextCardData.title);
+                }
+                if (contextCardData.wordLabel) {
+                    parts.push(contextCardData.wordLabel);
+                }
+                if (contextCardData.paragraphLabel) {
+                    parts.push(contextCardData.paragraphLabel);
+                }
+            }
+        }
+        else if (message.role === "assistant" && !message.isError) {
+            var requestCardData = buildChatAssistantRequestCardData(messages, messageIndex);
+            if (requestCardData && requestCardData.title) {
+                parts.push(requestCardData.title);
+            }
+            if (requestCardData && requestCardData.promptText) {
+                parts.push(summarizeChatPromptCopy(requestCardData.promptText) || requestCardData.promptText);
+            }
+            var actionSummary = getChatMessageActionSummary(message, currentSnapshot);
+            if (actionSummary && actionSummary.title) {
+                parts.push(actionSummary.title);
+            }
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatMessageStateCardAriaLabel(message) {
+        if (!message) {
+            return "";
+        }
+        var parts = [];
+        var kicker = message.isError ? "Conversation issue" : (message.role === "user" ? "User prompt" : "Assistant response");
+        var stateTitle = getChatMessageStateTitle(message);
+        var stateDetail = getChatMessageStateDetail(message);
+        if (kicker) {
+            parts.push(kicker);
+        }
+        if (stateTitle) {
+            parts.push(stateTitle);
+        }
+        if (stateDetail) {
+            parts.push(stateDetail);
+        }
+        return parts.join(". ");
+    }
+
     function getChatMessageThreadRole(messages, messageIndex) {
         if (!messages || typeof messageIndex !== "number" || !messages[messageIndex]) {
             return "";
@@ -6654,7 +10203,34 @@ function RTE_Plugin_AIToolkit() {
         return !!exchangeIndex && exchangeIndex === latestExchangeIndex;
     }
 
-    function buildChatExchangeBannerData(messages, messageIndex) {
+    function getChatExchangeResponseMessageIndex(messages, requestIndex) {
+        if (!messages || !messages.length || typeof requestIndex !== "number" || !messages[requestIndex]) {
+            return -1;
+        }
+        var requestMessage = messages[requestIndex];
+        if (requestMessage.isError || requestMessage.role !== "user" || getChatMessageThreadRole(messages, requestIndex) !== "request") {
+            return -1;
+        }
+        var exchangeIndex = getChatMessageExchangeIndex(messages, requestIndex);
+        for (var index = requestIndex + 1; index < messages.length; index++) {
+            if (!messages[index] || messages[index].isError) {
+                continue;
+            }
+            if (messages[index].role === "user") {
+                break;
+            }
+            if (
+                messages[index].role === "assistant"
+                && getChatMessageThreadRole(messages, index) === "response"
+                && getChatMessageExchangeIndex(messages, index) === exchangeIndex
+            ) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    function buildChatExchangeBannerData(messages, messageIndex, currentSnapshot) {
         if (!messages || typeof messageIndex !== "number" || !messages[messageIndex]) {
             return null;
         }
@@ -6662,18 +10238,135 @@ function RTE_Plugin_AIToolkit() {
         if (message.isError || message.role !== "user" || getChatMessageThreadRole(messages, messageIndex) !== "request") {
             return null;
         }
-        var nextMessage = messages[messageIndex + 1];
+        var responseIndex = getChatExchangeResponseMessageIndex(messages, messageIndex);
+        var nextMessage = responseIndex >= 0 ? messages[responseIndex] : null;
         var intentLabel = getChatMessageIntentLabel(message);
+        var actionLabel = "";
+        var changeGlance = null;
+        var detailParts = [];
+        if (nextMessage && nextMessage.role === "assistant" && !nextMessage.isError) {
+            var recommendedActionId = getChatRecommendedActionId(nextMessage, currentSnapshot);
+            actionLabel = getChatRecommendedActionLabel(recommendedActionId);
+            changeGlance = buildChatResolvedPreviewGlanceData(nextMessage);
+            if (actionLabel) {
+                detailParts.push(actionLabel + " is the recommended next step.");
+            }
+            if (changeGlance && changeGlance.detail) {
+                detailParts.push(changeGlance.detail);
+            }
+        }
         return {
             title: (intentLabel === "Custom" ? "Custom" : intentLabel) + " exchange",
             exchangeLabel: getChatMessageExchangeLabel(messages, messageIndex),
             scopeLabel: getChatMessageScopeLabel(message),
             statusLabel: nextMessage && nextMessage.role === "assistant" && !nextMessage.isError ? "Reply linked" : "Waiting on reply",
+            actionLabel: actionLabel,
+            changeGlance: changeGlance,
+            detail: detailParts.join(" "),
             isCurrent: isCurrentChatExchange(messages, messageIndex)
         };
     }
 
-    function buildChatExchangeOutcomeData(messages, messageIndex) {
+    function buildChatExchangeBannerAriaLabel(bannerData) {
+        if (!bannerData) {
+            return "";
+        }
+        var parts = [];
+        if (bannerData.title) {
+            parts.push(bannerData.title);
+        }
+        if (bannerData.exchangeLabel) {
+            parts.push(bannerData.exchangeLabel);
+        }
+        if (bannerData.scopeLabel) {
+            parts.push(bannerData.scopeLabel);
+        }
+        if (bannerData.statusLabel) {
+            parts.push(bannerData.statusLabel);
+        }
+        if (bannerData.actionLabel) {
+            parts.push("Best next step");
+            parts.push(bannerData.actionLabel);
+        }
+        if (bannerData.changeGlance) {
+            parts.push(bannerData.changeGlance.title || "Change at a glance");
+            if (bannerData.changeGlance.pills && bannerData.changeGlance.pills.length) {
+                for (var glanceIndex = 0; glanceIndex < bannerData.changeGlance.pills.length; glanceIndex++) {
+                    if (bannerData.changeGlance.pills[glanceIndex] && bannerData.changeGlance.pills[glanceIndex].text) {
+                        parts.push(bannerData.changeGlance.pills[glanceIndex].text);
+                    }
+                }
+            }
+            if (bannerData.changeGlance.detail) {
+                parts.push(bannerData.changeGlance.detail);
+            }
+        }
+        if (bannerData.isCurrent) {
+            parts.push("Current exchange");
+        }
+        if (bannerData.detail) {
+            parts.push(bannerData.detail);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatExchangeGroupAriaLabel(messages, requestIndex, currentSnapshot) {
+        if (!messages || typeof requestIndex !== "number" || !messages[requestIndex]) {
+            return "";
+        }
+        var requestMessage = messages[requestIndex];
+        if (requestMessage.isError || requestMessage.role !== "user" || getChatMessageThreadRole(messages, requestIndex) !== "request") {
+            return "";
+        }
+        var bannerData = buildChatExchangeBannerData(messages, requestIndex, currentSnapshot);
+        var responseIndex = getChatExchangeResponseMessageIndex(messages, requestIndex);
+        var outcomeData = responseIndex >= 0 ? buildChatExchangeOutcomeData(messages, responseIndex, currentSnapshot) : null;
+        var parts = ["AI chat exchange"];
+        if (bannerData && bannerData.exchangeLabel) {
+            parts.push(bannerData.exchangeLabel);
+        }
+        if (bannerData && bannerData.title) {
+            parts.push(bannerData.title);
+        }
+        if (bannerData && bannerData.scopeLabel) {
+            parts.push(bannerData.scopeLabel + " thread");
+        }
+        if (requestMessage.text) {
+            parts.push("Request");
+            parts.push(summarizeChatPromptCopy(requestMessage.text));
+        }
+        if (outcomeData) {
+            if (outcomeData.statusLabel) {
+                parts.push(outcomeData.statusLabel);
+            }
+            if (outcomeData.actionLabel) {
+                parts.push("Best next step");
+                parts.push(outcomeData.actionLabel);
+            }
+            if (outcomeData.changeGlance) {
+                parts.push(outcomeData.changeGlance.title || "Change at a glance");
+                if (outcomeData.changeGlance.pills && outcomeData.changeGlance.pills.length) {
+                    for (var glanceIndex = 0; glanceIndex < outcomeData.changeGlance.pills.length; glanceIndex++) {
+                        if (outcomeData.changeGlance.pills[glanceIndex] && outcomeData.changeGlance.pills[glanceIndex].text) {
+                            parts.push(outcomeData.changeGlance.pills[glanceIndex].text);
+                        }
+                    }
+                }
+                if (outcomeData.changeGlance.detail) {
+                    parts.push(outcomeData.changeGlance.detail);
+                }
+            }
+        }
+        else if (bannerData && bannerData.statusLabel) {
+            parts.push(bannerData.statusLabel);
+        }
+        if (bannerData && bannerData.isCurrent) {
+            parts.push("Current exchange");
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatExchangeOutcomeData(messages, messageIndex, currentSnapshot) {
         if (!messages || typeof messageIndex !== "number" || !messages[messageIndex]) {
             return null;
         }
@@ -6684,8 +10377,17 @@ function RTE_Plugin_AIToolkit() {
         var resolved = message.resolved || null;
         var operations = resolved && resolved.operations ? resolved.operations : [];
         var resultText = resolved ? getPrimaryResolvedText(resolved) : "";
-        var recommendedActionId = getChatRecommendedActionId(message);
+        var recommendedActionId = getChatRecommendedActionId(message, currentSnapshot);
         var stepCount = operations.length ? operations.length : (resultText ? 1 : 0);
+        var changeGlance = buildChatResolvedPreviewGlanceData(message);
+        var detailParts = [];
+        if (changeGlance && changeGlance.detail) {
+            detailParts.push(changeGlance.detail);
+        }
+        var actionSummaryDetail = (getChatMessageActionSummary(message, currentSnapshot) || {}).detail || getChatMessageStateDetail(message);
+        if (actionSummaryDetail) {
+            detailParts.push(actionSummaryDetail);
+        }
         var statusLabel = "Reply ready";
         if (operations.length) {
             statusLabel = "Ready to review";
@@ -6695,14 +10397,57 @@ function RTE_Plugin_AIToolkit() {
         }
         return {
             title: "Exchange outcome",
-            detail: (getChatMessageActionSummary(message) || {}).detail || getChatMessageStateDetail(message),
+            detail: detailParts.join(" "),
             exchangeLabel: getChatMessageExchangeLabel(messages, messageIndex),
             scopeLabel: getChatMessageScopeLabel(message),
             statusLabel: statusLabel,
             stepLabel: stepCount ? (stepCount + " step" + (stepCount === 1 ? "" : "s")) : "",
             actionLabel: getChatRecommendedActionLabel(recommendedActionId),
+            changeGlance: changeGlance,
             isCurrent: isCurrentChatExchange(messages, messageIndex)
         };
+    }
+
+    function buildChatExchangeOutcomeAriaLabel(outcomeData) {
+        if (!outcomeData) {
+            return "";
+        }
+        var parts = [];
+        if (outcomeData.title) {
+            parts.push(outcomeData.title);
+        }
+        if (outcomeData.exchangeLabel) {
+            parts.push(outcomeData.exchangeLabel);
+        }
+        if (outcomeData.statusLabel) {
+            parts.push(outcomeData.statusLabel);
+        }
+        if (outcomeData.scopeLabel) {
+            parts.push(outcomeData.scopeLabel);
+        }
+        if (outcomeData.stepLabel) {
+            parts.push(outcomeData.stepLabel);
+        }
+        if (outcomeData.actionLabel) {
+            parts.push(outcomeData.actionLabel);
+        }
+        if (outcomeData.changeGlance) {
+            parts.push(outcomeData.changeGlance.title || "Change at a glance");
+            if (outcomeData.changeGlance.pills && outcomeData.changeGlance.pills.length) {
+                for (var glanceIndex = 0; glanceIndex < outcomeData.changeGlance.pills.length; glanceIndex++) {
+                    if (outcomeData.changeGlance.pills[glanceIndex] && outcomeData.changeGlance.pills[glanceIndex].text) {
+                        parts.push(outcomeData.changeGlance.pills[glanceIndex].text);
+                    }
+                }
+            }
+        }
+        if (outcomeData.isCurrent) {
+            parts.push("Current exchange");
+        }
+        if (outcomeData.detail) {
+            parts.push(outcomeData.detail);
+        }
+        return parts.join(". ");
     }
 
     function getChatContextWordCount(text) {
@@ -6735,11 +10480,33 @@ function RTE_Plugin_AIToolkit() {
         return null;
     }
 
-    function getChatStatusTone(state) {
+    function getChatEffectiveStatusText(state, context) {
+        var statusText = normalizeText(state && state.status ? state.status : "");
+        if (!statusText) {
+            return "";
+        }
+        var scope = context && context.scope === "selection" ? "selection" : "document";
+        if (/^select text first to use selection scope\.?$/i.test(statusText)) {
+            return scope === "selection"
+                ? "Chat will use the current selection."
+                : "Select text to switch AI Chat back to selection scope.";
+        }
+        if (/^chat will use the current selection\.?$/i.test(statusText)) {
+            return scope === "selection"
+                ? "Chat will use the current selection."
+                : "Selection scope is unavailable right now. Chat will use the whole document until you select text again.";
+        }
+        if (/^chat will use the whole document\.?$/i.test(statusText)) {
+            return "Chat will use the whole document.";
+        }
+        return state.status;
+    }
+
+    function getChatStatusTone(state, context) {
         if (state && state.busy) {
             return "busy";
         }
-        var statusText = normalizeText(state && state.status ? state.status : "").toLowerCase();
+        var statusText = normalizeText(getChatEffectiveStatusText(state, context)).toLowerCase();
         if (!statusText) {
             return "idle";
         }
@@ -6756,14 +10523,113 @@ function RTE_Plugin_AIToolkit() {
         if (state && state.busy) {
             return "Thinking through the current " + (context && context.scope === "selection" ? "selection" : "document") + "...";
         }
-        if (state && state.status) {
-            return state.status;
+        var effectiveStatusText = getChatEffectiveStatusText(state, context);
+        if (effectiveStatusText) {
+            return effectiveStatusText;
         }
         var scopeLabel = context && context.scope === "selection" ? "selection" : "document";
         if (activePrompt && activePrompt.label) {
             return "Ready to run the " + activePrompt.label + " starter on the current " + scopeLabel + ".";
         }
+        if (normalizeText(state && state.draft ? state.draft : "")) {
+            return "Custom prompt ready for the current " + scopeLabel + ".";
+        }
         return "Ready to ask about the current " + scopeLabel + ".";
+    }
+
+    function buildChatComposerMetaPills(state, context, activePrompt) {
+        var pills = [];
+        var exchangeCount = getChatExchangeCount(state && state.messages ? state.messages : []);
+        var messageCount = state && state.messages ? state.messages.length : 0;
+        appendChatHeaderMetaPill(pills, context && context.scope === "selection" ? "Selection context" : "Document context", "is-scope");
+        appendChatHeaderMetaPill(pills, exchangeCount + " exchange" + (exchangeCount === 1 ? "" : "s"), "is-exchanges");
+        appendChatHeaderMetaPill(pills, messageCount + " message" + (messageCount === 1 ? "" : "s"), "is-messages");
+        appendChatHeaderMetaPill(pills, "Enter sends", "is-send");
+        if (activePrompt) {
+            appendChatHeaderMetaPill(pills, "Starter: " + (activePrompt.label || activePrompt.id || "Prompt"), "is-starter");
+        }
+        else if (normalizeText(state && state.draft ? state.draft : "")) {
+            appendChatHeaderMetaPill(pills, "Custom prompt", "is-custom");
+        }
+        else {
+            appendChatHeaderMetaPill(pills, "Ready for a new ask", "is-prompt");
+        }
+        appendChatHeaderMetaPill(pills, String(normalizeText(state && state.draft ? state.draft : "").length) + " chars", "is-count");
+        return pills;
+    }
+
+    function buildChatComposerData(state, context, activePrompt) {
+        var statusTone = getChatStatusTone(state, context);
+        return {
+            title: "Compose",
+            statusTone: statusTone,
+            statusLabel: statusTone === "busy" ? "Working" : (statusTone === "error" ? "Needs attention" : (statusTone === "ready" ? "Ready" : "Compose")),
+            statusText: buildChatComposerStatusText(state, context, activePrompt),
+            metaPills: buildChatComposerMetaPills(state, context, activePrompt)
+        };
+    }
+
+    function buildChatComposerAriaLabel(composerData) {
+        if (!composerData) {
+            return "";
+        }
+        var parts = [];
+        if (composerData.title) {
+            parts.push(composerData.title);
+        }
+        if (composerData.statusLabel) {
+            parts.push(composerData.statusLabel);
+        }
+        if (composerData.statusText) {
+            parts.push(composerData.statusText);
+        }
+        if (composerData.metaPills && composerData.metaPills.length) {
+            for (var i = 0; i < composerData.metaPills.length; i++) {
+                if (composerData.metaPills[i] && composerData.metaPills[i].text) {
+                    parts.push(composerData.metaPills[i].text);
+                }
+            }
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatSendActionData(state, context, activePrompt) {
+        var scopeLabel = context && context.scope === "selection" ? "selection" : "document";
+        var hasCustomDraft = !!normalizeText(state && state.draft ? state.draft : "");
+        if (state && state.busy) {
+            return {
+                text: "Thinking...",
+                disabled: true,
+                ariaLabel: "Send disabled while AI Chat is thinking about the current " + scopeLabel + ".",
+                title: "AI Chat is thinking about the current " + scopeLabel + "."
+            };
+        }
+        if (activePrompt && activePrompt.label) {
+            return {
+                text: "Send starter",
+                disabled: false,
+                ariaLabel: "Send starter. Send the " + activePrompt.label + " starter for the current " + scopeLabel + ".",
+                title: "Send the " + activePrompt.label + " starter for the current " + scopeLabel + "."
+            };
+        }
+        if (hasCustomDraft) {
+            return {
+                text: "Send prompt",
+                disabled: false,
+                ariaLabel: "Send prompt. Send the custom prompt for the current " + scopeLabel + ".",
+                title: "Send the custom prompt for the current " + scopeLabel + "."
+            };
+        }
+        return {
+            text: "Send",
+            disabled: true,
+            ariaLabel: "Send disabled. Type a prompt or load a starter for the current " + scopeLabel + " first.",
+            title: "Type a prompt or load a starter for the current " + scopeLabel + " first."
+        };
+    }
+
+    function buildChatComposerActionsAriaLabel(sendActionData) {
+        return "Compose actions. Open Ask AI. " + (sendActionData && sendActionData.ariaLabel ? sendActionData.ariaLabel : "Send.");
     }
 
     function getLatestChatMessage(state) {
@@ -6786,86 +10652,334 @@ function RTE_Plugin_AIToolkit() {
         return exchangeCount;
     }
 
-    function getChatConversationSummaryTitle(state) {
-        var latestMessage = getLatestChatMessage(state);
-        if (!latestMessage) {
+    function appendChatConversationSummaryPill(pills, text, className) {
+        if (!pills || !text) {
+            return;
+        }
+        for (var i = 0; i < pills.length; i++) {
+            if (pills[i] && pills[i].text === text) {
+                return;
+            }
+        }
+        pills.push({
+            text: text,
+            className: className || ""
+        });
+    }
+
+    function buildChatConversationSummaryChangeText(changeGlance) {
+        if (!changeGlance) {
             return "";
         }
+        var pills = changeGlance.pills || [];
+        var changeLabel = "";
+        var impactLabel = "";
+        for (var i = 0; i < pills.length; i++) {
+            var pill = pills[i];
+            if (!pill || !pill.text) {
+                continue;
+            }
+            if (!changeLabel && pill.kind === "change") {
+                changeLabel = pill.text;
+            }
+            else if (!impactLabel && pill.kind === "impact") {
+                impactLabel = pill.text;
+            }
+        }
+        var detailParts = [];
+        if (changeLabel && impactLabel) {
+            detailParts.push("This is a " + impactLabel.toLowerCase() + " " + changeLabel.toLowerCase() + ".");
+        }
+        else if (changeLabel) {
+            detailParts.push("This is a " + changeLabel.toLowerCase() + ".");
+        }
+        else if (impactLabel) {
+            detailParts.push("This is " + impactLabel.toLowerCase() + ".");
+        }
+        if (changeGlance.detail) {
+            detailParts.push(changeGlance.detail);
+        }
+        return detailParts.join(" ");
+    }
+
+    function buildChatConversationSummaryData(state, context) {
+        var latestMessage = getLatestChatMessage(state);
+        if (!latestMessage) {
+            return null;
+        }
+        var currentSnapshot = context && context.snapshot ? context.snapshot : null;
+        var scopeLabel = context && context.scope === "selection" ? "selection" : "document";
+        var scopePill = scopeLabel === "selection" ? "Selection thread" : "Document thread";
+        var messageCount = state && state.messages ? state.messages.length : 0;
+        var exchangeCount = getChatExchangeCount(state && state.messages ? state.messages : []);
+        var exchangeLabel = exchangeCount + " exchange" + (exchangeCount === 1 ? "" : "s");
+        var messageLabel = messageCount + " message" + (messageCount === 1 ? "" : "s");
+        var threadLead = exchangeCount
+            ? (exchangeLabel + ", " + messageLabel)
+            : messageLabel;
+        var title = "Prompt sent to AI";
+        var statusLabel = "Conversation live";
+        var detailParts = [];
+        var pills = [];
         if (state && state.busy) {
-            return "Working on your latest request";
+            title = "Working on your latest request";
+            statusLabel = "Working";
+            detailParts.push(threadLead + " in this " + scopeLabel + " thread.");
+            detailParts.push("The assistant is preparing the next reply.");
         }
-        if (latestMessage.isError) {
-            return "Latest reply needs attention";
+        else if (latestMessage.isError) {
+            title = "Latest reply needs attention";
+            statusLabel = "Needs attention";
+            detailParts.push(threadLead + " in this " + scopeLabel + " thread.");
+            detailParts.push("Adjust the prompt or try again.");
         }
-        if (latestMessage.role === "assistant") {
+        else if (latestMessage.role === "assistant") {
             var resolved = latestMessage.resolved || null;
             var operations = resolved && resolved.operations ? resolved.operations : [];
             var resultText = resolved ? getPrimaryResolvedText(resolved) : "";
+            var recommendedActionId = getChatRecommendedActionId(latestMessage, currentSnapshot);
+            var recommendedActionLabel = getChatRecommendedActionLabel(recommendedActionId);
+            var changeGlance = buildChatResolvedPreviewGlanceData(latestMessage);
+            var changeSummaryText = buildChatConversationSummaryChangeText(changeGlance);
+            var actionSummary = getChatMessageActionSummary(latestMessage, currentSnapshot);
+            detailParts.push(threadLead + " in this " + scopeLabel + " thread.");
             if (operations.length) {
-                return "Latest review exchange is ready";
+                title = "Latest review exchange is ready";
+                statusLabel = "Ready to review";
             }
-            if (resultText) {
-                return "Latest draft exchange is ready";
+            else if (resultText) {
+                title = "Latest draft exchange is ready";
+                statusLabel = "Draft ready";
             }
-            return "Latest reply is ready";
+            else {
+                title = "Latest reply is ready";
+                statusLabel = "Reply ready";
+            }
+            if (recommendedActionLabel) {
+                detailParts.push(recommendedActionLabel + " is the recommended next step.");
+                appendChatConversationSummaryPill(pills, recommendedActionLabel, "is-action");
+            }
+            if (changeGlance && changeGlance.pills && changeGlance.pills.length) {
+                for (var changePillIndex = 0; changePillIndex < changeGlance.pills.length; changePillIndex++) {
+                    var changePill = changeGlance.pills[changePillIndex];
+                    if (!changePill || !changePill.text) {
+                        continue;
+                    }
+                    appendChatConversationSummaryPill(pills, changePill.text, changePill.kind ? ("is-" + changePill.kind) : "");
+                }
+            }
+            if (changeSummaryText) {
+                detailParts.push(changeSummaryText);
+            }
+            else if (actionSummary && actionSummary.detail) {
+                detailParts.push(actionSummary.detail);
+            }
         }
-        return "Prompt sent to AI";
+        else {
+            detailParts.push(threadLead + " in this " + scopeLabel + " thread.");
+        }
+        pills.unshift({
+            text: messageLabel,
+            className: "is-count"
+        });
+        pills.unshift({
+            text: exchangeLabel,
+            className: "is-exchanges"
+        });
+        pills.unshift({
+            text: scopePill,
+            className: "is-scope"
+        });
+        pills.unshift({
+            text: statusLabel,
+            className: "is-status"
+        });
+        return {
+            title: title,
+            detail: detailParts.join(" "),
+            statusLabel: statusLabel,
+            scopeLabel: scopePill,
+            exchangeLabel: exchangeLabel,
+            messageLabel: messageLabel,
+            actionLabel: latestMessage.role === "assistant" ? getChatRecommendedActionLabel(getChatRecommendedActionId(latestMessage, currentSnapshot)) : "",
+            changeGlance: latestMessage.role === "assistant" ? buildChatResolvedPreviewGlanceData(latestMessage) : null,
+            pills: pills
+        };
+    }
+
+    function buildChatConversationSummaryAriaLabel(summaryData) {
+        if (!summaryData) {
+            return "";
+        }
+        var parts = ["AI chat feed summary"];
+        if (summaryData.title) {
+            parts.push(summaryData.title);
+        }
+        if (summaryData.statusLabel) {
+            parts.push(summaryData.statusLabel);
+        }
+        if (summaryData.scopeLabel) {
+            parts.push(summaryData.scopeLabel);
+        }
+        if (summaryData.exchangeLabel) {
+            parts.push(summaryData.exchangeLabel);
+        }
+        if (summaryData.messageLabel) {
+            parts.push(summaryData.messageLabel);
+        }
+        if (summaryData.actionLabel) {
+            parts.push("Best next step");
+            parts.push(summaryData.actionLabel);
+        }
+        if (summaryData.changeGlance) {
+            parts.push(summaryData.changeGlance.title || "Change at a glance");
+            var glancePills = summaryData.changeGlance.pills || [];
+            for (var i = 0; i < glancePills.length; i++) {
+                if (glancePills[i] && glancePills[i].text) {
+                    parts.push(glancePills[i].text);
+                }
+            }
+            if (summaryData.changeGlance.detail) {
+                parts.push(summaryData.changeGlance.detail);
+            }
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatFeedIntroData(state, context, activePrompt) {
+        var scopeLabel = context && context.scope === "selection" ? "selection" : "document";
+        var exchangeCount = getChatExchangeCount(state && state.messages ? state.messages : []);
+        var messageCount = state && state.messages ? state.messages.length : 0;
+        var hasCustomDraft = !!normalizeText(state && state.draft ? state.draft : "");
+        var detail = "Your first answer, draft, or reviewable change for the current " + scopeLabel + " will appear here.";
+        var metaPills = [
+            {
+                text: "Waiting for first ask",
+                className: "is-status"
+            }
+        ];
+        if (activePrompt && activePrompt.label) {
+            metaPills[0] = {
+                text: "Starter ready",
+                className: "is-status"
+            };
+            metaPills.push({
+                text: activePrompt.label + " starter",
+                className: "is-starter"
+            });
+            detail = "Press Enter to send the " + activePrompt.label + " starter for the current " + scopeLabel + ", or edit it in Compose first.";
+        }
+        else if (hasCustomDraft) {
+            metaPills[0] = {
+                text: "Draft ready",
+                className: "is-status"
+            };
+            metaPills.push({
+                text: "Custom prompt",
+                className: "is-custom"
+            });
+            detail = "Press Enter to send your custom prompt for the current " + scopeLabel + ", or keep editing it in Compose.";
+        }
+        metaPills.push(
+            {
+                text: exchangeCount + " exchange" + (exchangeCount === 1 ? "" : "s"),
+                className: "is-exchanges"
+            },
+            {
+                text: messageCount + " message" + (messageCount === 1 ? "" : "s"),
+                className: "is-count"
+            }
+        );
+        return {
+            title: "First exchange",
+            detail: detail,
+            metaPills: metaPills
+        };
+    }
+
+    function buildChatFeedIntroAriaLabel(feedIntroData) {
+        if (!feedIntroData) {
+            return "";
+        }
+        var parts = [];
+        if (feedIntroData.title) {
+            parts.push(feedIntroData.title);
+        }
+        if (feedIntroData.metaPills && feedIntroData.metaPills.length) {
+            for (var i = 0; i < feedIntroData.metaPills.length; i++) {
+                if (feedIntroData.metaPills[i] && feedIntroData.metaPills[i].text) {
+                    parts.push(feedIntroData.metaPills[i].text);
+                }
+            }
+        }
+        if (feedIntroData.detail) {
+            parts.push(feedIntroData.detail);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatFeedSectionAriaLabel(state, context, activePrompt) {
+        var parts = ["Conversation"];
+        if (state && state.messages && state.messages.length) {
+            var summaryData = buildChatConversationSummaryData(state, context);
+            if (summaryData && summaryData.title) {
+                parts.push(summaryData.title);
+            }
+            if (summaryData && summaryData.statusLabel) {
+                parts.push(summaryData.statusLabel);
+            }
+            if (summaryData && summaryData.scopeLabel) {
+                parts.push(summaryData.scopeLabel);
+            }
+            if (summaryData && summaryData.exchangeLabel) {
+                parts.push(summaryData.exchangeLabel);
+            }
+            if (summaryData && summaryData.messageLabel) {
+                parts.push(summaryData.messageLabel);
+            }
+            if (summaryData && summaryData.actionLabel) {
+                parts.push("Best next step");
+                parts.push(summaryData.actionLabel);
+            }
+            if (summaryData && summaryData.detail) {
+                parts.push(summaryData.detail);
+            }
+            return parts.join(". ");
+        }
+        var feedIntroData = buildChatFeedIntroData(state, context, activePrompt);
+        if (feedIntroData.title) {
+            parts.push(feedIntroData.title);
+        }
+        if (feedIntroData.metaPills && feedIntroData.metaPills.length) {
+            for (var i = 0; i < feedIntroData.metaPills.length; i++) {
+                if (feedIntroData.metaPills[i] && feedIntroData.metaPills[i].text) {
+                    parts.push(feedIntroData.metaPills[i].text);
+                }
+            }
+        }
+        if (feedIntroData.detail) {
+            parts.push(feedIntroData.detail);
+        }
+        return parts.join(". ");
+    }
+
+    function getChatConversationSummaryTitle(state, context) {
+        var summaryData = buildChatConversationSummaryData(state, context);
+        return summaryData ? summaryData.title : "";
     }
 
     function getChatConversationSummaryDetail(state, context) {
-        var latestMessage = getLatestChatMessage(state);
-        if (!latestMessage) {
-            return "";
-        }
-        var scopeLabel = context && context.scope === "selection" ? "selection" : "document";
-        var messageCount = state && state.messages ? state.messages.length : 0;
-        var exchangeCount = getChatExchangeCount(state && state.messages ? state.messages : []);
-        var threadLead = exchangeCount
-            ? (exchangeCount + " exchange" + (exchangeCount === 1 ? "" : "s") + ", " + messageCount + " message" + (messageCount === 1 ? "" : "s"))
-            : (messageCount + " message" + (messageCount === 1 ? "" : "s"));
-        if (state && state.busy) {
-            return threadLead + " in this " + scopeLabel + " thread. The assistant is preparing the next reply.";
-        }
-        if (latestMessage.isError) {
-            return threadLead + " in this " + scopeLabel + " thread. Adjust the prompt or try again.";
-        }
-        if (latestMessage.role === "assistant") {
-            var resolved = latestMessage.resolved || null;
-            var operations = resolved && resolved.operations ? resolved.operations : [];
-            var resultText = resolved ? getPrimaryResolvedText(resolved) : "";
-            if (operations.length) {
-                return threadLead + " in this " + scopeLabel + " thread. Use preview, replace, or insert on the latest assistant change.";
-            }
-            if (resultText) {
-                return threadLead + " in this " + scopeLabel + " thread. The latest assistant draft is ready to reuse.";
-            }
-        }
-        return threadLead + " in this " + scopeLabel + " thread.";
+        var summaryData = buildChatConversationSummaryData(state, context);
+        return summaryData ? summaryData.detail : "";
     }
 
-    function getChatConversationSummaryStatus(state) {
-        var latestMessage = getLatestChatMessage(state);
-        if (!latestMessage) {
-            return "";
-        }
-        if (state && state.busy) {
-            return "Working";
-        }
-        if (latestMessage.isError) {
-            return "Needs attention";
-        }
-        if (latestMessage.role === "assistant") {
-            var resolved = latestMessage.resolved || null;
-            var operations = resolved && resolved.operations ? resolved.operations : [];
-            if (operations.length) {
-                return "Ready to review";
-            }
-        }
-        return "Conversation live";
+    function getChatConversationSummaryStatus(state, context) {
+        var summaryData = buildChatConversationSummaryData(state, context);
+        return summaryData ? summaryData.statusLabel : "";
     }
 
-    function getChatHeaderStatusLabel(state) {
-        var tone = getChatStatusTone(state);
+    function getChatHeaderStatusLabel(state, context) {
+        var tone = getChatStatusTone(state, context);
         if (tone === "busy") {
             return "Working";
         }
@@ -6891,10 +11005,662 @@ function RTE_Plugin_AIToolkit() {
         if (activePrompt && activePrompt.label) {
             return activePrompt.label + " starter is loaded for the current " + scopeLabel + ".";
         }
+        if (!messageCount && normalizeText(state && state.draft ? state.draft : "")) {
+            return "Custom prompt is ready for the current " + scopeLabel + ".";
+        }
         if (messageCount) {
             return threadLead + " in this conversation for the current " + scopeLabel + ". " + getChatConversationSummaryTitle(state) + ".";
         }
         return "Ask, rewrite, or review the current " + scopeLabel + " in place.";
+    }
+
+    function appendChatHeaderMetaPill(pills, text, className) {
+        if (!pills || !text) {
+            return;
+        }
+        for (var i = 0; i < pills.length; i++) {
+            if (pills[i] && pills[i].text === text) {
+                return;
+            }
+        }
+        pills.push({
+            text: text,
+            className: className || ""
+        });
+    }
+
+    function buildChatHeaderMetaPills(state, context, activePrompt) {
+        var pills = [];
+        var scopeThreadLabel = context && context.scope === "selection" ? "Selection thread" : "Document thread";
+        var messageCount = state && state.messages ? state.messages.length : 0;
+        var exchangeCount = getChatExchangeCount(state && state.messages ? state.messages : []);
+        var conversationSummary = buildChatConversationSummaryData(state, context);
+        appendChatHeaderMetaPill(pills, scopeThreadLabel, "is-scope");
+        appendChatHeaderMetaPill(pills, exchangeCount + " exchange" + (exchangeCount === 1 ? "" : "s"), "is-exchanges");
+        appendChatHeaderMetaPill(pills, messageCount + " message" + (messageCount === 1 ? "" : "s"), "is-messages");
+        appendChatHeaderMetaPill(pills, getChatContextWordCount(context && context.source ? context.source : "") + " words", "is-words");
+        if (conversationSummary && conversationSummary.actionLabel) {
+            appendChatHeaderMetaPill(pills, conversationSummary.actionLabel, "is-action");
+        }
+        else {
+            appendChatHeaderMetaPill(
+                pills,
+                activePrompt && activePrompt.label ? activePrompt.label + " starter" : (normalizeText(state && state.draft ? state.draft : "") ? "Custom draft" : "Ready for a new ask"),
+                "is-prompt"
+            );
+        }
+        return pills;
+    }
+
+    function buildChatHeaderData(state, context, activePrompt) {
+        return {
+            statusLabel: getChatHeaderStatusLabel(state, context),
+            scopeFocusLabel: context && context.scope === "selection" ? "Selection focus" : "Document focus",
+            subtitle: getChatHeaderSummaryText(state, context, activePrompt),
+            metaPills: buildChatHeaderMetaPills(state, context, activePrompt)
+        };
+    }
+
+    function buildChatHeaderAriaLabel(titleText, headerData) {
+        var parts = [];
+        if (titleText) {
+            parts.push(titleText);
+        }
+        if (!headerData) {
+            return parts.join(". ");
+        }
+        if (headerData.statusLabel) {
+            parts.push(headerData.statusLabel);
+        }
+        if (headerData.scopeFocusLabel) {
+            parts.push(headerData.scopeFocusLabel);
+        }
+        if (headerData.subtitle) {
+            parts.push(headerData.subtitle);
+        }
+        if (headerData.metaPills && headerData.metaPills.length) {
+            for (var i = 0; i < headerData.metaPills.length; i++) {
+                if (headerData.metaPills[i] && headerData.metaPills[i].text) {
+                    parts.push(headerData.metaPills[i].text);
+                }
+            }
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatContextData(context) {
+        var scopeIsSelection = context && context.scope === "selection";
+        var hasSelection = !!(context && context.snapshot && context.snapshot.hasSelection);
+        var sourceText = context && context.source ? context.source : "";
+        var previewMetaPills = [
+            {
+                text: getChatContextWordCount(sourceText) + " words",
+                className: "is-words"
+            },
+            {
+                text: normalizeText(sourceText).length + " chars",
+                className: "is-chars"
+            }
+        ];
+        var paragraphCount = getChatContextParagraphCount(sourceText);
+        if (paragraphCount > 1) {
+            previewMetaPills.push({
+                text: paragraphCount + " paragraphs",
+                className: "is-paragraphs"
+            });
+        }
+        return {
+            title: "Context",
+            detail: scopeIsSelection
+                ? "Using the selected passage as the active source. Switch to document to widen the ask."
+                : (hasSelection
+                    ? "Using the whole document as the active source. Switch to selection to narrow the ask."
+                    : "Using the whole document as the active source. Select text any time to narrow the ask."),
+            summaryPills: [
+                {
+                    text: scopeIsSelection ? "Selection active" : "Document active",
+                    className: scopeIsSelection ? "is-selection" : "is-document"
+                },
+                {
+                    text: hasSelection ? "Selection available" : "No current selection",
+                    className: hasSelection ? "is-available" : "is-empty"
+                }
+            ],
+            previewTitle: getChatContextPreviewTitle(context),
+            previewMetaPills: previewMetaPills,
+            previewSummary: context && context.summary ? context.summary : "The document is currently empty.",
+            scopeIsSelection: scopeIsSelection,
+            hasSelection: hasSelection
+        };
+    }
+
+    function buildChatContextAriaLabel(contextData) {
+        if (!contextData) {
+            return "";
+        }
+        var parts = [];
+        if (contextData.title) {
+            parts.push(contextData.title);
+        }
+        if (contextData.summaryPills && contextData.summaryPills.length) {
+            for (var i = 0; i < contextData.summaryPills.length; i++) {
+                if (contextData.summaryPills[i] && contextData.summaryPills[i].text) {
+                    parts.push(contextData.summaryPills[i].text);
+                }
+            }
+        }
+        if (contextData.detail) {
+            parts.push(contextData.detail);
+        }
+        if (contextData.previewTitle) {
+            parts.push(contextData.previewTitle);
+        }
+        if (contextData.previewMetaPills && contextData.previewMetaPills.length) {
+            for (var previewMetaIndex = 0; previewMetaIndex < contextData.previewMetaPills.length; previewMetaIndex++) {
+                if (contextData.previewMetaPills[previewMetaIndex] && contextData.previewMetaPills[previewMetaIndex].text) {
+                    parts.push(contextData.previewMetaPills[previewMetaIndex].text);
+                }
+            }
+        }
+        if (contextData.previewSummary) {
+            parts.push(contextData.previewSummary);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatContextBarAriaLabel(contextData) {
+        if (!contextData) {
+            return "";
+        }
+        var parts = ["Context scope switch"];
+        if (contextData.summaryPills && contextData.summaryPills.length) {
+            for (var i = 0; i < contextData.summaryPills.length; i++) {
+                if (contextData.summaryPills[i] && contextData.summaryPills[i].text) {
+                    parts.push(contextData.summaryPills[i].text);
+                }
+            }
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatContextScopeButtonAriaLabel(scopeId, contextData) {
+        var useSelection = scopeId === "selection";
+        if (useSelection) {
+            if (!contextData || !contextData.hasSelection) {
+                return "Use selection. Unavailable until text is selected.";
+            }
+            return contextData.scopeIsSelection
+                ? "Use selection. Active scope. AI Chat is using the current selection."
+                : "Use selection. Available scope. Switch AI Chat to the current selection.";
+        }
+        return contextData && contextData.scopeIsSelection
+            ? "Use document. Available scope. Switch AI Chat to the whole document."
+            : "Use document. Active scope. AI Chat is using the whole document.";
+    }
+
+    function buildChatContextPreviewAriaLabel(contextData) {
+        if (!contextData) {
+            return "";
+        }
+        var parts = [];
+        if (contextData.previewTitle) {
+            parts.push(contextData.previewTitle);
+        }
+        if (contextData.previewMetaPills && contextData.previewMetaPills.length) {
+            for (var i = 0; i < contextData.previewMetaPills.length; i++) {
+                if (contextData.previewMetaPills[i] && contextData.previewMetaPills[i].text) {
+                    parts.push(contextData.previewMetaPills[i].text);
+                }
+            }
+        }
+        if (contextData.previewSummary) {
+            parts.push(contextData.previewSummary);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatQuickStartData(state, prompts, activePrompt, context) {
+        var promptCount = prompts && prompts.length ? prompts.length : 0;
+        var hasCustomDraft = !!normalizeText(state && state.draft ? state.draft : "");
+        var scopeLabel = context && context.scope === "selection" ? "selection" : "document";
+        var stateLabel = activePrompt
+            ? ((activePrompt.label || activePrompt.id || "Prompt") + " starter")
+            : (hasCustomDraft ? "Custom prompt" : "Ready to choose");
+        var detail = activePrompt
+            ? "Press Enter in Compose to send the loaded starter for the current " + scopeLabel + ", or edit it first."
+            : (hasCustomDraft
+                ? "Keep writing your prompt for the current " + scopeLabel + ", or switch to a starter before you send."
+                : "Choose a starter for the current " + scopeLabel + " or keep typing your own prompt in Compose.");
+        return {
+            title: "Quick starts",
+            detail: detail,
+            metaPills: [
+                {
+                    text: scopeLabel === "selection" ? "Selection context" : "Document context",
+                    className: "is-scope"
+                },
+                {
+                    text: promptCount + " starters",
+                    className: "is-count"
+                },
+                {
+                    text: stateLabel,
+                    className: activePrompt ? "is-active" : (hasCustomDraft ? "is-custom" : "is-ready")
+                }
+            ]
+        };
+    }
+
+    function buildChatQuickStartAriaLabel(quickStartData) {
+        if (!quickStartData) {
+            return "";
+        }
+        var parts = [];
+        if (quickStartData.title) {
+            parts.push(quickStartData.title);
+        }
+        if (quickStartData.metaPills && quickStartData.metaPills.length) {
+            for (var i = 0; i < quickStartData.metaPills.length; i++) {
+                if (quickStartData.metaPills[i] && quickStartData.metaPills[i].text) {
+                    parts.push(quickStartData.metaPills[i].text);
+                }
+            }
+        }
+        if (quickStartData.detail) {
+            parts.push(quickStartData.detail);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatQuickButtonAriaLabel(prompt, isActivePrompt, context) {
+        var parts = [];
+        var label = prompt && (prompt.label || prompt.id) ? (prompt.label || prompt.id) : "Prompt";
+        var scopeLabel = context && context.scope === "selection" ? "selection" : "document";
+        parts.push(label);
+        var intentLabel = getChatPromptIntentLabel(prompt);
+        if (intentLabel) {
+            parts.push(intentLabel + " starter");
+        }
+        var copy = summarizeChatPromptCopy(prompt && prompt.prompt ? prompt.prompt : "");
+        if (copy) {
+            parts.push(copy);
+        }
+        parts.push(isActivePrompt
+            ? "Current starter loaded in Compose for the current " + scopeLabel
+            : "Loads this starter into Compose for the current " + scopeLabel);
+        return parts.join(". ");
+    }
+
+    function buildChatQuickRowAriaLabel(context) {
+        return "Starter buttons for the current " + (context && context.scope === "selection" ? "selection" : "document");
+    }
+
+    function buildChatEmptyStateData(context, prompts) {
+        var capabilityCards = [
+            {
+                title: "Ask and explore",
+                copy: "Get answers, summaries, headings, or rewrite direction grounded in the current context."
+            },
+            {
+                title: "Prepare reviewable edits",
+                copy: "Preview inline changes, apply structured plans, or turn responses into review-ready suggestions."
+            },
+            {
+                title: "Use starters or type your own",
+                copy: "Choose one of the curated quick starts above or write a custom prompt in the composer below."
+            }
+        ];
+        // 2026-05-15 (v20260515a): empty-state detail trimmed from 117 chars
+        // ("Use the current document as context, ask for guidance, or prepare
+        // reviewable edits before they touch the page.") to a calm 41-char
+        // one-liner ("Ask anything about the current document."). The
+        // earlier copy stamped marketing voice — "context", "reviewable
+        // edits", "before they touch the page" — onto an empty conversation
+        // where the user has not yet typed a single character. Same shape
+        // Claude side-panel ("Type a message to start.") / ChatGPT side-
+        // panel ("How can I help you today?") / Notion AI empty composer
+        // ship: one short line that names the action, not the architecture.
+        // The capability-cards data is still attached to emptyStateData.aria
+        // so screen-reader users hear the long form via the aria-label.
+        return {
+            title: "Start with AI Chat",
+            detail: context.scope === "selection"
+                ? "Ask anything about the current selection."
+                : "Ask anything about the current document.",
+            metaPills: [
+                {
+                    text: context.scope === "selection" ? "Selection context" : "Document context",
+                    className: "is-scope"
+                },
+                {
+                    text: (prompts && prompts.length ? prompts.length : 0) + " starters",
+                    className: "is-prompts"
+                },
+                {
+                    text: getChatContextWordCount(context.source) + " words in scope",
+                    className: "is-size"
+                }
+            ],
+            capabilityCards: capabilityCards
+        };
+    }
+
+    function buildChatEmptyCapabilityAriaLabel(capabilityCard) {
+        if (!capabilityCard) {
+            return "";
+        }
+        var parts = [];
+        if (capabilityCard.title) {
+            parts.push(capabilityCard.title);
+        }
+        if (capabilityCard.copy) {
+            parts.push(capabilityCard.copy);
+        }
+        return parts.join(". ");
+    }
+
+    function buildChatEmptyStateAriaLabel(emptyStateData) {
+        if (!emptyStateData) {
+            return "";
+        }
+        var parts = [];
+        if (emptyStateData.title) {
+            parts.push(emptyStateData.title);
+        }
+        if (emptyStateData.detail) {
+            parts.push(emptyStateData.detail);
+        }
+        if (emptyStateData.metaPills && emptyStateData.metaPills.length) {
+            for (var i = 0; i < emptyStateData.metaPills.length; i++) {
+                if (emptyStateData.metaPills[i] && emptyStateData.metaPills[i].text) {
+                    parts.push(emptyStateData.metaPills[i].text);
+                }
+            }
+        }
+        if (emptyStateData.capabilityCards && emptyStateData.capabilityCards.length) {
+            for (var cardIndex = 0; cardIndex < emptyStateData.capabilityCards.length; cardIndex++) {
+                parts.push(buildChatEmptyCapabilityAriaLabel(emptyStateData.capabilityCards[cardIndex]));
+            }
+        }
+        return parts.join(". ");
+    }
+
+    function clearChatNode(node) {
+        if (!node) {
+            return;
+        }
+        while (node.firstChild) {
+            node.removeChild(node.firstChild);
+        }
+    }
+
+    function syncChatPillGroup(node, pills, className) {
+        if (!node) {
+            return;
+        }
+        clearChatNode(node);
+        var list = pills || [];
+        for (var i = 0; i < list.length; i++) {
+            if (!list[i] || !list[i].text) {
+                continue;
+            }
+            append(node, "span", "", className + (list[i].className ? " " + list[i].className : ""), list[i].text);
+        }
+    }
+
+    function syncChatDraftAwareUi(panel, state, context, prompts) {
+        if (!panel) {
+            return;
+        }
+        var activePrompt = getActiveChatPrompt(state, prompts);
+        var contextData = buildChatContextData(context);
+        var headerData = buildChatHeaderData(state, context, activePrompt);
+        var emptyStateData = !state.messages.length ? buildChatEmptyStateData(context, prompts) : null;
+        var composerData = buildChatComposerData(state, context, activePrompt);
+        var quickStartData = buildChatQuickStartData(state, prompts, activePrompt, context);
+        var feedIntroData = !state.messages.length ? buildChatFeedIntroData(state, context, activePrompt) : null;
+        var sendActionData = buildChatSendActionData(state, context, activePrompt);
+
+        var headerNode = panel.querySelector(".rte-ai-chat-header");
+        if (headerNode) {
+            headerNode.setAttribute("aria-label", buildChatHeaderAriaLabel(config.text_aichat || "AI Chat", headerData));
+        }
+        var headerStatusNode = panel.querySelector(".rte-ai-chat-header-status.is-status");
+        if (headerStatusNode) {
+            headerStatusNode.innerHTML = "";
+            headerStatusNode.innerText = headerData.statusLabel;
+        }
+        var headerScopeNode = panel.querySelector(".rte-ai-chat-header-status.is-scope");
+        if (headerScopeNode) {
+            headerScopeNode.innerHTML = "";
+            headerScopeNode.innerText = headerData.scopeFocusLabel;
+        }
+        var headerSubtitleNode = panel.querySelector(".rte-ai-chat-subtitle");
+        if (headerSubtitleNode) {
+            headerSubtitleNode.innerHTML = "";
+            headerSubtitleNode.innerText = headerData.subtitle;
+        }
+        syncChatPillGroup(panel.querySelector(".rte-ai-chat-header-meta"), headerData.metaPills, "rte-ai-chat-header-meta-pill");
+
+        var contextSectionNode = panel.querySelector(".rte-ai-chat-context-shell");
+        if (contextSectionNode) {
+            contextSectionNode.setAttribute("aria-label", buildChatContextAriaLabel(contextData));
+            // 2026-05-15 (v20260515a): keep `is-no-selection-actionable`
+            // class in sync as the editor's selection state changes (e.g.
+            // user selects text after the panel was opened with no
+            // selection). CSS hides the scope row when the class is on.
+            contextSectionNode.classList.toggle("is-no-selection-actionable", !contextData.hasSelection);
+        }
+        var contextBarNode = panel.querySelector(".rte-ai-chat-context-bar");
+        if (contextBarNode) {
+            contextBarNode.setAttribute("aria-label", buildChatContextBarAriaLabel(contextData));
+        }
+        var contextScopeButtons = panel.querySelectorAll(".rte-ai-chat-scope-button");
+        if (contextScopeButtons.length > 0) {
+            contextScopeButtons[0].disabled = !contextData.hasSelection;
+            contextScopeButtons[0].setAttribute("aria-label", buildChatContextScopeButtonAriaLabel("selection", contextData));
+            if (contextData.scopeIsSelection) {
+                contextScopeButtons[0].classList.add("is-active");
+            }
+            else {
+                contextScopeButtons[0].classList.remove("is-active");
+            }
+        }
+        if (contextScopeButtons.length > 1) {
+            contextScopeButtons[1].setAttribute("aria-label", buildChatContextScopeButtonAriaLabel("document", contextData));
+            if (contextData.scopeIsSelection) {
+                contextScopeButtons[1].classList.remove("is-active");
+            }
+            else {
+                contextScopeButtons[1].classList.add("is-active");
+            }
+        }
+        syncChatPillGroup(panel.querySelector(".rte-ai-chat-context-summary-meta"), contextData.summaryPills, "rte-ai-chat-context-summary-pill");
+        var contextSummaryTextNode = panel.querySelector(".rte-ai-chat-context-summary-text");
+        if (contextSummaryTextNode) {
+            contextSummaryTextNode.innerHTML = "";
+            contextSummaryTextNode.innerText = contextData.detail;
+        }
+        var contextPreviewNode = panel.querySelector(".rte-ai-chat-context-preview");
+        if (contextPreviewNode) {
+            contextPreviewNode.className = "rte-ai-chat-context-preview is-" + (context && context.scope === "selection" ? "selection" : "document");
+            contextPreviewNode.setAttribute("aria-label", buildChatContextPreviewAriaLabel(contextData));
+        }
+        var contextPreviewTitleNode = panel.querySelector(".rte-ai-chat-context-preview-title");
+        if (contextPreviewTitleNode) {
+            contextPreviewTitleNode.innerHTML = "";
+            contextPreviewTitleNode.innerText = contextData.previewTitle;
+        }
+        syncChatPillGroup(panel.querySelector(".rte-ai-chat-context-preview-meta"), contextData.previewMetaPills, "rte-ai-chat-context-preview-pill");
+        var contextPreviewCopyNode = panel.querySelector(".rte-ai-chat-context-preview-copy");
+        if (contextPreviewCopyNode) {
+            contextPreviewCopyNode.innerHTML = "";
+            contextPreviewCopyNode.innerText = contextData.previewSummary;
+        }
+
+        var quickSectionNode = panel.querySelector(".rte-ai-chat-quick-shell");
+        if (quickSectionNode) {
+            quickSectionNode.setAttribute("aria-label", buildChatQuickStartAriaLabel(quickStartData));
+        }
+        var quickRowNode = panel.querySelector(".rte-ai-chat-quick-row");
+        if (quickRowNode) {
+            quickRowNode.setAttribute("aria-label", buildChatQuickRowAriaLabel(context));
+        }
+        var quickButtons = panel.querySelectorAll(".rte-ai-chat-quick-button");
+        for (var quickIndex = 0; quickIndex < quickButtons.length && quickIndex < prompts.length; quickIndex++) {
+            var quickPrompt = prompts[quickIndex];
+            var quickIsActive = !!(state.draft && quickPrompt && quickPrompt.prompt && normalizeText(state.draft) === normalizeText(quickPrompt.prompt));
+            if (quickIsActive) {
+                quickButtons[quickIndex].classList.add("is-active");
+            }
+            else {
+                quickButtons[quickIndex].classList.remove("is-active");
+            }
+            quickButtons[quickIndex].setAttribute("aria-label", buildChatQuickButtonAriaLabel(quickPrompt, quickIsActive, context));
+        }
+        syncChatPillGroup(panel.querySelector(".rte-ai-chat-quick-summary-meta"), quickStartData.metaPills, "rte-ai-chat-quick-summary-pill");
+        var quickSummaryTextNode = panel.querySelector(".rte-ai-chat-quick-summary-text");
+        if (quickSummaryTextNode) {
+            quickSummaryTextNode.innerHTML = "";
+            quickSummaryTextNode.innerText = quickStartData.detail;
+        }
+
+        var composerSectionNode = panel.querySelector(".rte-ai-chat-compose-shell");
+        if (composerSectionNode) {
+            composerSectionNode.setAttribute("aria-label", buildChatComposerAriaLabel(composerData));
+        }
+        var composerInputNode = panel.querySelector(".rte-ai-chat-input");
+        if (composerInputNode) {
+            composerInputNode.setAttribute("aria-label", "Compose next AI request for the current " + (context && context.scope === "selection" ? "selection" : "document"));
+        }
+        var composerMetaNode = panel.querySelector(".rte-ai-chat-composer-meta");
+        if (composerMetaNode) {
+            composerMetaNode.setAttribute("aria-label", (composerData.metaPills || []).map(function (pill) {
+                return pill && pill.text ? pill.text : "";
+            }).filter(function (text) {
+                return !!text;
+            }).join(". "));
+        }
+        syncChatPillGroup(composerMetaNode, composerData.metaPills, "rte-ai-chat-composer-pill");
+        var composerStatusNode = panel.querySelector(".rte-ai-chat-status");
+        if (composerStatusNode) {
+            composerStatusNode.className = "rte-ai-chat-status is-" + composerData.statusTone;
+            composerStatusNode.setAttribute("aria-label", composerData.statusLabel + ". " + composerData.statusText);
+        }
+        var composerStatusPillNode = panel.querySelector(".rte-ai-chat-status-pill");
+        if (composerStatusPillNode) {
+            composerStatusPillNode.className = "rte-ai-chat-status-pill is-" + composerData.statusTone;
+            composerStatusPillNode.innerHTML = "";
+            composerStatusPillNode.innerText = composerData.statusLabel;
+        }
+        var composerStatusTextNode = panel.querySelector(".rte-ai-chat-status-text");
+        if (composerStatusTextNode) {
+            composerStatusTextNode.innerHTML = "";
+            composerStatusTextNode.innerText = composerData.statusText;
+        }
+        var composerActionsNode = panel.querySelector(".rte-ai-chat-composer-actions");
+        if (composerActionsNode) {
+            composerActionsNode.setAttribute("aria-label", buildChatComposerActionsAriaLabel(sendActionData));
+        }
+        var sendButtonNode = panel.querySelector(".rte-ai-chat-send-button");
+        if (sendButtonNode) {
+            sendButtonNode.disabled = !!sendActionData.disabled;
+            sendButtonNode.setAttribute("aria-label", sendActionData.ariaLabel);
+            sendButtonNode.title = sendActionData.title;
+            // 2026-05-08: keep the send-glyph icon when re-syncing the
+            // dynamic label text. Swap to spinner during busy state so
+            // users see live progress instead of a stuck "Thinking..." label.
+            sendButtonNode.classList.toggle("is-busy", !!state.busy);
+            setReviewV2ButtonContent(sendButtonNode, state.busy ? "spinner" : "send", sendActionData.text);
+        }
+
+        if (!state.messages.length && feedIntroData) {
+            var feedSectionNode = panel.querySelector(".rte-ai-chat-feed-shell");
+            if (feedSectionNode) {
+                feedSectionNode.setAttribute("aria-label", buildChatFeedSectionAriaLabel(state, context, activePrompt));
+            }
+            var feedIntroNode = panel.querySelector(".rte-ai-chat-feed-intro");
+            if (feedIntroNode) {
+                feedIntroNode.setAttribute("aria-label", buildChatFeedIntroAriaLabel(feedIntroData));
+            }
+            var feedIntroTitleNode = panel.querySelector(".rte-ai-chat-feed-intro-title");
+            if (feedIntroTitleNode) {
+                feedIntroTitleNode.innerHTML = "";
+                feedIntroTitleNode.innerText = feedIntroData.title;
+            }
+            var feedIntroDetailNode = panel.querySelector(".rte-ai-chat-feed-intro-detail");
+            if (feedIntroDetailNode) {
+                feedIntroDetailNode.innerHTML = "";
+                feedIntroDetailNode.innerText = feedIntroData.detail;
+            }
+            syncChatPillGroup(panel.querySelector(".rte-ai-chat-feed-intro-meta"), feedIntroData.metaPills, "rte-ai-chat-feed-intro-pill");
+
+            var emptyStateNode = panel.querySelector(".rte-ai-chat-empty");
+            if (emptyStateNode && emptyStateData) {
+                emptyStateNode.setAttribute("aria-label", buildChatEmptyStateAriaLabel(emptyStateData));
+            }
+            var emptyTitleNode = panel.querySelector(".rte-ai-chat-empty-title");
+            if (emptyTitleNode && emptyStateData) {
+                emptyTitleNode.innerHTML = "";
+                emptyTitleNode.innerText = emptyStateData.title;
+            }
+            var emptyDetailNode = panel.querySelector(".rte-ai-chat-empty-detail");
+            if (emptyDetailNode && emptyStateData) {
+                emptyDetailNode.innerHTML = "";
+                emptyDetailNode.innerText = emptyStateData.detail;
+            }
+            syncChatPillGroup(panel.querySelector(".rte-ai-chat-empty-meta"), emptyStateData ? emptyStateData.metaPills : [], "rte-ai-chat-empty-pill");
+        }
+    }
+
+    function syncOpenChatPanelFromEditor() {
+        if (!editor || !editor.__aiChatPanel || !editor.__aiChatPanel.isConnected) {
+            return;
+        }
+        var state = getChatState();
+        if (state && state.messages && state.messages.length) {
+            renderChatPanel(false);
+            return;
+        }
+        syncChatDraftAwareUi(
+            editor.__aiChatPanel,
+            state,
+            resolveChatScope(),
+            config.aiToolkitChatPrompts || []
+        );
+    }
+
+    function scheduleOpenChatPanelSync() {
+        if (!editor) {
+            return;
+        }
+        if (editor.__aiChatSyncTimer) {
+            clearTimeout(editor.__aiChatSyncTimer);
+        }
+        editor.__aiChatSyncTimer = setTimeout(function () {
+            editor.__aiChatSyncTimer = 0;
+            syncOpenChatPanelFromEditor();
+        }, 0);
+    }
+
+    function syncOpenDialogFromEditor() {
+        if (!editor || !editor.__aiDialog || !editor.__aiDialog.isConnected || typeof editor.__aiDialog.__aiSyncFromEditor !== "function") {
+            return;
+        }
+        editor.__aiDialog.__aiSyncFromEditor();
+    }
+
+    function scheduleOpenDialogSync() {
+        if (!editor) {
+            return;
+        }
+        if (editor.__aiDialogSyncTimer) {
+            clearTimeout(editor.__aiDialogSyncTimer);
+        }
+        editor.__aiDialogSyncTimer = setTimeout(function () {
+            editor.__aiDialogSyncTimer = 0;
+            syncOpenDialogFromEditor();
+        }, 0);
     }
 
     function renderChatPanel(focusComposer) {
@@ -6903,6 +11669,8 @@ function RTE_Plugin_AIToolkit() {
             return false;
         }
 
+        var preservedFocus = !focusComposer ? captureChatPanelFocusState(editor.__aiChatPanel) : null;
+        var preservedScroll = !focusComposer ? captureChatFeedScrollState(editor.__aiChatPanel) : null;
         var state = getChatState();
         var context = resolveChatScope();
         var prompts = config.aiToolkitChatPrompts || [];
@@ -6912,7 +11680,30 @@ function RTE_Plugin_AIToolkit() {
         editor.__aiChatOriginalMinHeight = shell.style ? (shell.style.minHeight || "") : "";
         shell.classList.add("rte-ai-chat-host");
         if (shell.style) {
-            var desiredHeight = window.innerWidth <= 900 ? 560 : 660;
+            // 2026-05-25 (v20260525a): pulled the desired-height floor down
+            // again to track the composer compaction landed today. The
+            // composer's Send button moved INSIDE the textarea (was a
+            // stacked second row beneath it, ~36 + 8 gap = ~44px), the
+            // textarea min-height dropped from the 52-108 the override
+            // cascade actually produced to 44px, and `resize: none` killed
+            // the handle since the inline Send overlay would otherwise
+            // occlude it. Net composer height: ~114px stacked → ~62px
+            // inline. The empty-state chat panel now ends at ~420px tall;
+            // the prior 440/480 floor was reserving editor-shell height
+            // for a panel whose contents have moved up the page.
+            // Earlier baseline:
+            //   v20260518a: 560/660 → 440/480 after the chat composer's
+            //               first set of compactions.
+            // 2026-06-02 (v20260602a): floor pulled down again after the
+            // Pass 49 chat-panel compactness pass: outer padding 16→12,
+            // empty-state card chrome flattened (no border / gradient /
+            // box-shadow), feed-shell padding 12/13→10/11. Empty-state
+            // panel now sits at ~350px content tall, so the 420 floor
+            // was reserving ~70px of editor-shell height for empty
+            // panel chrome. Drop the floor to 320/360 (mobile/desktop)
+            // so the editor shell isn't artificially padded for a
+            // panel whose contents already fit.
+            var desiredHeight = window.innerWidth <= 900 ? 320 : 360;
             shell.style.minHeight = Math.max(shell.offsetHeight || 0, desiredHeight) + "px";
         }
         editor.__aiChatShell = shell;
@@ -6930,86 +11721,151 @@ function RTE_Plugin_AIToolkit() {
             }
         };
 
-        var header = append(panel, "div", "", "rte-ai-chat-header");
+        // 2026-05-08 redesign: stripped this panel down to the basics. The
+        // earlier build crammed an "Assistant workspace / READY / DOCUMENT
+        // FOCUS / V202605xxx" eyebrow row, a paragraph subtitle, a 5-pill
+        // header-meta row, a decorative hero panel, a context preview card,
+        // a context summary pill row, a "Quick starts" section label, a
+        // quick-start summary row, a "Conversation" section label, a feed
+        // intro card, and an empty-state capability grid into the same panel.
+        // Two screenshots in a row prompted "hard to use, hard to understand".
+        // Now: header (icon + title + new chat + close), scope toggle, quick
+        // chips, conversation area, composer.
+        var headerData = buildChatHeaderData(state, context, activePrompt);
+        var headerTitleText = config.text_aichat || "AI Chat";
+        var header = append(panel, "div", "", "rte-ai-chat-header is-minimal");
+        header.setAttribute("role", "group");
+        header.setAttribute("aria-label", buildChatHeaderAriaLabel(headerTitleText, headerData));
         var headerCopy = append(header, "div", "", "rte-ai-chat-header-copy");
-        var headerEyebrow = append(headerCopy, "div", "", "rte-ai-chat-header-eyebrow");
-        append(headerEyebrow, "span", "", "rte-ai-chat-header-kicker", "Assistant workspace");
-        append(headerEyebrow, "span", "", "rte-ai-chat-header-status is-status", getChatHeaderStatusLabel(state));
-        append(headerEyebrow, "span", "", "rte-ai-chat-header-status is-scope", context.scope === "selection" ? "Selection focus" : "Document focus");
         var titleRow = append(headerCopy, "div", "", "rte-ai-chat-title-row");
         var titleIcon = append(titleRow, "span", "", "rte-ai-chat-title-icon");
         titleIcon.innerHTML = config.svgCode_aiassist_chat || config.svgCode_aiassist || "";
-        append(titleRow, "div", "", "rte-ai-chat-title", config.text_aichat || "AI Chat");
-        append(headerCopy, "div", "", "rte-ai-chat-subtitle", getChatHeaderSummaryText(state, context, activePrompt));
-        var headerMeta = append(headerCopy, "div", "", "rte-ai-chat-header-meta");
-        append(headerMeta, "span", "", "rte-ai-chat-header-meta-pill is-exchanges", getChatExchangeCount(state.messages) + " exchange" + (getChatExchangeCount(state.messages) === 1 ? "" : "s"));
-        append(headerMeta, "span", "", "rte-ai-chat-header-meta-pill is-messages", (state.messages && state.messages.length ? state.messages.length : 0) + " message" + (state.messages && state.messages.length === 1 ? "" : "s"));
-        append(headerMeta, "span", "", "rte-ai-chat-header-meta-pill is-words", getChatContextWordCount(context.source) + " words");
-        append(headerMeta, "span", "", "rte-ai-chat-header-meta-pill is-prompt", activePrompt && activePrompt.label ? activePrompt.label + " starter" : (normalizeText(state.draft || "") ? "Custom draft" : "Ready for a new ask"));
+        append(titleRow, "div", "", "rte-ai-chat-title", headerTitleText);
         var headerActions = append(header, "div", "", "rte-ai-chat-header-actions");
-        var clearButton = append(headerActions, "button", "", "secondary rte-ai-chat-header-button", "New chat");
+        // 2026-05-15 (v20260515c): New chat button → icon-only. Sat next
+        // to a close [X] icon-only button on the same 420px header row,
+        // so painting the refresh icon plus a "New chat" text label was
+        // a third unequal-width affordance fighting the close button for
+        // header chrome attention. Same shape Claude side-panel / ChatGPT
+        // side-panel / Notion AI ship — a single refresh / + glyph with
+        // hover title + aria-label for affordance, no inline text. Saves
+        // ~70px wide on the header row so the title + close pair land at
+        // their natural left/right edges. The icon-only class triggers
+        // the same compact padding rule the chat scope buttons use.
+        var clearButton = append(headerActions, "button", "", "secondary rte-ai-chat-header-button is-icon-only");
         clearButton.type = "button";
+        clearButton.setAttribute("data-rte-ai-chat-header-action", "new-chat");
+        clearButton.title = "Start a fresh chat";
+        clearButton.setAttribute("aria-label", "Start a fresh chat");
+        setReviewV2ButtonContent(clearButton, "refresh", "");
         clearButton.onclick = function () {
-            state.messages = [];
-            state.status = "Started a fresh AI chat.";
+            resetChatConversationState(state, "Started a fresh AI chat.");
             renderChatPanel(true);
         };
         var closeButton = append(headerActions, "button", "", "rte-ai-panel-close-button");
         closeButton.type = "button";
+        closeButton.setAttribute("data-rte-ai-chat-header-action", "close");
         closeButton.setAttribute("aria-label", "Close AI chat");
         closeButton.title = "Close";
         closeButton.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>';
         closeButton.onclick = function () {
             closeChatPanel();
+            editor.focus();
         };
 
-        var contextSection = append(panel, "div", "", "rte-ai-chat-stack rte-ai-chat-context-shell");
-        appendPanelSectionLabel(contextSection, "rte-ai-chat-section-label is-context", "Context");
+        // Compact scope toggle. No preview card, no summary pills, no detail
+        // copy — just two buttons that flip the scope.
+        // 2026-05-15 (v20260515a): when there is no editor selection the
+        // toggle has nothing to toggle — the Selection button is disabled
+        // (no selected text exists), Document is the default + only active
+        // choice, so the 38px row + 10px gap (48px tall) was rendering a
+        // segmented control whose state was already forced. Same shape
+        // Claude side-panel / ChatGPT side-panel ship — the scope chip only
+        // appears when there's actually a scope to pick. CSS hides the row
+        // via the `is-no-selection-actionable` class; the moment the user
+        // selects text the class drops and the toggle reappears. DOM stays
+        // intact so syncChatDraftAwareUi selectors (`.rte-ai-chat-context-
+        // shell` / `.rte-ai-chat-context-bar` / `.rte-ai-chat-scope-button`)
+        // keep resolving without each call site needing a null guard.
+        // Saves ~48px tall on every fresh-open chat panel.
+        var contextData = buildChatContextData(context);
+        var contextSection = append(panel, "div", "", "rte-ai-chat-stack rte-ai-chat-context-shell is-minimal" + (context.snapshot.hasSelection ? "" : " is-no-selection-actionable"));
+        contextSection.setAttribute("role", "group");
+        contextSection.setAttribute("aria-label", buildChatContextAriaLabel(contextData));
         var contextBar = append(contextSection, "div", "", "rte-ai-chat-context-bar");
-        var selectionButton = append(contextBar, "button", "", "rte-ai-chat-scope-button" + (state.scope === "selection" ? " is-active" : ""), "Use selection");
+        contextBar.setAttribute("role", "group");
+        contextBar.setAttribute("aria-label", buildChatContextBarAriaLabel(contextData));
+        // 2026-05-13 (v20260513c): scope buttons demoted to icon-only.
+        // The cursor-T (Selection) and document (Document) glyphs alone
+        // are the same icon vocabulary the Ask AI dialog has used since
+        // v20260509j, so muscle memory carries across the two AI surfaces.
+        // At the 390px chat panel width the labeled buttons were eating
+        // ~140px (35%) of the context row for a binary toggle that has
+        // exactly two options; icon-only drops that to ~70px (18%) and
+        // lets the panel breathe. Hover title + aria-label still surface
+        // the long form for affordance and screen readers. Same compact
+        // segmented control Notion AI inline composer / Tiptap AI bubble
+        // use for their "selection vs document" scope picker.
+        var selectionButton = append(contextBar, "button", "", "rte-ai-chat-scope-button is-icon-only" + (contextData.scopeIsSelection ? " is-active" : ""));
         selectionButton.type = "button";
         selectionButton.disabled = !context.snapshot.hasSelection;
+        selectionButton.setAttribute("data-rte-ai-chat-scope-target", "selection");
+        selectionButton.setAttribute("aria-label", buildChatContextScopeButtonAriaLabel("selection", contextData));
+        selectionButton.title = "Use selection";
+        setReviewV2ButtonContent(selectionButton, "cursorText", "");
         selectionButton.onclick = function () {
+            var currentSnapshot = captureSelectionSnapshot();
             state.scope = "selection";
-            state.status = context.snapshot.hasSelection ? "Chat will use the current selection." : "Select text first to use selection scope.";
+            state.status = currentSnapshot.hasSelection ? "Chat will use the current selection." : "Select text first to use selection scope.";
             renderChatPanel(true);
         };
-        var documentButton = append(contextBar, "button", "", "rte-ai-chat-scope-button" + (state.scope !== "selection" ? " is-active" : ""), "Use document");
+        var documentButton = append(contextBar, "button", "", "rte-ai-chat-scope-button is-icon-only" + (!contextData.scopeIsSelection ? " is-active" : ""));
         documentButton.type = "button";
+        documentButton.setAttribute("data-rte-ai-chat-scope-target", "document");
+        documentButton.setAttribute("aria-label", buildChatContextScopeButtonAriaLabel("document", contextData));
+        documentButton.title = "Use document";
+        setReviewV2ButtonContent(documentButton, "document", "");
         documentButton.onclick = function () {
             state.scope = "document";
             state.status = "Chat will use the whole document.";
             renderChatPanel(true);
         };
-        append(contextBar, "span", "", "rte-ai-chat-context-pill", context.scope === "selection" ? "Selection" : "Document");
 
-        var contextPreview = append(contextSection, "div", "", "rte-ai-chat-context-preview is-" + context.scope);
-        var contextPreviewHeader = append(contextPreview, "div", "", "rte-ai-chat-context-preview-header");
-        append(contextPreviewHeader, "span", "", "rte-ai-chat-context-preview-title", getChatContextPreviewTitle(context));
-        var contextPreviewMeta = append(contextPreviewHeader, "div", "", "rte-ai-chat-context-preview-meta");
-        var contextWordCount = getChatContextWordCount(context.source);
-        var contextParagraphCount = getChatContextParagraphCount(context.source);
-        append(contextPreviewMeta, "span", "", "rte-ai-chat-context-preview-pill is-words", contextWordCount + " words");
-        append(contextPreviewMeta, "span", "", "rte-ai-chat-context-preview-pill is-chars", normalizeText(context.source || "").length + " chars");
-        if (contextParagraphCount > 1) {
-            append(contextPreviewMeta, "span", "", "rte-ai-chat-context-preview-pill is-paragraphs", contextParagraphCount + " paragraphs");
-        }
-        append(contextPreview, "div", "", "rte-ai-chat-context-preview-copy", context.summary);
-
-        var quickSection = append(panel, "div", "", "rte-ai-chat-stack rte-ai-chat-quick-shell");
-        appendPanelSectionLabel(quickSection, "rte-ai-chat-section-label is-quick", "Quick starts");
+        // Quick-start chips. No section label, no summary pills, just chips.
+        // 2026-05-13 (v20260513c): chips are only rendered on the empty
+        // state. The chips are called "quick STARTS" — once a user has
+        // sent any message they've already started, and the chip row
+        // above the conversation feed becomes a permanently-visible
+        // 30px row of suggestions the user has already declined.
+        // Same shape Claude side-panel / ChatGPT side-panel / Notion AI
+        // ship — starter suggestions land on the empty state and step
+        // out of the way once a conversation exists. The chip section
+        // is still appended pre-message so syncChatDraftAwareUi /
+        // restoreChatPanelFocus selectors that walk
+        // `.rte-ai-chat-quick-shell` still resolve; once the conversation
+        // begins the section is suppressed via the is-conversation flag
+        // and CSS hides the row. Power users still get the chips back
+        // every time they hit "New chat" (which clears state.messages).
+        var quickStartData = buildChatQuickStartData(state, prompts, activePrompt, context);
+        var quickSection = append(panel, "div", "", "rte-ai-chat-stack rte-ai-chat-quick-shell is-minimal" + (state.messages.length ? " is-conversation" : ""));
+        quickSection.setAttribute("role", "group");
+        quickSection.setAttribute("aria-label", buildChatQuickStartAriaLabel(quickStartData));
         var quickRow = append(quickSection, "div", "", "rte-ai-chat-quick-row");
+        quickRow.setAttribute("role", "group");
+        quickRow.setAttribute("aria-label", buildChatQuickRowAriaLabel(context));
         for (var p = 0; p < prompts.length; p++) {
             (function (prompt) {
                 var isActivePrompt = !!(state.draft && prompt.prompt && normalizeText(state.draft) === normalizeText(prompt.prompt));
-                var quickButton = append(quickRow, "button", "", "rte-ai-chat-quick-button" + (isActivePrompt ? " is-active" : ""));
-                quickButton.setAttribute("data-rte-ai-chat-prompt-tone", getChatPromptToneClass(prompt));
-                append(quickButton, "span", "", "rte-ai-chat-quick-eyebrow", getChatPromptIntentLabel(prompt));
-                append(quickButton, "span", "", "rte-ai-chat-quick-title", prompt.label || prompt.id || "Prompt");
-                append(quickButton, "span", "", "rte-ai-chat-quick-copy", summarizeChatPromptCopy(prompt.prompt || ""));
+                var quickButton = append(quickRow, "button", "", "rte-ai-chat-quick-button is-chip" + (isActivePrompt ? " is-active" : ""));
                 quickButton.type = "button";
+                quickButton.setAttribute("data-rte-ai-chat-prompt-tone", getChatPromptToneClass(prompt));
+                quickButton.setAttribute("data-rte-ai-chat-prompt-id", prompt.id || prompt.label || String(p));
                 quickButton.title = prompt.prompt || "";
-                quickButton.setAttribute("aria-label", (prompt.label || prompt.id || "Prompt") + ". " + summarizeChatPromptCopy(prompt.prompt || ""));
+                quickButton.setAttribute("aria-label", buildChatQuickButtonAriaLabel(prompt, isActivePrompt, context));
+                // Tone-matched icon + label. The same setReviewV2ButtonContent
+                // helper used by every other AI button keeps the gap and
+                // alignment consistent.
+                setReviewV2ButtonContent(quickButton, getChatPromptToneIconKey(prompt), prompt.label || prompt.id || "Prompt");
                 quickButton.onclick = function () {
                     state.draft = prompt.prompt || "";
                     state.status = "Loaded the " + (prompt.label || prompt.id || "starter prompt") + " quick start.";
@@ -7018,44 +11874,93 @@ function RTE_Plugin_AIToolkit() {
             })(prompts[p]);
         }
 
-        var feedSection = append(panel, "div", "", "rte-ai-chat-stack rte-ai-chat-feed-shell");
-        appendPanelSectionLabel(feedSection, "rte-ai-chat-section-label is-feed", "Conversation");
+        // Conversation feed. No section label, no separate intro card, no
+        // capability grid — when the conversation is empty we just show a
+        // calm one-liner ("Ask anything about the current selection.").
+        var feedSection = append(panel, "div", "", "rte-ai-chat-stack rte-ai-chat-feed-shell is-minimal");
+        feedSection.setAttribute("role", "group");
+        feedSection.setAttribute("aria-label", buildChatFeedSectionAriaLabel(state, context, activePrompt));
         var feed = append(feedSection, "div", "", "rte-ai-chat-feed");
         if (!state.messages.length) {
-            var emptyState = append(feed, "div", "", "rte-ai-chat-empty");
-            var emptyHero = append(emptyState, "div", "", "rte-ai-chat-empty-hero");
-            append(emptyHero, "div", "", "rte-ai-chat-empty-title", "Start with AI Chat");
-            append(emptyHero, "div", "", "rte-ai-chat-empty-detail", context.scope === "selection"
-                ? "Use the selected passage as the active source, ask a question, or prepare reviewable edits before you accept anything."
-                : "Use the current document as context, ask for guidance, or prepare reviewable edits before they touch the page.");
-            var emptyMeta = append(emptyHero, "div", "", "rte-ai-chat-empty-meta");
-            append(emptyMeta, "span", "", "rte-ai-chat-empty-pill is-scope", context.scope === "selection" ? "Selection context" : "Document context");
-            append(emptyMeta, "span", "", "rte-ai-chat-empty-pill is-prompts", prompts.length + " starters");
-            append(emptyMeta, "span", "", "rte-ai-chat-empty-pill is-size", getChatContextWordCount(context.source) + " words in scope");
-
-            var emptyCapabilities = append(emptyState, "div", "", "rte-ai-chat-empty-capabilities");
-            var answerCard = append(emptyCapabilities, "div", "", "rte-ai-chat-empty-capability");
-            append(answerCard, "div", "", "rte-ai-chat-empty-capability-title", "Ask and explore");
-            append(answerCard, "div", "", "rte-ai-chat-empty-capability-copy", "Get answers, summaries, headings, or rewrite direction grounded in the current context.");
-            var reviewCard = append(emptyCapabilities, "div", "", "rte-ai-chat-empty-capability");
-            append(reviewCard, "div", "", "rte-ai-chat-empty-capability-title", "Prepare reviewable edits");
-            append(reviewCard, "div", "", "rte-ai-chat-empty-capability-copy", "Preview inline changes, apply structured plans, or turn responses into review-ready suggestions.");
-            var composeCard = append(emptyCapabilities, "div", "", "rte-ai-chat-empty-capability");
-            append(composeCard, "div", "", "rte-ai-chat-empty-capability-title", "Use starters or type your own");
-            append(composeCard, "div", "", "rte-ai-chat-empty-capability-copy", "Choose one of the curated quick starts above or write a custom prompt in the composer below.");
+            var emptyStateData = buildChatEmptyStateData(context, prompts);
+            var emptyState = append(feed, "div", "", "rte-ai-chat-empty is-minimal is-flat");
+            emptyState.setAttribute("role", "group");
+            emptyState.setAttribute("aria-label", buildChatEmptyStateAriaLabel(emptyStateData));
+            // 2026-05-09 (v20260509j): dropped the 200x140 hero illustration
+            // SVG from the empty state. With the scope toggle in the
+            // header row + quick-start chips directly above this hint,
+            // users already see ~5 visual anchors before they ever read
+            // a turn — adding a 6th illustration was decorative noise
+            // that pushed the composer below the fold on short panels.
+            // Same shape ChatGPT side-panel / Claude side-panel use:
+            // an empty conversation feed reads as a calm hint line, not
+            // a marketing splash. Detached node kept so any external
+            // integration that walks .rte-ai-chat-empty-art still
+            // resolves without throwing.
+            var emptyArt = document.createElement("div");
+            emptyArt.className = "rte-ai-chat-empty-art is-detached";
+            emptyArt.setAttribute("aria-hidden", "true");
+            // 2026-05-20 (v20260520a): empty-state hint now points at the
+            // quick-start chips above. Pre-pass the hint was a single line
+            // ("Ask anything about the current document.") that gave
+            // first-time users no signal about the unlabeled row of small
+            // label-only pills directly above it — the chips read as
+            // decorative tags rather than one-click starters. Appending
+            // "—or tap a quick start above." links the two surfaces so the
+            // empty state names BOTH the composer (Ask anything) and the
+            // chip row (a quick start) as valid next steps. Same shape
+            // Claude side-panel / ChatGPT side-panel ship: the empty hint
+            // names every clickable affordance on the panel. Zero added
+            // chrome — the existing single `.rte-ai-chat-empty-detail` line
+            // grows from ~32 chars to ~52 chars and still wraps at the
+            // ~320px max-width set by the existing CSS rule. Chips visible
+            // only on empty state, so when conversation begins the
+            // reference drops with the chips.
+            var hasQuickStarts = !!(prompts && prompts.length);
+            var emptyHintBase = context.scope === "selection"
+                ? "Ask anything about the current selection"
+                : "Ask anything about the current document";
+            append(emptyState, "div", "", "rte-ai-chat-empty-detail",
+                hasQuickStarts ? (emptyHintBase + " — or tap a quick start above.") : (emptyHintBase + "."));
         }
         var activeExchangeGroup = null;
         var activeExchangeIndex = 0;
         for (var i = 0; i < state.messages.length; i++) {
-            if (i === 0) {
+            // 2026-05-08: feed summary card (status/scope/exchange/message
+            // pills above the first turn) folded into the per-message header
+            // for legibility — kept the data shape for syncChatDraftAwareUi
+            // queries to noop gracefully when the node is absent.
+            if (false && i === 0) {
+                var feedSummaryData = buildChatConversationSummaryData(state, context);
                 var feedSummary = append(feed, "div", "", "rte-ai-chat-feed-summary");
-                append(feedSummary, "div", "", "rte-ai-chat-feed-summary-title", getChatConversationSummaryTitle(state));
-                append(feedSummary, "div", "", "rte-ai-chat-feed-summary-detail", getChatConversationSummaryDetail(state, context));
+                if (feedSummaryData) {
+                    feedSummary.setAttribute("role", "group");
+                    feedSummary.setAttribute("aria-label", buildChatConversationSummaryAriaLabel(feedSummaryData));
+                }
+                append(feedSummary, "div", "", "rte-ai-chat-feed-summary-title", feedSummaryData ? feedSummaryData.title : getChatConversationSummaryTitle(state, context));
+                append(feedSummary, "div", "", "rte-ai-chat-feed-summary-detail", feedSummaryData ? feedSummaryData.detail : getChatConversationSummaryDetail(state, context));
                 var feedSummaryMeta = append(feedSummary, "div", "", "rte-ai-chat-feed-summary-meta");
-                append(feedSummaryMeta, "span", "", "rte-ai-chat-feed-summary-pill is-status", getChatConversationSummaryStatus(state));
-                append(feedSummaryMeta, "span", "", "rte-ai-chat-feed-summary-pill is-scope", context.scope === "selection" ? "Selection thread" : "Document thread");
-                append(feedSummaryMeta, "span", "", "rte-ai-chat-feed-summary-pill is-exchanges", getChatExchangeCount(state.messages) + " exchange" + (getChatExchangeCount(state.messages) === 1 ? "" : "s"));
-                append(feedSummaryMeta, "span", "", "rte-ai-chat-feed-summary-pill is-count", state.messages.length + " message" + (state.messages.length === 1 ? "" : "s"));
+                var feedSummaryPills = feedSummaryData && feedSummaryData.pills && feedSummaryData.pills.length
+                    ? feedSummaryData.pills
+                    : [
+                        { text: getChatConversationSummaryStatus(state, context), className: "is-status" },
+                        { text: context.scope === "selection" ? "Selection thread" : "Document thread", className: "is-scope" },
+                        { text: getChatExchangeCount(state.messages) + " exchange" + (getChatExchangeCount(state.messages) === 1 ? "" : "s"), className: "is-exchanges" },
+                        { text: state.messages.length + " message" + (state.messages.length === 1 ? "" : "s"), className: "is-count" }
+                    ];
+                for (var feedSummaryPillIndex = 0; feedSummaryPillIndex < feedSummaryPills.length; feedSummaryPillIndex++) {
+                    var feedSummaryPill = feedSummaryPills[feedSummaryPillIndex];
+                    if (!feedSummaryPill || !feedSummaryPill.text) {
+                        continue;
+                    }
+                    append(
+                        feedSummaryMeta,
+                        "span",
+                        "",
+                        "rte-ai-chat-feed-summary-pill" + (feedSummaryPill.className ? " " + feedSummaryPill.className : ""),
+                        feedSummaryPill.text
+                    );
+                }
             }
             (function (message, messageIndex) {
                 var threadRole = getChatMessageThreadRole(state.messages, messageIndex);
@@ -7071,6 +11976,8 @@ function RTE_Plugin_AIToolkit() {
                     if (currentExchange) {
                         activeExchangeGroup.setAttribute("data-rte-ai-chat-current-exchange", "true");
                     }
+                    activeExchangeGroup.setAttribute("role", "group");
+                    activeExchangeGroup.setAttribute("aria-label", buildChatExchangeGroupAriaLabel(state.messages, messageIndex, context.snapshot));
                     activeExchangeIndex = currentExchangeIndex;
                     exchangeContainer = activeExchangeGroup;
                 }
@@ -7081,8 +11988,12 @@ function RTE_Plugin_AIToolkit() {
                     activeExchangeGroup = null;
                     activeExchangeIndex = 0;
                 }
-                var exchangeBannerData = buildChatExchangeBannerData(state.messages, messageIndex);
-                if (exchangeBannerData) {
+                // Per-exchange banner (title + scope/status/action/glance
+                // pills + detail) folded into per-message header. Each banner
+                // adds 5–8 visible pills per turn, which is what made longer
+                // conversations look like a wall of badges.
+                var exchangeBannerData = buildChatExchangeBannerData(state.messages, messageIndex, context.snapshot);
+                if (false && exchangeBannerData) {
                     var exchangeBanner = append(exchangeContainer, "div", "", "rte-ai-chat-exchange-banner");
                     if (exchangeBannerData.exchangeLabel) {
                         exchangeBanner.setAttribute("data-rte-ai-chat-exchange-index", exchangeBannerData.exchangeLabel);
@@ -7090,6 +12001,8 @@ function RTE_Plugin_AIToolkit() {
                     if (exchangeBannerData.isCurrent) {
                         exchangeBanner.setAttribute("data-rte-ai-chat-current-exchange", "true");
                     }
+                    exchangeBanner.setAttribute("role", "group");
+                    exchangeBanner.setAttribute("aria-label", buildChatExchangeBannerAriaLabel(exchangeBannerData));
                     append(exchangeBanner, "div", "", "rte-ai-chat-exchange-title", exchangeBannerData.title);
                     var exchangeMeta = append(exchangeBanner, "div", "", "rte-ai-chat-exchange-meta");
                     if (exchangeBannerData.exchangeLabel) {
@@ -7097,11 +12010,34 @@ function RTE_Plugin_AIToolkit() {
                     }
                     append(exchangeMeta, "span", "", "rte-ai-chat-exchange-pill is-scope", exchangeBannerData.scopeLabel);
                     append(exchangeMeta, "span", "", "rte-ai-chat-exchange-pill is-status", exchangeBannerData.statusLabel);
+                    if (exchangeBannerData.actionLabel) {
+                        append(exchangeMeta, "span", "", "rte-ai-chat-exchange-pill is-action", exchangeBannerData.actionLabel);
+                    }
+                    if (exchangeBannerData.changeGlance && exchangeBannerData.changeGlance.pills && exchangeBannerData.changeGlance.pills.length) {
+                        for (var exchangeGlanceIndex = 0; exchangeGlanceIndex < exchangeBannerData.changeGlance.pills.length; exchangeGlanceIndex++) {
+                            var exchangeGlancePill = exchangeBannerData.changeGlance.pills[exchangeGlanceIndex];
+                            if (!exchangeGlancePill || !exchangeGlancePill.text) {
+                                continue;
+                            }
+                            append(
+                                exchangeMeta,
+                                "span",
+                                "",
+                                "rte-ai-chat-exchange-pill" + (exchangeGlancePill.kind ? " is-" + exchangeGlancePill.kind : ""),
+                                exchangeGlancePill.text
+                            );
+                        }
+                    }
                     if (exchangeBannerData.isCurrent) {
                         append(exchangeMeta, "span", "", "rte-ai-chat-exchange-pill is-current", "Current exchange");
                     }
+                    if (exchangeBannerData.detail) {
+                        append(exchangeBanner, "div", "", "rte-ai-chat-exchange-detail", exchangeBannerData.detail);
+                    }
                 }
-                var item = append(exchangeContainer, "div", "", "rte-ai-chat-message is-" + message.role + (message.isError ? " is-error" : ""));
+                var item = append(exchangeContainer, "div", "", "rte-ai-chat-message is-" + message.role + " is-minimal" + (message.isError ? " is-error" : ""));
+                item.setAttribute("role", "group");
+                item.setAttribute("aria-label", buildChatMessageAriaLabel(state.messages, messageIndex, context.snapshot));
                 if (threadRole) {
                     item.setAttribute("data-rte-ai-chat-thread-role", threadRole);
                     item.setAttribute("data-rte-ai-chat-exchange-index", String(currentExchangeIndex));
@@ -7109,36 +12045,101 @@ function RTE_Plugin_AIToolkit() {
                         item.setAttribute("data-rte-ai-chat-current-exchange", "true");
                     }
                 }
-                var messageHeader = append(item, "div", "", "rte-ai-chat-message-header");
-                var messageHeaderRow = append(messageHeader, "div", "", "rte-ai-chat-message-role-row");
-                append(messageHeaderRow, "span", "", "rte-ai-chat-message-role is-" + (message.isError ? "error" : message.role), getChatMessageRoleLabel(message));
-                append(messageHeaderRow, "span", "", "rte-ai-chat-message-pill is-scope", getChatMessageScopeLabel(message));
-                append(messageHeaderRow, "span", "", "rte-ai-chat-message-pill is-type", getChatMessageTypeLabel(message));
-                append(messageHeaderRow, "span", "", "rte-ai-chat-message-pill is-turn", "Turn " + (messageIndex + 1));
-                var meta = append(messageHeader, "div", "", "rte-ai-chat-message-meta", buildChatMessageSupportingCopy(message));
-                meta.setAttribute("aria-hidden", "true");
-                var stateCard = append(item, "div", "", "rte-ai-chat-message-state is-" + (message.isError ? "error" : message.role));
-                append(stateCard, "div", "", "rte-ai-chat-message-state-kicker", message.isError ? "Conversation issue" : (message.role === "user" ? "User prompt" : "Assistant response"));
-                append(stateCard, "div", "", "rte-ai-chat-message-state-title", getChatMessageStateTitle(message));
-                append(stateCard, "div", "", "rte-ai-chat-message-state-detail", getChatMessageStateDetail(message));
-                if (message.role === "user" && !message.isError) {
-                    var promptCard = append(item, "div", "", "rte-ai-chat-message-prompt-card");
-                    var promptHeader = append(promptCard, "div", "", "rte-ai-chat-message-prompt-header");
-                    append(promptHeader, "div", "", "rte-ai-chat-message-prompt-title", "What you asked");
-                    append(promptHeader, "span", "", "rte-ai-chat-message-prompt-pill", getChatUserPromptBadgeLabel(message));
-                    var promptExchangeLabel = getChatMessageExchangeLabel(state.messages, messageIndex);
-                    if (promptExchangeLabel) {
-                        append(promptHeader, "span", "", "rte-ai-chat-message-prompt-pill is-exchange", promptExchangeLabel);
+                // Single role label per message ("You" / "AI"). The earlier
+                // build also stamped scope/type/turn pills, an aria meta line,
+                // a "User prompt" or "Assistant response" state card, a prompt
+                // card with an extra header, and a context card with word and
+                // paragraph counts. All of that has been folded into one
+                // role row + body for legibility.
+                var messageHeader = append(item, "div", "", "rte-ai-chat-message-header is-minimal");
+                // Small avatar circle next to each message role label. SVG
+                // glyphs differ for user vs assistant vs error, hue inherited
+                // from the role's CSS color via currentColor.
+                var avatarKind = message.isError ? "error" : message.role;
+                var avatar = append(messageHeader, "span", "", "rte-ai-chat-message-avatar is-" + avatarKind);
+                avatar.setAttribute("aria-hidden", "true");
+                avatar.innerHTML = avatarKind === "user"
+                    ? '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.5" r="2.8"/><path d="M8 9.4c-2.8 0-5.2 1.5-5.2 3.4 0 .4.3.7.7.7h9c.4 0 .7-.3.7-.7 0-1.9-2.4-3.4-5.2-3.4z"/></svg>'
+                    : (avatarKind === "error"
+                        ? '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5M8 11.2v.1"/></svg>'
+                        : '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3" y="5" width="10" height="8" rx="2"/><circle cx="8" cy="3" r="0.9"/><line x1="8" y1="3.9" x2="8" y2="5" stroke="currentColor" stroke-width="1"/><circle cx="6" cy="9" r="1.1" fill="#ffffff"/><circle cx="10" cy="9" r="1.1" fill="#ffffff"/></svg>');
+                append(messageHeader, "span", "", "rte-ai-chat-message-role is-" + (message.isError ? "error" : message.role), getChatMessageRoleLabel(message));
+                append(item, "div", "", "rte-ai-chat-message-text", message.text || "");
+                // 2026-05-08: per-message Copy + Regenerate row for assistant
+                // turns. Lets users grab the AI output without reaching into
+                // the underlying editor, and re-run a request without typing
+                // the whole prompt again. Hidden on user / error messages.
+                if (message.role === "assistant" && !message.isError && message.text) {
+                    var msgActions = append(item, "div", "", "rte-ai-chat-message-actions-row");
+                    var msgCopyBtn = append(msgActions, "button", "", "rte-ai-chat-message-action is-copy");
+                    msgCopyBtn.type = "button";
+                    msgCopyBtn.title = "Copy message text";
+                    setReviewV2ButtonContent(msgCopyBtn, "checkAll", "Copy");
+                    msgCopyBtn.onclick = (function (text, btn) {
+                        return function (e) {
+                            if (e && e.stopPropagation) e.stopPropagation();
+                            var nav = window.navigator;
+                            var copied = false;
+                            try {
+                                if (nav && nav.clipboard && nav.clipboard.writeText) {
+                                    nav.clipboard.writeText(text);
+                                    copied = true;
+                                }
+                            } catch (ignore) {}
+                            if (!copied) {
+                                // Fallback: range-copy via a hidden textarea.
+                                var ta = document.createElement("textarea");
+                                ta.value = text;
+                                ta.style.position = "fixed";
+                                ta.style.left = "-9999px";
+                                document.body.appendChild(ta);
+                                ta.select();
+                                try { document.execCommand("copy"); copied = true; } catch (e2) {}
+                                document.body.removeChild(ta);
+                            }
+                            if (copied) {
+                                btn.classList.add("is-just-copied");
+                                setReviewV2ButtonContent(btn, "check", "Copied");
+                                setTimeout(function () {
+                                    btn.classList.remove("is-just-copied");
+                                    setReviewV2ButtonContent(btn, "checkAll", "Copy");
+                                }, 1400);
+                            }
+                        };
+                    })(message.text || "", msgCopyBtn);
+                    // Regenerate: re-run the user prompt that produced this
+                    // assistant turn. Walk back to find the most recent user
+                    // message (almost always at messageIndex-1).
+                    var precedingUserPrompt = "";
+                    for (var pIdx = messageIndex - 1; pIdx >= 0; pIdx--) {
+                        if (state.messages[pIdx] && state.messages[pIdx].role === "user" && !state.messages[pIdx].isError) {
+                            precedingUserPrompt = state.messages[pIdx].text || "";
+                            break;
+                        }
                     }
-                    append(promptCard, "div", "", "rte-ai-chat-message-prompt-body", message.text || "");
+                    if (precedingUserPrompt) {
+                        var msgRegenBtn = append(msgActions, "button", "", "rte-ai-chat-message-action is-regen");
+                        msgRegenBtn.type = "button";
+                        msgRegenBtn.title = "Regenerate response";
+                        setReviewV2ButtonContent(msgRegenBtn, "refresh", "Regenerate");
+                        msgRegenBtn.onclick = (function (prompt) {
+                            return function (e) {
+                                if (e && e.stopPropagation) e.stopPropagation();
+                                state.draft = prompt;
+                                runChatPrompt(prompt);
+                            };
+                        })(precedingUserPrompt);
+                    }
                 }
-                else {
-                    append(item, "div", "", "rte-ai-chat-message-text", message.text || "");
-                }
-                if (message.role === "user" && !message.isError) {
+                if (false && message.role === "user" && !message.isError) {
+                    // legacy context card path retained behind a permanent
+                    // false guard so the block below remains valid JS without
+                    // restructuring the surrounding closure indices.
                     var contextCardData = buildChatMessageContextCardData(message);
                     if (contextCardData) {
                         var contextCard = append(item, "div", "", "rte-ai-chat-message-context-card is-user");
+                        contextCard.setAttribute("role", "group");
+                        contextCard.setAttribute("aria-label", buildChatMessageContextCardAriaLabel(contextCardData));
                         var contextHeader = append(contextCard, "div", "", "rte-ai-chat-message-context-header");
                         append(contextHeader, "div", "", "rte-ai-chat-message-context-title", contextCardData.title);
                         var contextMeta = append(contextHeader, "div", "", "rte-ai-chat-message-context-meta");
@@ -7150,16 +12151,21 @@ function RTE_Plugin_AIToolkit() {
                         append(contextCard, "div", "", "rte-ai-chat-message-context-copy", contextCardData.copy);
                     }
                 }
-                if (message.role === "assistant" && !message.isError) {
+                // Request card on assistant messages used to repeat the
+                // user's prompt under a "What you asked" header. Removed to
+                // declutter — the user's own message above already shows it.
+                if (false && message.role === "assistant" && !message.isError) {
                     var requestCardData = buildChatAssistantRequestCardData(state.messages, messageIndex);
                     if (requestCardData) {
                         var requestCard = append(item, "div", "", "rte-ai-chat-message-request-card");
+                        var requestExchangeLabel = getChatMessageExchangeLabel(state.messages, messageIndex);
+                        requestCard.setAttribute("role", "group");
+                        requestCard.setAttribute("aria-label", buildChatAssistantRequestCardAriaLabel(requestCardData, requestExchangeLabel));
                         var requestHeader = append(requestCard, "div", "", "rte-ai-chat-message-request-header");
                         append(requestHeader, "div", "", "rte-ai-chat-message-request-title", requestCardData.title);
                         var requestMeta = append(requestHeader, "div", "", "rte-ai-chat-message-request-meta");
                         append(requestMeta, "span", "", "rte-ai-chat-message-request-pill is-scope", requestCardData.scopeLabel);
                         append(requestMeta, "span", "", "rte-ai-chat-message-request-pill is-detail", requestCardData.detail);
-                        var requestExchangeLabel = getChatMessageExchangeLabel(state.messages, messageIndex);
                         if (requestExchangeLabel) {
                             append(requestMeta, "span", "", "rte-ai-chat-message-request-pill is-exchange", requestExchangeLabel);
                         }
@@ -7168,9 +12174,20 @@ function RTE_Plugin_AIToolkit() {
                 }
 
                 if (message.role === "assistant" && message.resolved) {
-                    var resolvedPreview = buildChatResolvedPreviewData(message);
-                    if (resolvedPreview) {
+                    var resolvedPreview = buildChatResolvedPreviewData(message, context.snapshot);
+                    // 2026-05-08 (v20260508t): the per-message preview card
+                    // (title + 4 meta pills + current/result compare lines +
+                    // why card + change-glance + plan lead/items/followups)
+                    // duplicated information already conveyed by the message
+                    // bubble + smart Apply button. Two screenshots in a row
+                    // came back as "hard to use" with the card present.
+                    // Render path is preserved behind a permanent false guard
+                    // so syncChatDraftAwareUi and downstream queries that look
+                    // up these nodes keep noop'ing safely.
+                    if (false && resolvedPreview) {
                         var previewCard = append(item, "div", "", "rte-ai-chat-message-preview");
+                        previewCard.setAttribute("role", "group");
+                        previewCard.setAttribute("aria-label", buildChatResolvedPreviewAriaLabel(resolvedPreview));
                         var previewHeader = append(previewCard, "div", "", "rte-ai-chat-message-preview-header");
                         append(previewHeader, "div", "", "rte-ai-chat-message-preview-title", resolvedPreview.title);
                         var previewMeta = append(previewCard, "div", "", "rte-ai-chat-message-preview-meta");
@@ -7191,50 +12208,105 @@ function RTE_Plugin_AIToolkit() {
                             append(previewReason, "div", "", "rte-ai-chat-message-preview-reason-label", "Why this change");
                             append(previewReason, "div", "", "rte-ai-chat-message-preview-reason", resolvedPreview.reasonText);
                         }
-                        if (resolvedPreview.planItems && resolvedPreview.planItems.length) {
+                        if (resolvedPreview.changeGlance) {
+                            var previewGlance = append(previewCard, "div", "", "rte-ai-chat-message-preview-glance");
+                            append(previewGlance, "div", "", "rte-ai-chat-message-preview-glance-title", resolvedPreview.changeGlance.title || "Change at a glance");
+                            if (resolvedPreview.changeGlance.pills && resolvedPreview.changeGlance.pills.length) {
+                                var previewGlanceMeta = append(previewGlance, "div", "", "rte-ai-chat-message-preview-glance-meta");
+                                for (var previewGlanceIndex = 0; previewGlanceIndex < resolvedPreview.changeGlance.pills.length; previewGlanceIndex++) {
+                                    var previewGlancePill = resolvedPreview.changeGlance.pills[previewGlanceIndex];
+                                    if (!previewGlancePill || !previewGlancePill.text) {
+                                        continue;
+                                    }
+                                    append(previewGlanceMeta, "span", "", "rte-ai-review-item-glance-pill is-" + (previewGlancePill.kind || "other"), previewGlancePill.text);
+                                }
+                            }
+                            if (resolvedPreview.changeGlance.detail) {
+                                append(previewGlance, "div", "", "rte-ai-chat-message-preview-glance-detail", resolvedPreview.changeGlance.detail);
+                            }
+                        }
+                        if ((resolvedPreview.planLeadTitle || resolvedPreview.planLeadLabel || resolvedPreview.planLeadDetail)
+                            || (resolvedPreview.planItems && resolvedPreview.planItems.length)) {
                             var previewPlan = append(previewCard, "div", "", "rte-ai-chat-message-preview-plan");
                             append(previewPlan, "div", "", "rte-ai-chat-message-preview-plan-title", "What happens next");
-                            var previewPlanItems = append(previewPlan, "div", "", "rte-ai-chat-message-preview-plan-items");
-                            for (var planIndex = 0; planIndex < resolvedPreview.planItems.length; planIndex++) {
-                                append(previewPlanItems, "span", "", "rte-ai-chat-message-preview-plan-item", resolvedPreview.planItems[planIndex]);
+                            if (resolvedPreview.planLeadTitle || resolvedPreview.planLeadLabel || resolvedPreview.planLeadDetail) {
+                                var previewPlanLead = append(previewPlan, "div", "", "rte-ai-chat-message-preview-plan-lead");
+                                if (resolvedPreview.planLeadTitle) {
+                                    append(previewPlanLead, "div", "", "rte-ai-chat-message-preview-plan-lead-title", resolvedPreview.planLeadTitle);
+                                }
+                                if (resolvedPreview.planLeadLabel) {
+                                    var previewPlanLeadMeta = append(previewPlanLead, "div", "", "rte-ai-chat-message-preview-plan-items");
+                                    append(previewPlanLeadMeta, "span", "", "rte-ai-chat-message-preview-plan-item is-recommended", resolvedPreview.planLeadLabel);
+                                }
+                                if (resolvedPreview.planLeadDetail) {
+                                    append(previewPlanLead, "div", "", "rte-ai-chat-message-preview-plan-lead-detail", resolvedPreview.planLeadDetail);
+                                }
                             }
-                            if (resolvedPreview.hiddenPlanCount) {
-                                append(previewPlanItems, "span", "", "rte-ai-chat-message-preview-plan-item is-more", "+" + resolvedPreview.hiddenPlanCount + " more");
+                            if (resolvedPreview.planItems && resolvedPreview.planItems.length) {
+                                if (resolvedPreview.planFollowupTitle) {
+                                    append(previewPlan, "div", "", "rte-ai-chat-message-preview-plan-followup-title", resolvedPreview.planFollowupTitle);
+                                }
+                                var previewPlanItems = append(previewPlan, "div", "", "rte-ai-chat-message-preview-plan-followups");
+                                for (var planIndex = 0; planIndex < resolvedPreview.planItems.length; planIndex++) {
+                                    var planItem = resolvedPreview.planItems[planIndex];
+                                    if (!planItem) {
+                                        continue;
+                                    }
+                                    var followup = append(previewPlanItems, "div", "", "rte-ai-chat-message-preview-plan-followup");
+                                    var followupAriaLabel = buildChatPreviewPlanItemAriaLabel(planItem);
+                                    if (followupAriaLabel) {
+                                        followup.setAttribute("role", "group");
+                                        followup.setAttribute("aria-label", followupAriaLabel);
+                                    }
+                                    append(followup, "div", "", "rte-ai-chat-message-preview-plan-followup-label", planItem.label || "");
+                                    if (planItem.detail) {
+                                        append(followup, "div", "", "rte-ai-chat-message-preview-plan-followup-detail", planItem.detail);
+                                    }
+                                }
+                                if (resolvedPreview.hiddenPlanCount) {
+                                    append(previewPlanItems, "div", "", "rte-ai-chat-message-preview-plan-followup is-more", "+" + resolvedPreview.hiddenPlanCount + " more");
+                                }
                             }
                         }
                     }
                     var actions = append(item, "div", "", "rte-ai-chat-message-actions");
-                    var actionSummary = getChatMessageActionSummary(message);
-                    if (actionSummary) {
+                    var actionSummary = getChatMessageActionSummary(message, context.snapshot);
+                    var previewOwnsHandoff = resolvedPreview
+                        && (resolvedPreview.planLeadTitle
+                            || resolvedPreview.planLeadLabel
+                            || resolvedPreview.planLeadDetail
+                            || (resolvedPreview.planItems && resolvedPreview.planItems.length));
+                    // 2026-05-08 (v20260508t): the action summary stack
+                    // (title + detail) duplicates the smart-Apply button's
+                    // own label ("Replace selection", "Apply 3 pending steps",
+                    // "Re-run from source"). Drop the extra card; users see
+                    // the same hint on the primary button.
+                    if (false && actionSummary && !previewOwnsHandoff) {
                         var actionSummaryNode = append(actions, "div", "", "rte-ai-chat-message-action-summary");
                         append(actionSummaryNode, "div", "", "rte-ai-chat-message-action-summary-title", actionSummary.title);
                         append(actionSummaryNode, "div", "", "rte-ai-chat-message-action-summary-detail", actionSummary.detail);
                     }
-                    var recommendedActionId = getChatRecommendedActionId(message);
+                    var recommendedActionId = getChatRecommendedActionId(message, context.snapshot);
                     var utilityActions = append(actions, "div", "", "rte-ai-chat-message-action-group is-utility");
                     var primaryActions = append(actions, "div", "", "rte-ai-chat-message-action-group is-primary");
                     var secondaryActions = append(actions, "div", "", "rte-ai-chat-message-action-group is-secondary");
-                    var operations = message.resolved.operations || [];
-                    var resultText = getPrimaryResolvedText(message.resolved);
+                    var actionState = buildChatMessageActionState(message, context.snapshot);
                     var markRecommendedChatAction = function (button, actionId) {
                         if (!button || !actionId || actionId !== recommendedActionId) {
                             return;
                         }
                         button.className += " is-recommended";
                         button.setAttribute("data-rte-ai-chat-recommended", "true");
-                        var baseLabel = button.getAttribute("aria-label") || button.innerText || "";
-                        button.setAttribute("aria-label", (baseLabel ? baseLabel + ". " : "") + "Recommended next step.");
-                        button.title = ((button.innerText || "").trim() || "Action") + " - Recommended next step";
                     };
                     var copyButton = append(utilityActions, "button", "", "secondary rte-ai-chat-action-button is-copy", "Copy text");
                     copyButton.type = "button";
                     copyButton.setAttribute("data-rte-ai-chat-action", "copy");
-                    copyButton.setAttribute("aria-label", "Copy this AI response");
                     copyButton.onclick = function () {
                         copyChatMessageText(message);
                     };
+                    syncChatActionButtonAccessibility(copyButton, "copy", message, recommendedActionId, context.snapshot);
 
-                    if (operations.length) {
+                    if (actionState.canApplyPlan) {
                         var planButton = append(primaryActions, "button", "", "secondary rte-ai-chat-action-button is-apply", "Apply");
                         planButton.type = "button";
                         planButton.setAttribute("data-rte-ai-chat-action", "apply");
@@ -7242,8 +12314,9 @@ function RTE_Plugin_AIToolkit() {
                             applyChatMessage(message, "plan");
                         };
                         markRecommendedChatAction(planButton, "apply");
+                        syncChatActionButtonAccessibility(planButton, "apply", message, recommendedActionId, context.snapshot);
                     }
-                    if (resultText && message.snapshot && message.snapshot.hasSelection) {
+                    if (actionState.canPreview) {
                         var previewButton = append(primaryActions, "button", "", "secondary rte-ai-chat-action-button is-preview", "Preview inline");
                         previewButton.type = "button";
                         previewButton.setAttribute("data-rte-ai-chat-action", "preview");
@@ -7251,7 +12324,10 @@ function RTE_Plugin_AIToolkit() {
                             applyChatMessage(message, "preview");
                         };
                         markRecommendedChatAction(previewButton, "preview");
+                        syncChatActionButtonAccessibility(previewButton, "preview", message, recommendedActionId, context.snapshot);
 
+                    }
+                    if (actionState.canReplaceSelection) {
                         var replaceSelectionButton = append(primaryActions, "button", "", "secondary rte-ai-chat-action-button is-selection", "Replace selection");
                         replaceSelectionButton.type = "button";
                         replaceSelectionButton.setAttribute("data-rte-ai-chat-action", "selection");
@@ -7259,8 +12335,9 @@ function RTE_Plugin_AIToolkit() {
                             applyChatMessage(message, "selection");
                         };
                         markRecommendedChatAction(replaceSelectionButton, "selection");
+                        syncChatActionButtonAccessibility(replaceSelectionButton, "selection", message, recommendedActionId, context.snapshot);
                     }
-                    if (resultText) {
+                    if (actionState.canInsert) {
                         var insertButton = append(secondaryActions, "button", "", "secondary rte-ai-chat-action-button is-insert", "Insert below");
                         insertButton.type = "button";
                         insertButton.setAttribute("data-rte-ai-chat-action", "insert");
@@ -7268,8 +12345,9 @@ function RTE_Plugin_AIToolkit() {
                             applyChatMessage(message, "insert");
                         };
                         markRecommendedChatAction(insertButton, "insert");
+                        syncChatActionButtonAccessibility(insertButton, "insert", message, recommendedActionId, context.snapshot);
 
-                        if (!message.snapshot || !message.snapshot.hasSelection) {
+                        if (actionState.canReplaceDocument) {
                             var replaceDocumentButton = append(secondaryActions, "button", "", "secondary rte-ai-chat-action-button is-document", "Replace document");
                             replaceDocumentButton.type = "button";
                             replaceDocumentButton.setAttribute("data-rte-ai-chat-action", "document");
@@ -7277,16 +12355,56 @@ function RTE_Plugin_AIToolkit() {
                                 applyChatMessage(message, "document");
                             };
                             markRecommendedChatAction(replaceDocumentButton, "document");
+                            syncChatActionButtonAccessibility(replaceDocumentButton, "document", message, recommendedActionId, context.snapshot);
                         }
                     }
-                    appendChatActionGroupHeader(utilityActions, getChatActionGroupInfo("utility", recommendedActionId), "utility");
-                    appendChatActionGroupHeader(primaryActions, getChatActionGroupInfo("primary", recommendedActionId), "primary");
-                    appendChatActionGroupHeader(secondaryActions, getChatActionGroupInfo("secondary", recommendedActionId), "secondary");
+                    appendChatActionGroupHeader(utilityActions, getChatActionGroupInfo("utility", recommendedActionId, message, context.snapshot), "utility");
+                    appendChatActionGroupHeader(primaryActions, getChatActionGroupInfo("primary", recommendedActionId, message, context.snapshot), "primary");
+                    appendChatActionGroupHeader(secondaryActions, getChatActionGroupInfo("secondary", recommendedActionId, message, context.snapshot), "secondary");
+                    orderChatActionGroups(actions, recommendedActionId);
+                    orderChatRecommendedActionButton(actions, recommendedActionId);
+                    syncChatActionAccessibility(actions, recommendedActionId, message, context.snapshot);
+
+                    // 2026-05-08 (v20260508t): "More" toggle. Hides the
+                    // alternative apply paths (Preview inline / Insert below /
+                    // Replace document) until the user opts in. Defaults
+                    // visible: Copy text, Apply (smart), Replace selection.
+                    // CSS controls the hide; this button only flips a class
+                    // on the message item. Only render when there is at least
+                    // one alt button to hide.
+                    var hasMoreOptions = !!(actionState.canPreview || actionState.canInsert || actionState.canReplaceDocument);
+                    if (hasMoreOptions) {
+                        var moreToggleHost = primaryActions.children.length ? primaryActions : (secondaryActions.children.length ? secondaryActions : utilityActions);
+                        var moreToggle = append(moreToggleHost, "button", "", "secondary rte-ai-chat-action-button rte-ai-chat-message-action-toggle-more");
+                        moreToggle.type = "button";
+                        moreToggle.setAttribute("data-rte-ai-chat-action", "more");
+                        moreToggle.setAttribute("aria-expanded", "false");
+                        moreToggle.title = "More apply options";
+                        setReviewV2ButtonContent(moreToggle, "more", "More");
+                        moreToggle.onclick = (function (host) {
+                            return function (e) {
+                                if (e && e.stopPropagation) e.stopPropagation();
+                                var expanded = host.classList.toggle("is-show-more");
+                                moreToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+                            };
+                        })(item);
+                    }
                 }
                 if (message.role === "assistant" && !message.isError) {
-                    var exchangeOutcomeData = buildChatExchangeOutcomeData(state.messages, messageIndex);
-                    if (exchangeOutcomeData && exchangeContainer !== feed) {
+                    var exchangeOutcomeData = buildChatExchangeOutcomeData(state.messages, messageIndex, context.snapshot);
+                    // 2026-05-08 (v20260508t): the per-exchange outcome card
+                    // (title + status/scope/steps/action/change pills + detail)
+                    // came after every successful assistant turn and added a
+                    // second wall of badges below the message bubble.
+                    // Information already lives on the smart Apply button
+                    // label and the message text — drop the card.
+                    if (false && exchangeOutcomeData && exchangeContainer !== feed) {
                         var exchangeOutcome = append(exchangeContainer, "div", "", "rte-ai-chat-exchange-outcome");
+                        exchangeOutcome.setAttribute("role", "group");
+                        var exchangeOutcomeAriaLabel = buildChatExchangeOutcomeAriaLabel(exchangeOutcomeData);
+                        if (exchangeOutcomeAriaLabel) {
+                            exchangeOutcome.setAttribute("aria-label", exchangeOutcomeAriaLabel);
+                        }
                         if (exchangeOutcomeData.exchangeLabel) {
                             exchangeOutcome.setAttribute("data-rte-ai-chat-exchange-index", exchangeOutcomeData.exchangeLabel);
                         }
@@ -7303,6 +12421,15 @@ function RTE_Plugin_AIToolkit() {
                         if (exchangeOutcomeData.actionLabel) {
                             append(exchangeOutcomeMeta, "span", "", "rte-ai-chat-exchange-outcome-pill is-action", exchangeOutcomeData.actionLabel);
                         }
+                        if (exchangeOutcomeData.changeGlance && exchangeOutcomeData.changeGlance.pills && exchangeOutcomeData.changeGlance.pills.length) {
+                            for (var exchangeGlanceIndex = 0; exchangeGlanceIndex < exchangeOutcomeData.changeGlance.pills.length; exchangeGlanceIndex++) {
+                                var exchangeGlancePill = exchangeOutcomeData.changeGlance.pills[exchangeGlanceIndex];
+                                if (!exchangeGlancePill || !exchangeGlancePill.text) {
+                                    continue;
+                                }
+                                append(exchangeOutcomeMeta, "span", "", "rte-ai-chat-exchange-outcome-pill is-" + (exchangeGlancePill.kind || "other"), exchangeGlancePill.text);
+                            }
+                        }
                         if (exchangeOutcomeData.isCurrent) {
                             append(exchangeOutcomeMeta, "span", "", "rte-ai-chat-exchange-outcome-pill is-current", "Current exchange");
                         }
@@ -7312,57 +12439,104 @@ function RTE_Plugin_AIToolkit() {
             })(state.messages[i], i);
         }
 
+        // Compose row: just a textarea + send/open-dialog buttons. The workspace
+        // header above already shows scope/exchange/message/ready pills and the
+        // status badge, so we deliberately don't render a second copy of those
+        // pills here — earlier builds did and it made the panel look like two
+        // stacked dialogs.
+        var composerData = buildChatComposerData(state, context, activePrompt);
+        var sendActionData = buildChatSendActionData(state, context, activePrompt);
         var composerSection = append(panel, "div", "", "rte-ai-chat-stack rte-ai-chat-compose-shell");
-        appendPanelSectionLabel(composerSection, "rte-ai-chat-section-label is-compose", "Compose");
+        composerSection.setAttribute("role", "group");
+        composerSection.setAttribute("aria-label", buildChatComposerAriaLabel(composerData));
         var composer = append(composerSection, "div", "", "rte-ai-chat-composer");
         var composerArea = append(composer, "textarea", "", "rte-ai-chat-input");
-        composerArea.placeholder = "Ask AI to rewrite, translate, summarize, explain, or improve the current content.";
+        // 2026-05-18 (v20260518a): rows=1 so the at-rest textarea height
+        // is governed by min-height (36px from the CSS pass-32 override)
+        // instead of the default browser rows=2 baseline that was pushing
+        // the at-rest composer to ~50px. The textarea still grows with
+        // content because CSS does not pin a fixed height — only the
+        // minimum drops. Same shape Notion AI / Claude / ChatGPT
+        // composers ship — single-line input that grows on type.
+        composerArea.rows = 1;
+        // 2026-05-15 (v20260515c): "Ask AI…  Enter to send, Shift+Enter
+        // for newline." → "Ask anything…". The Enter / Shift+Enter
+        // shortcut is universal convention across every modern chat
+        // composer (Claude, ChatGPT, Notion AI, Linear's command palette,
+        // Cursor) — teaching it inside the placeholder repeats what the
+        // user already knows from the first chat surface they ever used.
+        // 51 chars → 14 chars. Same shape Claude composer ("Ask
+        // anything") / ChatGPT composer ("Message ChatGPT") / Notion AI
+        // ("Tell AI what to do…") ship.
+        composerArea.placeholder = "Ask anything…";
+        composerArea.setAttribute("aria-label", "Compose next AI request for the current " + (context.scope === "selection" ? "selection" : "document"));
         composerArea.value = state.draft || "";
         composerArea.disabled = !!state.busy;
         composerArea.oninput = function () {
             state.draft = composerArea.value;
+            if (!state.busy) {
+                state.status = "";
+            }
+            syncChatDraftAwareUi(panel, state, resolveChatScope(), prompts);
         };
         composerArea.onkeydown = function (e) {
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
+                var keydownContext = resolveChatScope();
+                var keydownPrompt = getActiveChatPrompt(state, prompts);
+                var keydownSendAction = buildChatSendActionData(state, keydownContext, keydownPrompt);
+                if (keydownSendAction.disabled) {
+                    state.status = keydownSendAction.title;
+                    syncChatDraftAwareUi(panel, state, keydownContext, prompts);
+                    return;
+                }
                 runChatPrompt(composerArea.value);
             }
         };
 
-        var activePrompt = getActiveChatPrompt(state, prompts);
-        var composerMeta = append(composer, "div", "", "rte-ai-chat-composer-meta");
-        append(composerMeta, "span", "", "rte-ai-chat-composer-pill is-scope", context.scope === "selection" ? "Selection context" : "Document context");
-        append(composerMeta, "span", "", "rte-ai-chat-composer-pill is-send", "Enter sends");
-        if (activePrompt) {
-            append(composerMeta, "span", "", "rte-ai-chat-composer-pill is-starter", "Starter: " + (activePrompt.label || activePrompt.id || "Prompt"));
-        }
-        else if (normalizeText(state.draft || "")) {
-            append(composerMeta, "span", "", "rte-ai-chat-composer-pill is-custom", "Custom prompt");
-        }
-        append(composerMeta, "span", "", "rte-ai-chat-composer-pill is-count", String(normalizeText(state.draft || "").length) + " chars");
-
         var composerActions = append(composer, "div", "", "rte-ai-chat-composer-actions");
-        var askAiButton = append(composerActions, "button", "", "secondary rte-ai-chat-action-button is-open-dialog", "Open Ask AI");
+        composerActions.setAttribute("role", "group");
+        composerActions.setAttribute("aria-label", buildChatComposerActionsAriaLabel(sendActionData));
+        // 2026-05-13 (v20260513b): "Open Ask AI" button removed from the
+        // visible composer row. The button opened the single-shot Ask AI
+        // dialog (preset to rewrite/document) — a different surface that
+        // does the same job the chat composer is already doing, just with
+        // a fixed Action picker instead of a free-form prompt. With both
+        // buttons fighting for the composer row's width the Send primary
+        // was rendering at ~50% of the row, half the natural prominence,
+        // and first-time users hit "Open Ask AI" expecting it to send the
+        // prompt they had just typed (and instead got a separate dialog
+        // with their draft gone). The dialog is still reachable from the
+        // toolbar AI button → "Ask AI" item, so power users haven't lost
+        // a path; the chat surface now reads as one focused conversation
+        // input. Same shape Claude side-panel / ChatGPT side-panel use:
+        // the composer has ONE primary action (Send), no second button
+        // bouncing the user to another surface. Detached node kept for
+        // any external integration that walks
+        // `[data-rte-ai-chat-action="open-dialog"]`.
+        var askAiButton = document.createElement("button");
         askAiButton.type = "button";
+        askAiButton.className = "secondary rte-ai-chat-action-button is-open-dialog is-detached";
         askAiButton.setAttribute("data-rte-ai-chat-action", "open-dialog");
+        setReviewV2ButtonContent(askAiButton, "external", "Open Ask AI");
         askAiButton.onclick = function () {
             openDialog({
                 useDocument: state.scope !== "selection",
                 presetMode: "rewrite"
             });
         };
-        var sendButton = append(composerActions, "button", "", "rte-ai-chat-send-button", state.busy ? "Thinking..." : "Send");
+        var sendButton = append(composerActions, "button", "", "rte-ai-chat-send-button" + (state.busy ? " is-busy" : ""));
         sendButton.type = "button";
         sendButton.setAttribute("data-rte-ai-chat-action", "send");
-        sendButton.disabled = !!state.busy;
+        sendButton.disabled = !!sendActionData.disabled;
+        sendButton.setAttribute("aria-label", sendActionData.ariaLabel);
+        sendButton.title = sendActionData.title;
+        // Send glyph + label, OR spinner glyph + "Thinking..." when state.busy.
+        // The label string is dynamic so we re-use setReviewV2ButtonContent.
+        setReviewV2ButtonContent(sendButton, state.busy ? "spinner" : "send", sendActionData.text);
         sendButton.onclick = function () {
             runChatPrompt(composerArea.value);
         };
-
-        var statusTone = getChatStatusTone(state);
-        var status = append(composerSection, "div", "", "rte-ai-chat-status is-" + statusTone);
-        append(status, "span", "", "rte-ai-chat-status-pill is-" + statusTone, statusTone === "busy" ? "Working" : (statusTone === "error" ? "Needs attention" : (statusTone === "ready" ? "Ready" : "Compose")));
-        append(status, "span", "", "rte-ai-chat-status-text", buildChatComposerStatusText(state, context, activePrompt));
 
         if (focusComposer) {
             setTimeout(function () {
@@ -7377,8 +12551,20 @@ function RTE_Plugin_AIToolkit() {
             }, 0);
         }
 
-        if (feed && typeof feed.scrollTop !== "undefined") {
+        if (feed && typeof feed.scrollTop !== "undefined" && (!preservedScroll || !restoreChatFeedScroll(feed, preservedScroll))) {
             feed.scrollTop = feed.scrollHeight;
+        }
+        if (!focusComposer && preservedFocus && !restoreChatPanelFocus(panel, preservedFocus) && panel && panel.focus) {
+            try {
+                panel.focus({ preventScroll: true });
+            }
+            catch (ignorePanelFocus) {
+                try {
+                    panel.focus();
+                }
+                catch (ignorePanelFocusFallback) {
+                }
+            }
         }
         return true;
     }
@@ -8034,23 +13220,44 @@ function RTE_Plugin_AIToolkit() {
         return result;
     }
 
-    function getReviewActionShortcutTitle(actionName, suggestion) {
+    function getReviewActionShortcutKeys(actionName) {
+        switch (actionName) {
+            case "accept":
+                return "Enter Space A";
+            case "reject":
+                return "Enter Space R";
+            case "undo":
+                return "Enter Space U";
+            case "redo":
+                return "Enter Space Shift+U";
+            case "locate":
+                return "Enter Space";
+            default:
+                return "Enter Space";
+        }
+    }
+
+    function getReviewActionShortcutTitle(actionName, suggestion, label) {
         var undoContext = getUndoDecisionContext();
         var redoContext = getRedoDecisionContext();
         var decisionCopy = getReviewShortcutDecisionCopy(suggestion);
+        var title = (label || "").replace(/\.$/, "");
+        if (!title) {
+            title = actionName === "locate" ? "Locate" : "Review action";
+        }
         if (actionName === "accept") {
-            return appendUndoShortcutTitle("Enter uses " + decisionCopy.acceptLabel + ". R uses " + decisionCopy.rejectLabel + ". J/K move items. Home/End jump.");
+            return title + ". Enter or Space activates this action. A uses " + decisionCopy.acceptLabel + ".";
         }
         if (actionName === "reject") {
-            return appendUndoShortcutTitle("Enter uses " + decisionCopy.rejectLabel + ". A uses " + decisionCopy.acceptLabel + ". J/K move items. Home/End jump.");
+            return title + ". Enter or Space activates this action. R uses " + decisionCopy.rejectLabel + ".";
         }
         if (actionName === "undo") {
-            return appendUndoShortcutTitle("Enter undoes " + undoContext.decisionLabel + " decision. A uses " + decisionCopy.acceptLabel + ". R uses " + decisionCopy.rejectLabel + ". J/K move items. Home/End jump.");
+            return title + ". Enter or Space activates this action." + (undoContext ? " U " + undoContext.shortcutLabel + "." : "");
         }
         if (actionName === "redo") {
-            return appendUndoShortcutTitle("Enter redoes " + redoContext.decisionLabel + " decision. A uses " + decisionCopy.acceptLabel + ". R uses " + decisionCopy.rejectLabel + ". J/K move items. Home/End jump.");
+            return title + ". Enter or Space activates this action." + (redoContext ? " Shift+U " + redoContext.shortcutLabel + "." : "");
         }
-        return appendUndoShortcutTitle("Enter locates in editor. A uses " + decisionCopy.acceptLabel + ". R uses " + decisionCopy.rejectLabel + ". J/K move items. Home/End jump.");
+        return title + ". Enter or Space activates this action.";
     }
 
     function getReviewActionShortcutHint(actionName, suggestion) {
@@ -8091,6 +13298,14 @@ function RTE_Plugin_AIToolkit() {
         }
         var focusLabel = getReviewFocusActionDisplayLabel(suggestion, preferredAction) || decisionCopy.acceptLabel;
         return appendUndoShortcutHint("Shortcuts: Enter focus " + focusLabel + " | A " + decisionCopy.acceptHint + " | R " + decisionCopy.rejectHint + " | J/K move | Home/End jump");
+    }
+
+    function getReviewCardSupplementalShortcutHint(suggestion, preferredAction) {
+        var decisionCopy = getReviewShortcutDecisionCopy(suggestion);
+        if (!suggestion || suggestion.status !== "pending") {
+            return appendUndoShortcutHint("Shortcuts: J/K move | Home/End jump");
+        }
+        return appendUndoShortcutHint("Shortcuts: A " + decisionCopy.acceptHint + " | R " + decisionCopy.rejectHint + " | J/K move | Home/End jump");
     }
 
     function resolveReviewFocusActionName(suggestion, preferredAction) {
@@ -8156,6 +13371,434 @@ function RTE_Plugin_AIToolkit() {
             return "Locate";
         }
         return "";
+    }
+
+    function getReviewActionGroupName(actionName) {
+        switch (actionName) {
+            case "accept":
+            case "reject":
+                return "decision";
+            case "undo":
+            case "redo":
+                return "recovery";
+            case "locate":
+                return "locate";
+            default:
+                return "";
+        }
+    }
+
+    function getReviewActionButtonDisplayOrder(groupName, actionName, targetActionName) {
+        var baseOrder;
+        switch (groupName) {
+            case "locate":
+                baseOrder = ["locate"];
+                break;
+            case "decision":
+                baseOrder = ["accept", "reject"];
+                break;
+            case "recovery":
+                baseOrder = ["undo", "redo"];
+                break;
+            default:
+                baseOrder = [];
+                break;
+        }
+        var defaultIndex = baseOrder.indexOf(actionName);
+        if (defaultIndex === -1) {
+            return baseOrder.length + 1;
+        }
+        if (!targetActionName) {
+            return defaultIndex + 1;
+        }
+        var targetIndex = baseOrder.indexOf(targetActionName);
+        if (targetIndex === -1) {
+            return defaultIndex + 1;
+        }
+        if (actionName === targetActionName) {
+            return 1;
+        }
+        var displayOrder = 2;
+        for (var orderIndex = 0; orderIndex < baseOrder.length; orderIndex++) {
+            if (baseOrder[orderIndex] === targetActionName) {
+                continue;
+            }
+            if (baseOrder[orderIndex] === actionName) {
+                return displayOrder;
+            }
+            displayOrder++;
+        }
+        return defaultIndex + 1;
+    }
+
+    function getReviewActionGroupDisplayLabel(groupName) {
+        switch (groupName) {
+            case "locate":
+                return "Locate";
+            case "decision":
+                return "Decide";
+            case "recovery":
+                return "Recover";
+            default:
+                return "";
+        }
+    }
+
+    function getReviewActionGroupDisplayOrder(groupName, currentGroupName) {
+        var baseOrder = ["locate", "decision", "recovery"];
+        var defaultIndex = baseOrder.indexOf(groupName);
+        if (defaultIndex === -1) {
+            return baseOrder.length + 1;
+        }
+        if (!currentGroupName) {
+            return defaultIndex + 1;
+        }
+        var currentIndex = baseOrder.indexOf(currentGroupName);
+        if (currentIndex === -1) {
+            return defaultIndex + 1;
+        }
+        if (groupName === currentGroupName) {
+            return 1;
+        }
+        var displayOrder = 2;
+        for (var index = 0; index < baseOrder.length; index++) {
+            if (baseOrder[index] === currentGroupName) {
+                continue;
+            }
+            if (baseOrder[index] === groupName) {
+                return displayOrder;
+            }
+            displayOrder++;
+        }
+        return defaultIndex + 1;
+    }
+
+    function buildReviewActionGroupDetail(groupName, options) {
+        options = options || {};
+        var queueTransitionData = options.queueTransitionData || null;
+        if (groupName === "decision") {
+            if (queueTransitionData) {
+                return queueTransitionData.statusLabel + ". " + queueTransitionData.detail;
+            }
+            return "Accept or reject this AI change from the current review queue.";
+        }
+        if (groupName === "locate") {
+            return "Find this suggestion in the editor without deciding it yet.";
+        }
+        if (groupName === "recovery") {
+            if (options.targetActionName === "undo" && options.undoSummaryText) {
+                return options.undoSummaryText;
+            }
+            if (options.targetActionName === "redo" && options.redoSummaryText) {
+                return options.redoSummaryText;
+            }
+            if (options.undoSummaryText || options.redoSummaryText) {
+                return "Undo or redo a recent AI review decision without leaving this card.";
+            }
+            return "Recover from a recent AI review action without leaving this card.";
+        }
+        return "";
+    }
+
+    function buildReviewActionSummaryData(options) {
+        options = options || {};
+        var suggestion = options.suggestion || null;
+        if (!suggestion) {
+            return null;
+        }
+        var targetActionName = options.targetActionName || "";
+        var currentGroupName = getReviewActionGroupName(targetActionName);
+        var focusLabel = getReviewFocusActionDisplayLabel(suggestion, targetActionName);
+        var groupLabel = getReviewActionGroupDisplayLabel(currentGroupName);
+        if (!currentGroupName || !focusLabel || !groupLabel) {
+            return null;
+        }
+        return {
+            title: "Action handoff",
+            pills: [groupLabel + " lane", "Enter focuses " + focusLabel],
+            detail: buildReviewActionGroupDetail(currentGroupName, options)
+        };
+    }
+
+    function buildReviewActionSummaryAriaLabel(summaryData) {
+        if (!summaryData) {
+            return "";
+        }
+        var parts = [];
+        if (summaryData.title) {
+            parts.push(summaryData.title);
+        }
+        if (summaryData.pills && summaryData.pills.length) {
+            for (var pillIndex = 0; pillIndex < summaryData.pills.length; pillIndex++) {
+                if (summaryData.pills[pillIndex]) {
+                    parts.push(summaryData.pills[pillIndex]);
+                }
+            }
+        }
+        if (summaryData.detail) {
+            parts.push(summaryData.detail);
+        }
+        return parts.join(". ");
+    }
+
+    function syncActiveReviewActionSummary(preferredAction) {
+        var panel = editor.__aiReviewPanel && editor.__aiReviewPanel.isConnected ? editor.__aiReviewPanel : null;
+        if (!panel || !panel.querySelector) {
+            return false;
+        }
+        var item = panel.querySelector(".rte-ai-review-item.is-active");
+        var suggestion = getActiveSuggestion();
+        var actionsNode = item && item.querySelector ? item.querySelector(".rte-ai-review-item-actions") : null;
+        if (!item || !suggestion || !actionsNode) {
+            return false;
+        }
+        var targetActionName = resolveReviewFocusActionName(suggestion, preferredAction || getPreferredReviewActionFocus(panel));
+        var currentGroupName = getReviewActionGroupName(targetActionName);
+        var typeFilter = getReviewSuggestionTypeFilter(suggestion);
+        var filteredPendingSuggestions = getFilteredPendingSuggestions(typeFilter);
+        if (!filteredPendingSuggestions.length && typeFilter !== "all") {
+            filteredPendingSuggestions = getFilteredPendingSuggestions("all");
+        }
+        var queueTransitionData = buildReviewQueueTransitionData(filteredPendingSuggestions, editor.__aiActiveSuggestionId, suggestion);
+        var undoableReviewDecision = suggestion.status === "pending" ? getUndoableReviewDecision() : null;
+        var redoableReviewDecision = getRedoableReviewDecision();
+        var isRedoTarget = !!(redoableReviewDecision && redoableReviewDecision.suggestion && redoableReviewDecision.suggestion.id === suggestion.id && suggestion.status === "pending");
+        var summaryOptions = {
+            suggestion: suggestion,
+            targetActionName: targetActionName,
+            queueTransitionData: queueTransitionData,
+            undoSummaryText: undoableReviewDecision ? buildUndoDecisionSummaryText(undoableReviewDecision) : "",
+            redoSummaryText: isRedoTarget ? buildRedoDecisionSummaryText(redoableReviewDecision) : ""
+        };
+        var summaryData = buildReviewActionSummaryData(summaryOptions);
+        var summaryNode = actionsNode.querySelector ? actionsNode.querySelector(".rte-ai-review-item-action-summary") : null;
+        if (summaryData) {
+            if (!summaryNode) {
+                summaryNode = document.createElement("span");
+                summaryNode.className = "rte-ai-review-item-action-summary";
+            }
+            while (summaryNode.firstChild) {
+                summaryNode.removeChild(summaryNode.firstChild);
+            }
+            summaryNode.setAttribute("aria-label", buildReviewActionSummaryAriaLabel(summaryData));
+            append(summaryNode, "span", "", "rte-ai-review-item-action-summary-title", summaryData.title);
+            if (summaryData.pills && summaryData.pills.length) {
+                var summaryPillsNode = append(summaryNode, "span", "", "rte-ai-review-item-action-summary-pills");
+                for (var summaryPillIndex = 0; summaryPillIndex < summaryData.pills.length; summaryPillIndex++) {
+                    if (!summaryData.pills[summaryPillIndex]) {
+                        continue;
+                    }
+                    append(summaryPillsNode, "span", "", "rte-ai-review-item-action-summary-pill", summaryData.pills[summaryPillIndex]);
+                }
+            }
+            if (summaryData.detail) {
+                append(summaryNode, "span", "", "rte-ai-review-item-action-summary-detail", summaryData.detail);
+            }
+            if (actionsNode.firstChild !== summaryNode) {
+                actionsNode.insertBefore(summaryNode, actionsNode.firstChild);
+            }
+            actionsNode.setAttribute("aria-label", "AI review actions. " + buildReviewActionSummaryAriaLabel(summaryData));
+        }
+        else {
+            if (summaryNode && summaryNode.parentNode) {
+                summaryNode.parentNode.removeChild(summaryNode);
+            }
+            actionsNode.setAttribute("aria-label", "AI review actions");
+        }
+        var focusLabel = getReviewFocusActionDisplayLabel(suggestion, targetActionName);
+        var groupNodes = actionsNode.querySelectorAll(".rte-ai-review-item-action-group");
+        var orderedGroups = [];
+        for (var groupIndex = 0; groupIndex < groupNodes.length; groupIndex++) {
+            var groupNode = groupNodes[groupIndex];
+            if (!groupNode) {
+                continue;
+            }
+            var groupName = groupNode.getAttribute("data-rte-ai-review-action-group")
+                || (groupNode.classList.contains("is-decision") ? "decision" : (groupNode.classList.contains("is-recovery") ? "recovery" : (groupNode.classList.contains("is-locate") ? "locate" : "")));
+            if (!groupName) {
+                continue;
+            }
+            var firstButton = groupNode.querySelector ? groupNode.querySelector(".rte-ai-review-action-button") : null;
+            if (!firstButton) {
+                var staleHeader = groupNode.querySelector ? groupNode.querySelector(".rte-ai-review-item-action-group-header") : null;
+                var staleDetail = groupNode.querySelector ? groupNode.querySelector(".rte-ai-review-item-action-group-detail") : null;
+                if (staleHeader && staleHeader.parentNode) {
+                    staleHeader.parentNode.removeChild(staleHeader);
+                }
+                if (staleDetail && staleDetail.parentNode) {
+                    staleDetail.parentNode.removeChild(staleDetail);
+                }
+                groupNode.setAttribute("data-rte-ai-review-action-group-current", "false");
+                groupNode.classList.remove("is-current-lane");
+                groupNode.removeAttribute("aria-label");
+                continue;
+            }
+            orderedGroups.push(groupNode);
+            var displayLabel = getReviewActionGroupDisplayLabel(groupName);
+            var headerNode = groupNode.querySelector ? groupNode.querySelector(".rte-ai-review-item-action-group-header") : null;
+            if (!headerNode) {
+                headerNode = document.createElement("span");
+                headerNode.className = "rte-ai-review-item-action-group-header";
+                if (groupNode.firstChild) {
+                    groupNode.insertBefore(headerNode, groupNode.firstChild);
+                }
+                else {
+                    groupNode.appendChild(headerNode);
+                }
+            }
+            var titleNode = headerNode.querySelector ? headerNode.querySelector(".rte-ai-review-item-action-group-title") : null;
+            if (!titleNode) {
+                titleNode = document.createElement("span");
+                titleNode.className = "rte-ai-review-item-action-group-title";
+                headerNode.appendChild(titleNode);
+            }
+            titleNode.textContent = displayLabel;
+            var badgeNode = headerNode.querySelector ? headerNode.querySelector(".rte-ai-review-item-action-group-badge") : null;
+            if (!badgeNode) {
+                badgeNode = document.createElement("span");
+                badgeNode.className = "rte-ai-review-item-action-group-badge";
+                headerNode.appendChild(badgeNode);
+            }
+            var detailNode = groupNode.querySelector ? groupNode.querySelector(".rte-ai-review-item-action-group-detail") : null;
+            if (!detailNode) {
+                detailNode = document.createElement("span");
+                detailNode.className = "rte-ai-review-item-action-group-detail";
+                if (firstButton) {
+                    groupNode.insertBefore(detailNode, firstButton);
+                }
+                else {
+                    groupNode.appendChild(detailNode);
+                }
+            }
+            var isCurrentGroup = !!currentGroupName && groupName === currentGroupName;
+            var detailText = buildReviewActionGroupDetail(groupName, summaryOptions);
+            groupNode.style.removeProperty("order");
+            groupNode.setAttribute("data-rte-ai-review-action-group-current", isCurrentGroup ? "true" : "false");
+            groupNode.classList.toggle("is-current-lane", isCurrentGroup);
+            if (isCurrentGroup && focusLabel) {
+                var badgeText = "Enter: " + focusLabel;
+                badgeNode.textContent = badgeText;
+                badgeNode.style.display = "";
+                badgeNode.setAttribute("aria-label", "Current action lane. " + badgeText);
+            }
+            else {
+                badgeNode.textContent = "";
+                badgeNode.style.display = "none";
+                badgeNode.removeAttribute("aria-label");
+            }
+            if (detailText) {
+                detailNode.textContent = detailText;
+                detailNode.style.display = "";
+            }
+            else {
+                detailNode.textContent = "";
+                detailNode.style.display = "none";
+            }
+            var groupAriaLabel = displayLabel ? displayLabel + " lane" : "";
+            if (isCurrentGroup && focusLabel) {
+                groupAriaLabel += (groupAriaLabel ? ". " : "") + "Current action lane. Enter focuses " + focusLabel;
+            }
+            if (detailText) {
+                groupAriaLabel += (groupAriaLabel ? ". " : "") + detailText;
+            }
+            if (groupAriaLabel) {
+                groupNode.setAttribute("aria-label", groupAriaLabel);
+            }
+            else {
+                groupNode.removeAttribute("aria-label");
+            }
+        }
+        orderedGroups.sort(function (a, b) {
+            var aGroupName = a.getAttribute("data-rte-ai-review-action-group")
+                || (a.classList.contains("is-decision") ? "decision" : (a.classList.contains("is-recovery") ? "recovery" : (a.classList.contains("is-locate") ? "locate" : "")));
+            var bGroupName = b.getAttribute("data-rte-ai-review-action-group")
+                || (b.classList.contains("is-decision") ? "decision" : (b.classList.contains("is-recovery") ? "recovery" : (b.classList.contains("is-locate") ? "locate" : "")));
+            return getReviewActionGroupDisplayOrder(aGroupName, currentGroupName) - getReviewActionGroupDisplayOrder(bGroupName, currentGroupName);
+        });
+        for (var orderedGroupIndex = 0; orderedGroupIndex < orderedGroups.length; orderedGroupIndex++) {
+            actionsNode.appendChild(orderedGroups[orderedGroupIndex]);
+        }
+        return true;
+    }
+
+    function syncActiveReviewEnterTarget(preferredAction) {
+        var panel = editor.__aiReviewPanel && editor.__aiReviewPanel.isConnected ? editor.__aiReviewPanel : null;
+        if (!panel || !panel.querySelectorAll) {
+            return false;
+        }
+        var item = panel.querySelector(".rte-ai-review-item.is-active");
+        var suggestion = getActiveSuggestion();
+        var targetActionName = resolveReviewFocusActionName(suggestion, preferredAction || getPreferredReviewActionFocus(panel));
+        var groupedButtons = {};
+        var buttons = panel.querySelectorAll(".rte-ai-review-action-button[data-rte-ai-review-action]");
+        for (var buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
+            var button = buttons[buttonIndex];
+            if (!button || !button.getAttribute) {
+                continue;
+            }
+            var actionName = button.getAttribute("data-rte-ai-review-action") || "";
+            var isTarget = !!item && item.contains(button) && !!targetActionName && actionName === targetActionName && !button.disabled;
+            var groupNode = button.closest ? button.closest(".rte-ai-review-item-action-group") : null;
+            var groupName = groupNode && groupNode.classList
+                ? (groupNode.classList.contains("is-decision") ? "decision" : (groupNode.classList.contains("is-recovery") ? "recovery" : (groupNode.classList.contains("is-locate") ? "locate" : "")))
+                : "";
+            if (isTarget && groupNode && groupName) {
+                if (!groupedButtons[groupName]) {
+                    groupedButtons[groupName] = [];
+                }
+                groupedButtons[groupName].push(button);
+            }
+            else if (groupNode && groupName && item && item.contains(button)) {
+                if (!groupedButtons[groupName]) {
+                    groupedButtons[groupName] = [];
+                }
+                groupedButtons[groupName].push(button);
+            }
+            var ariaLabel = (button.getAttribute("aria-label") || button.textContent || "").replace(/\.\s*Current Enter target\.$/i, "");
+            var title = (button.getAttribute("title") || ariaLabel).replace(/\.\s*Current Enter target\.$/i, "");
+            button.setAttribute("data-rte-ai-review-enter-target", isTarget ? "true" : "false");
+            button.classList.toggle("is-enter-target", isTarget);
+            if (isTarget) {
+                button.setAttribute("data-rte-ai-review-enter-target-label", "Enter");
+                if (ariaLabel && !/current enter target/i.test(ariaLabel)) {
+                    button.setAttribute("aria-label", ariaLabel + ". Current Enter target.");
+                }
+                if (title && !/current enter target/i.test(title)) {
+                    button.title = title + ". Current Enter target.";
+                }
+            }
+            else {
+                button.removeAttribute("data-rte-ai-review-enter-target-label");
+                if (ariaLabel) {
+                    button.setAttribute("aria-label", ariaLabel);
+                }
+                if (title) {
+                    button.title = title;
+                }
+            }
+        }
+        if (!item) {
+            return false;
+        }
+        for (var groupName in groupedButtons) {
+            if (!groupedButtons.hasOwnProperty(groupName)) {
+                continue;
+            }
+            var groupNode = item.querySelector(".rte-ai-review-item-action-group.is-" + groupName);
+            var groupButtons = groupedButtons[groupName];
+            if (!groupNode || !groupButtons || !groupButtons.length) {
+                continue;
+            }
+            groupButtons.sort(function (a, b) {
+                var aActionName = a.getAttribute("data-rte-ai-review-action") || "";
+                var bActionName = b.getAttribute("data-rte-ai-review-action") || "";
+                return getReviewActionButtonDisplayOrder(groupName, aActionName, targetActionName) - getReviewActionButtonDisplayOrder(groupName, bActionName, targetActionName);
+            });
+            for (var orderedIndex = 0; orderedIndex < groupButtons.length; orderedIndex++) {
+                groupNode.appendChild(groupButtons[orderedIndex]);
+            }
+        }
+        return true;
     }
 
     function getRecoveryDecisionFocusActionDisplayLabel(decision, preferredAction) {
@@ -8315,13 +13958,11 @@ function RTE_Plugin_AIToolkit() {
         }
     }
 
-    function setReviewShortcutDisplay(text, stateName) {
-        var node = editor.__aiReviewShortcutDisplayNode;
+    function applyReviewShortcutDisplayState(node, stateName) {
         if (!node) {
             return;
         }
         var activeState = stateName || "";
-        renderReviewShortcutDisplayContent(node, text || "");
         if (activeState) {
             node.setAttribute("data-rte-ai-review-shortcut-action", activeState);
         }
@@ -8346,25 +13987,106 @@ function RTE_Plugin_AIToolkit() {
         }
     }
 
+    function syncActiveReviewShortcutModule(text, stateName) {
+        var panel = editor.__aiReviewPanel && editor.__aiReviewPanel.isConnected ? editor.__aiReviewPanel : null;
+        if (!panel || !panel.querySelector) {
+            return false;
+        }
+        var item = panel.querySelector(".rte-ai-review-item.is-active");
+        var actionsNode = item && item.querySelector ? item.querySelector(".rte-ai-review-item-actions") : null;
+        var moduleNode = actionsNode && actionsNode.querySelector ? actionsNode.querySelector(".rte-ai-review-item-shortcuts") : null;
+        if (!item || !actionsNode || !text) {
+            if (moduleNode && moduleNode.parentNode) {
+                moduleNode.parentNode.removeChild(moduleNode);
+            }
+            return false;
+        }
+        if (!moduleNode) {
+            moduleNode = document.createElement("div");
+            moduleNode.className = "rte-ai-review-item-shortcuts";
+        }
+        var titleNode = moduleNode.querySelector ? moduleNode.querySelector(".rte-ai-review-item-shortcuts-title") : null;
+        if (!titleNode) {
+            titleNode = document.createElement("span");
+            titleNode.className = "rte-ai-review-item-shortcuts-title";
+            moduleNode.appendChild(titleNode);
+        }
+        titleNode.textContent = "Keyboard guide";
+        var bodyNode = moduleNode.querySelector ? moduleNode.querySelector(".rte-ai-review-item-shortcuts-body") : null;
+        if (!bodyNode) {
+            bodyNode = document.createElement("div");
+            bodyNode.className = "rte-ai-review-shortcuts rte-ai-review-item-shortcuts-body";
+            moduleNode.appendChild(bodyNode);
+        }
+        renderReviewShortcutDisplayContent(bodyNode, text || "");
+        applyReviewShortcutDisplayState(bodyNode, stateName);
+        var ariaText = String(text || "").replace(/^Shortcuts:\s*/i, "");
+        moduleNode.setAttribute("aria-label", ariaText ? "Keyboard guide. " + ariaText : "Keyboard guide");
+        var summaryNode = actionsNode.querySelector ? actionsNode.querySelector(".rte-ai-review-item-action-summary") : null;
+        if (summaryNode && summaryNode.parentNode === actionsNode) {
+            if (summaryNode.nextSibling !== moduleNode) {
+                if (summaryNode.nextSibling) {
+                    actionsNode.insertBefore(moduleNode, summaryNode.nextSibling);
+                }
+                else {
+                    actionsNode.appendChild(moduleNode);
+                }
+            }
+        }
+        else if (actionsNode.firstChild !== moduleNode) {
+            if (actionsNode.firstChild) {
+                actionsNode.insertBefore(moduleNode, actionsNode.firstChild);
+            }
+            else {
+                actionsNode.appendChild(moduleNode);
+            }
+        }
+        return true;
+    }
+
+    function setReviewShortcutDisplay(text, stateName) {
+        var node = editor.__aiReviewShortcutDisplayNode;
+        if (!node) {
+            return;
+        }
+        renderReviewShortcutDisplayContent(node, text || "");
+        applyReviewShortcutDisplayState(node, stateName);
+        syncActiveReviewShortcutModule(text || "", stateName);
+    }
+
     function updateReviewShortcutDisplay(actionName) {
         var activeAction = actionName || "";
         setReviewShortcutDisplay(getReviewActionShortcutHint(activeAction, getActiveSuggestion()), activeAction);
+        syncActiveReviewActionSummary(activeAction);
+        syncActiveReviewEnterTarget(activeAction);
         updateVisibleReviewCondensedPreviewOpenHints();
+        updateVisibleInlineReviewFocusHints();
     }
 
     function updateReviewCardShortcutDisplay(suggestion) {
-        setReviewShortcutDisplay(getReviewCardShortcutHint(suggestion, getPreferredReviewActionFocus()), "card");
+        var preferredAction = getPreferredReviewActionFocus();
+        setReviewShortcutDisplay(getReviewCardShortcutHint(suggestion, preferredAction), "card");
+        syncActiveReviewActionSummary(preferredAction);
+        syncActiveReviewEnterTarget(preferredAction);
         updateVisibleReviewCondensedPreviewOpenHints();
+        updateVisibleInlineReviewFocusHints();
     }
 
     function updateReviewPanelShortcutDisplay(suggestion, preferredAction) {
-        setReviewShortcutDisplay(getReviewPanelShortcutHint(suggestion, preferredAction), "panel");
+        var resolvedPreferredAction = preferredAction || getPreferredReviewActionFocus();
+        setReviewShortcutDisplay(getReviewPanelShortcutHint(suggestion, resolvedPreferredAction), "panel");
+        syncActiveReviewActionSummary(resolvedPreferredAction);
+        syncActiveReviewEnterTarget(resolvedPreferredAction);
         updateVisibleReviewCondensedPreviewOpenHints();
+        updateVisibleInlineReviewFocusHints();
     }
 
     function updateReviewControlShortcutDisplay(control) {
         setReviewShortcutDisplay(getReviewControlShortcutHint(control), "control");
+        syncActiveReviewActionSummary(getPreferredReviewActionFocus());
+        syncActiveReviewEnterTarget(getPreferredReviewActionFocus());
         updateVisibleReviewCondensedPreviewOpenHints();
+        updateVisibleInlineReviewFocusHints();
     }
 
     function getReviewShortcutDisplayId() {
@@ -8480,8 +14202,8 @@ function RTE_Plugin_AIToolkit() {
         if (!button) {
             return;
         }
-        button.setAttribute("aria-keyshortcuts", appendUndoShortcutKeys("Enter Space A R J K Home End"));
-        button.title = getReviewActionShortcutTitle(actionName, findSuggestionById(suggestionId));
+        button.setAttribute("aria-keyshortcuts", getReviewActionShortcutKeys(actionName));
+        button.title = getReviewActionShortcutTitle(actionName, findSuggestionById(suggestionId), button.getAttribute("aria-label") || button.textContent || "");
         button.onfocus = function () {
             editor.__aiLastReviewActionFocus = actionName || "";
             linkReviewShortcutDisplayTarget(button);
@@ -8599,7 +14321,423 @@ function RTE_Plugin_AIToolkit() {
         return openReviewPanel(options);
     }
 
+    // 2026-05-08: redesigned AI Review window. After several rounds of CSS
+    // polish kept hitting "messy / too long / too plain" feedback, the root
+    // cause was the legacy renderer emitting ~12 distinct sections (queue
+    // overview, status pills row, progress bar, summary stat boxes, filter
+    // group cards, keyboard lane, recovery zone, next-queue zone, utility
+    // zone, exchange banners, queue transition cards, recovery handoff).
+    // This V2 path replaces all of that with a flat 4-zone panel:
+    //
+    //   1. Header (icon + "AI Review" + count badge + close)
+    //   2. Toolbar (type filter + Show resolved + Accept all + Reject all)
+    //   3. Body (empty state OR sorted list of items)
+    //   4. Each item is a single card; click it to expand inline with
+    //      before/after compare + Why card + Locate / Accept / Reject.
+    //
+    // Reuses existing data + handlers (getSuggestionStore, getReviewState,
+    // applyReviewDecision, locateSuggestion, accept/rejectPending...
+    // ByType) so no behavioural change. Customers who depend on the legacy
+    // tree can flip it back via:
+    //   RTE_DefaultConfig.aiToolkitReviewLegacyLayout = true
+    // 2026-05-08: inline SVG icon library used by the V2 panel. Each entry is
+    // a self-contained SVG string that inherits hue from `currentColor`, so
+    // CSS controls the colour per button state (hover, disabled, accept,
+    // reject, etc.). Stroke 2 px / lucide-style proportions.
+    var REVIEW_V2_ICONS = {
+        eyeOn: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+        eyeOff: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>',
+        checkAll: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 13l4 4L14 8"/><path d="M10 13l4 4L22 8"/></svg>',
+        check: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 12 10 18 20 6"/></svg>',
+        x: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>',
+        target: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
+        bulb: '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v.3h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg>',
+        arrowRight: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>',
+        // 2026-05-08 family-pack additions used by AI Chat composer + Ask AI
+        // dialog. Keeps the icon vocabulary consistent across all three AI
+        // windows so users learn the visual language once.
+        send: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/></svg>',
+        sparkles: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><path d="M12 8 13.4 10.6 16 12l-2.6 1.4L12 16l-1.4-2.6L8 12l2.6-1.4L12 8z" fill="currentColor"/></svg>',
+        refresh: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>',
+        external: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+        trash: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>',
+        // 2026-05-08 second batch — used for scope toggles, tabs, dropdowns,
+        // and dialog headers across all three AI windows.
+        cursorText: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h2a3 3 0 0 1 3 3v0a3 3 0 0 0 3 3h0M9 20h2a3 3 0 0 0 3-3v0a3 3 0 0 1 3-3h0"/><line x1="11" y1="4" x2="11" y2="20"/></svg>',
+        document: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>',
+        inbox: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
+        history: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/><polyline points="12 7 12 12 15 14"/></svg>',
+        filter: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
+        bot: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="3"/><circle cx="9" cy="14" r="1.3" fill="currentColor"/><circle cx="15" cy="14" r="1.3" fill="currentColor"/><line x1="12" y1="4" x2="12" y2="8"/><circle cx="12" cy="3" r="1.2" fill="currentColor"/><line x1="4" y1="13" x2="2" y2="13"/><line x1="22" y1="13" x2="20" y2="13"/></svg>',
+        chat: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+        wand: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4V2M15 14v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/></svg>',
+        // 2026-05-08 third batch — quick-start chip tones + Send spinner.
+        list: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+        globe: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        heading: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v16M18 4v16M6 12h12"/></svg>',
+        plus: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+        pencil: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+        spinner: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" class="rte-ai-spinner-svg"><path d="M12 3a9 9 0 1 0 9 9" /></svg>',
+        // 2026-05-08 (v20260508t): kebab glyph for the "More" toggle that
+        // hides alternative apply paths on chat messages and the Ask AI
+        // dialog, so the default surface only shows Copy / Apply / Discard.
+        more: '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>',
+        // 2026-06-03 (v20260603a): clipboard glyph for the Ask AI dialog
+        // result corner — Pass 50 adds a real "copy AI output to system
+        // clipboard" affordance next to "Edit prompt". Pre-pass the only
+        // copy was the apply-row icon-only Copy button which writes the
+        // result back into the SOURCE field for chain-refinement; there
+        // was no one-click way to grab the AI suggestion for use outside
+        // the editor. Same shape Notion AI / Claude / ChatGPT ship — a
+        // tiny clipboard pill in the result corner that copies the text
+        // and briefly flips to a check glyph as confirmation.
+        clipboard: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="3" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>'
+    };
+
+    // Map a quick-start prompt's tone to an icon key. Falls back to wand.
+    function getChatPromptToneIconKey(prompt) {
+        if (!prompt) return "wand";
+        var tone = (prompt.tone || prompt.intent || prompt.id || "").toLowerCase();
+        if (tone.indexOf("summar") !== -1) return "list";
+        if (tone.indexOf("proofread") !== -1 || tone.indexOf("review") !== -1) return "pencil";
+        if (tone.indexOf("translate") !== -1 || tone.indexOf("language") !== -1) return "globe";
+        if (tone.indexOf("heading") !== -1 || tone.indexOf("structure") !== -1 || tone.indexOf("outline") !== -1) return "heading";
+        if (tone.indexOf("expand") !== -1 || tone.indexOf("support") !== -1 || tone.indexOf("add") !== -1) return "plus";
+        return "wand";
+    }
+
+    // Replace a button's text content with an [icon, label] pair so CSS can
+    // size them via flex children. Idempotent: safe to call after an
+    // `append(..., text)` that already wrote textContent.
+    function setReviewV2ButtonContent(btn, iconKey, label) {
+        if (!btn) return;
+        btn.textContent = "";
+        if (iconKey && REVIEW_V2_ICONS[iconKey]) {
+            var iconSpan = btn.ownerDocument.createElement("span");
+            iconSpan.className = "rte-ai-review-v2-action-icon";
+            iconSpan.setAttribute("aria-hidden", "true");
+            iconSpan.innerHTML = REVIEW_V2_ICONS[iconKey];
+            btn.appendChild(iconSpan);
+        }
+        if (label) {
+            var labelSpan = btn.ownerDocument.createElement("span");
+            labelSpan.className = "rte-ai-review-v2-action-label";
+            labelSpan.textContent = label;
+            btn.appendChild(labelSpan);
+        }
+    }
+
+    function renderReviewPanelV2(focusPanel) {
+        var shell = getEditorShell();
+        if (!shell) return false;
+
+        var state = getReviewState();
+        var suggestions = getSuggestionStore().slice();
+        var counts = getSuggestionCounts();
+        var typeOptions = getReviewTypeOptions(suggestions);
+        var typeFilter = state.typeFilter || "all";
+        var hasCurrentFilter = false;
+        for (var ti = 0; ti < typeOptions.length; ti++) {
+            if (typeOptions[ti].value === typeFilter) { hasCurrentFilter = true; break; }
+        }
+        if (!hasCurrentFilter) {
+            typeFilter = "all";
+            state.typeFilter = "all";
+        }
+        var hasOpen = counts.pending > 0 || counts.stale > 0;
+        // Tab state: "pending" (default), "resolved", "all". Persisted on
+        // the review state so tab choice survives across renders.
+        var activeTab = state.activeTab || "pending";
+        if (activeTab !== "pending" && activeTab !== "resolved" && activeTab !== "all") {
+            activeTab = "pending";
+        }
+        // If the queue auto-completes, jump the user to Resolved so they
+        // see what just landed instead of an empty Pending state.
+        if (activeTab === "pending" && !hasOpen && counts.total > 0) {
+            activeTab = "resolved";
+            state.activeTab = "resolved";
+        }
+        var pendingCountForTabs = counts.pending + counts.stale;
+        var resolvedCountForTabs = counts.accepted + counts.rejected;
+
+        closeReviewPanel();
+        editor.__aiReviewOriginalMinHeight = shell.style ? (shell.style.minHeight || "") : "";
+        shell.classList.add("rte-ai-review-host");
+        if (shell.style) {
+            var desiredHeight = window.innerWidth <= 900 ? 460 : 520;
+            shell.style.minHeight = Math.max(shell.offsetHeight || 0, desiredHeight) + "px";
+        }
+        editor.__aiReviewShell = shell;
+
+        var panel = append(shell, "div", "", "rte-ai-review-panel rte-ai-review-v2");
+        panel.setAttribute("role", "complementary");
+        panel.setAttribute("aria-label", config.text_aireview || "AI Review");
+        panel.tabIndex = -1;
+        editor.__aiReviewPanel = panel;
+        panel.onkeydown = function (e) {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                closeReviewPanel();
+                editor.focus();
+            }
+        };
+
+        // Header
+        var header = append(panel, "div", "", "rte-ai-review-v2-header");
+        var iconWrap = append(header, "span", "", "rte-ai-review-v2-icon");
+        iconWrap.innerHTML = config.svgCode_aiassist_review || config.svgCode_aiassist || "";
+        append(header, "div", "", "rte-ai-review-v2-title", config.text_aireview || "AI Review");
+        // Pending count moved into the "To review" tab badge below; the
+        // header pill would have duplicated that signal.
+        var closeBtn = append(header, "button", "", "rte-ai-review-v2-close");
+        closeBtn.type = "button";
+        closeBtn.setAttribute("aria-label", "Close AI review");
+        closeBtn.title = "Close";
+        closeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>';
+        closeBtn.onclick = function () {
+            closeReviewPanel();
+            editor.focus();
+        };
+
+        // Tab strip: Pending (n) · Resolved (n). Two clear modes — review
+        // queue vs. decision history — replaces the older "Show resolved"
+        // toggle which mixed both states into one list.
+        var tabs = append(panel, "div", "", "rte-ai-review-v2-tabs");
+        tabs.setAttribute("role", "tablist");
+
+        function makeTab(tabId, iconKey, label, count) {
+            var tab = append(tabs, "button", "", "rte-ai-review-v2-tab" + (activeTab === tabId ? " is-active" : ""));
+            tab.type = "button";
+            tab.setAttribute("role", "tab");
+            tab.setAttribute("aria-selected", activeTab === tabId ? "true" : "false");
+            tab.setAttribute("data-rte-ai-review-tab", tabId);
+            // Icon (inbox / clock) sits before the label for instant
+            // recognisability — same pattern as Linear / Gmail tab rows.
+            if (iconKey && REVIEW_V2_ICONS[iconKey]) {
+                var iconSpan = tab.ownerDocument.createElement("span");
+                iconSpan.className = "rte-ai-review-v2-tab-icon";
+                iconSpan.setAttribute("aria-hidden", "true");
+                iconSpan.innerHTML = REVIEW_V2_ICONS[iconKey];
+                tab.appendChild(iconSpan);
+            }
+            var labelSpan = tab.ownerDocument.createElement("span");
+            labelSpan.className = "rte-ai-review-v2-tab-label";
+            labelSpan.textContent = label;
+            tab.appendChild(labelSpan);
+            if (typeof count === "number") {
+                var countSpan = tab.ownerDocument.createElement("span");
+                countSpan.className = "rte-ai-review-v2-tab-count" + (count > 0 ? " is-active" : "");
+                countSpan.textContent = String(count);
+                tab.appendChild(countSpan);
+            }
+            tab.onclick = function () {
+                if (activeTab === tabId) return;
+                getReviewState().activeTab = tabId;
+                renderReviewPanelV2(true);
+            };
+            return tab;
+        }
+
+        makeTab("pending", "inbox", "To review", pendingCountForTabs);
+        makeTab("resolved", "history", "History", resolvedCountForTabs);
+
+        // Toolbar: type filter + (on Pending tab only) Accept all / Reject all
+        var toolbar = append(panel, "div", "", "rte-ai-review-v2-toolbar");
+        if (typeOptions.length > 1) {
+            var sel = append(toolbar, "select", "", "rte-ai-review-v2-select");
+            for (var oi = 0; oi < typeOptions.length; oi++) {
+                var opt = append(sel, "option", "", "", typeOptions[oi].label);
+                opt.value = typeOptions[oi].value;
+            }
+            sel.value = typeFilter;
+            sel.onchange = function () {
+                getReviewState().typeFilter = sel.value || "all";
+                renderReviewPanelV2(true);
+            };
+        }
+        var pendingForBatch = 0;
+        for (var pi = 0; pi < suggestions.length; pi++) {
+            if (suggestions[pi].status === "pending" && matchesReviewTypeFilter(suggestions[pi], typeFilter)) {
+                pendingForBatch++;
+            }
+        }
+        if (activeTab === "pending") {
+            // Spacer pushes the batch buttons to the right edge so the type
+            // dropdown sits flush left and the destructive batch actions
+            // group together at the right.
+            append(toolbar, "div", "", "rte-ai-review-v2-toolbar-spacer");
+            var acceptAllBtn = append(toolbar, "button", "", "rte-ai-review-v2-batch is-accept");
+            acceptAllBtn.type = "button";
+            acceptAllBtn.disabled = !pendingForBatch;
+            setReviewV2ButtonContent(acceptAllBtn, "checkAll", "Accept all");
+            acceptAllBtn.onclick = function () {
+                if (acceptPendingSuggestionsByType(typeFilter)) renderReviewPanelV2(true);
+            };
+            var rejectAllBtn = append(toolbar, "button", "", "rte-ai-review-v2-batch is-reject");
+            rejectAllBtn.type = "button";
+            rejectAllBtn.disabled = !pendingForBatch;
+            setReviewV2ButtonContent(rejectAllBtn, "x", "Reject all");
+            rejectAllBtn.onclick = function () {
+                if (rejectPendingSuggestionsByType(typeFilter)) renderReviewPanelV2(true);
+            };
+        }
+
+        // Body
+        var body = append(panel, "div", "", "rte-ai-review-v2-body");
+
+        // Filter visible suggestions: type filter + active tab gate
+        var visible = [];
+        for (var si = 0; si < suggestions.length; si++) {
+            if (suggestions[si].changeType && suggestions[si].changeType !== "ai-preview") continue;
+            if (!matchesReviewTypeFilter(suggestions[si], typeFilter)) continue;
+            var st = suggestions[si].status;
+            var isOpen = (st === "pending" || st === "stale");
+            if (activeTab === "pending" && !isOpen) continue;
+            if (activeTab === "resolved" && isOpen) continue;
+            // "all" tab: include everything
+            visible.push(suggestions[si]);
+        }
+        // Pending first, resolved after; within each group, newest first.
+        visible.sort(function (a, b) {
+            var aOpen = a.status === "pending" || a.status === "stale";
+            var bOpen = b.status === "pending" || b.status === "stale";
+            if (aOpen !== bOpen) return aOpen ? -1 : 1;
+            return (b.timestamp || 0) - (a.timestamp || 0);
+        });
+
+        if (!visible.length) {
+            var empty = append(body, "div", "", "rte-ai-review-v2-empty");
+            if (counts.total === 0) {
+                // Truly empty store — guide the user to AI Chat / Ask AI.
+                append(empty, "div", "", "rte-ai-review-v2-empty-art is-prompt");
+                append(empty, "div", "", "rte-ai-review-v2-empty-title", "No AI suggestions yet");
+                append(empty, "div", "", "rte-ai-review-v2-empty-detail", "Ask AI or AI Chat will drop suggestions here for you to accept or reject.");
+            } else if (activeTab === "pending") {
+                // History exists but Pending is empty — celebrate.
+                append(empty, "div", "", "rte-ai-review-v2-empty-art is-clear");
+                append(empty, "div", "", "rte-ai-review-v2-empty-title", "Nothing to review");
+                append(empty, "div", "", "rte-ai-review-v2-empty-detail", "You're all caught up. Switch to History to see past decisions.");
+            } else if (activeTab === "resolved") {
+                append(empty, "div", "", "rte-ai-review-v2-empty-title", "No history yet");
+                append(empty, "div", "", "rte-ai-review-v2-empty-detail", "Decisions you make on the To review tab will show up here.");
+            } else {
+                append(empty, "div", "", "rte-ai-review-v2-empty-title", "No suggestions match this filter");
+                append(empty, "div", "", "rte-ai-review-v2-empty-detail", "Try a different type, or pick a different tab.");
+            }
+        } else {
+            var activeId = editor.__aiActiveSuggestionId || "";
+            var activeFound = false;
+            for (var ai = 0; ai < visible.length; ai++) {
+                if (visible[ai].id === activeId) { activeFound = true; break; }
+            }
+            if (!activeFound) {
+                // First open suggestion becomes active by default.
+                for (var di = 0; di < visible.length; di++) {
+                    if (visible[di].status === "pending" || visible[di].status === "stale") {
+                        setActiveSuggestionId(visible[di].id);
+                        activeId = visible[di].id;
+                        break;
+                    }
+                }
+            }
+            for (var vi = 0; vi < visible.length; vi++) {
+                (function (sug) {
+                    var item = append(body, "div", "", "rte-ai-review-v2-item is-" + sug.status + (sug.id === activeId ? " is-active" : ""));
+                    item.setAttribute("data-rte-ai-review-id", sug.id);
+                    item.setAttribute("role", "group");
+
+                    var head = append(item, "div", "", "rte-ai-review-v2-item-head");
+                    append(head, "span", "", "rte-ai-review-v2-item-status is-" + sug.status, getSuggestionStatusLabel(sug.status));
+                    if (sug.suggestionType && sug.suggestionType !== "other") {
+                        append(head, "span", "", "rte-ai-review-v2-item-type", getSuggestionTypeLabel(sug.suggestionType));
+                    }
+                    if (sug.snapshot && sug.snapshot.hasSelection) {
+                        append(head, "span", "", "rte-ai-review-v2-item-scope", "Selection");
+                    } else {
+                        append(head, "span", "", "rte-ai-review-v2-item-scope", "Document");
+                    }
+
+                    var titleText = summarizeSuggestionText(sug.originalText || sug.resultText || "AI suggestion", 120);
+                    append(item, "div", "", "rte-ai-review-v2-item-title", titleText);
+
+                    if (sug.id === activeId) {
+                        if (sug.originalText && sug.resultText && normalizeText(sug.originalText) !== normalizeText(sug.resultText)) {
+                            var compare = append(item, "div", "", "rte-ai-review-v2-compare");
+                            var before = append(compare, "div", "", "rte-ai-review-v2-before");
+                            append(before, "span", "", "rte-ai-review-v2-compare-label", "Current");
+                            append(before, "div", "", "rte-ai-review-v2-compare-text", normalizeText(sug.originalText));
+                            // Decorative arrow on the centerline of the
+                            // grid pointing from Current -> Suggested.
+                            var compareArrow = append(compare, "span", "", "rte-ai-review-v2-compare-arrow");
+                            compareArrow.setAttribute("aria-hidden", "true");
+                            compareArrow.innerHTML = REVIEW_V2_ICONS.arrowRight;
+                            var after = append(compare, "div", "", "rte-ai-review-v2-after");
+                            append(after, "span", "", "rte-ai-review-v2-compare-label", "Suggested");
+                            append(after, "div", "", "rte-ai-review-v2-compare-text", normalizeText(sug.resultText));
+                        }
+                        if (sug.reason) {
+                            var reason = append(item, "div", "", "rte-ai-review-v2-reason");
+                            var reasonLabel = append(reason, "span", "", "rte-ai-review-v2-reason-label");
+                            var bulbWrap = reason.ownerDocument.createElement("span");
+                            bulbWrap.className = "rte-ai-review-v2-reason-icon";
+                            bulbWrap.setAttribute("aria-hidden", "true");
+                            bulbWrap.innerHTML = REVIEW_V2_ICONS.bulb;
+                            reasonLabel.appendChild(bulbWrap);
+                            var reasonLabelText = reason.ownerDocument.createElement("span");
+                            reasonLabelText.textContent = "Why";
+                            reasonLabel.appendChild(reasonLabelText);
+                            append(reason, "span", "", "rte-ai-review-v2-reason-text", sug.reason);
+                        }
+                        var actions = append(item, "div", "", "rte-ai-review-v2-actions");
+                        var locateBtn = append(actions, "button", "", "rte-ai-review-v2-action is-locate");
+                        locateBtn.type = "button";
+                        setReviewV2ButtonContent(locateBtn, "target", "Locate");
+                        locateBtn.onclick = function (e) {
+                            if (e && e.stopPropagation) e.stopPropagation();
+                            locateSuggestion(sug.id);
+                        };
+                        if (sug.status === "pending" || sug.status === "stale") {
+                            var acceptBtn = append(actions, "button", "", "rte-ai-review-v2-action is-accept");
+                            acceptBtn.type = "button";
+                            setReviewV2ButtonContent(acceptBtn, "check", "Accept");
+                            acceptBtn.onclick = function (e) {
+                                if (e && e.stopPropagation) e.stopPropagation();
+                                applyReviewDecision(sug.id, "accept", { focusAction: "accept" });
+                            };
+                            var rejectBtn = append(actions, "button", "", "rte-ai-review-v2-action is-reject");
+                            rejectBtn.type = "button";
+                            setReviewV2ButtonContent(rejectBtn, "x", "Reject");
+                            rejectBtn.onclick = function (e) {
+                                if (e && e.stopPropagation) e.stopPropagation();
+                                applyReviewDecision(sug.id, "reject", { focusAction: "reject" });
+                            };
+                        }
+                    }
+
+                    item.onclick = function (e) {
+                        if (e && e.target && e.target.closest && e.target.closest(".rte-ai-review-v2-action")) return;
+                        if (sug.id === activeId) return;
+                        setActiveSuggestionId(sug.id);
+                        renderReviewPanelV2(true);
+                    };
+                })(visible[vi]);
+            }
+        }
+
+        if (focusPanel) {
+            try { panel.focus({ preventScroll: true }); }
+            catch (e) { try { panel.focus(); } catch (ee) {} }
+        }
+        return true;
+    }
+
     function renderReviewPanel(focusPanel, focusOptions) {
+        // 2026-05-08 redesign — see renderReviewPanelV2 above. Customers who
+        // depend on the legacy queue-overview / recovery / next-queue layout
+        // can opt back in via `RTE_DefaultConfig.aiToolkitReviewLegacyLayout`.
+        if (config.aiToolkitReviewLegacyLayout !== true) {
+            return renderReviewPanelV2(focusPanel);
+        }
         focusOptions = focusOptions || {};
         clearPreviewStateIfMissing();
         var shell = getEditorShell();
@@ -9639,7 +15777,7 @@ function RTE_Plugin_AIToolkit() {
                         append(transitionMeta, "span", "", "rte-ai-review-item-transition-pill is-scope", queueTransitionData.scopeLabel);
                     }
                     append(transitionCard, "div", "", "rte-ai-review-item-transition-detail", queueTransitionData.detail);
-                    append(transitionCard, "div", "", "rte-ai-review-item-transition-preview", queueTransitionData.preview);
+                    appendQueueTransitionPreview(transitionCard, "rte-ai-review-item-transition-preview", queueTransitionData);
                     if (queueTransitionData.followupTitle) {
                         var transitionFollowup = append(transitionCard, "div", "", "rte-ai-review-item-transition-followup");
                         append(transitionFollowup, "div", "", "rte-ai-review-item-transition-followup-title", queueTransitionData.followupTitle);
@@ -9673,7 +15811,11 @@ function RTE_Plugin_AIToolkit() {
                 var summary = append(item, "div", "", "rte-ai-review-item-summary");
                 append(summary, "div", "", "rte-ai-review-item-title", summarizeSuggestionText(suggestion.originalText || suggestion.resultText || "AI suggestion", 80));
                 if (isCondensedReviewItem) {
-                    appendReviewCondensedPreview(summary, suggestion, panel);
+                    appendReviewCondensedPreview(summary, suggestion, panel, {
+                        queuePositionData: queuePositionData,
+                        queueTransitionData: queueTransitionData,
+                        sharedUpdateCount: sharedUpdateCount
+                    });
                 }
                 var changeGlance = buildReviewChangeGlanceData(suggestion);
                 if (changeGlance) {
@@ -9735,7 +15877,7 @@ function RTE_Plugin_AIToolkit() {
                     queueOpened: isQueueOpenedItem,
                     queueRoleLabel: queuePositionData ? queuePositionData.roleLabel : "",
                     queuePositionLabel: queuePositionData ? queuePositionData.queueLabel : "",
-                    transitionLabel: queueTransitionData ? (queueTransitionData.title + ". " + queueTransitionData.statusLabel + ". " + queueTransitionData.queueLabel + ". " + queueTransitionData.preview + (queueTransitionData.followupTitle ? ". " + queueTransitionData.followupTitle + ". " + queueTransitionData.followupDetail : "")) : "",
+                    transitionLabel: queueTransitionData ? (queueTransitionData.title + ". " + queueTransitionData.statusLabel + ". " + queueTransitionData.queueLabel + ". " + getQueueTransitionPreviewSummary(queueTransitionData) + (queueTransitionData.followupTitle ? ". " + queueTransitionData.followupTitle + ". " + queueTransitionData.followupDetail : "")) : "",
                     changeSummary: changeGlance ? (changeGlance.title + ". " + (changeGlance.pills || []).map(function (pill) { return pill.text; }).join(". ") + (changeGlance.detail ? ". " + changeGlance.detail : "")) : "",
                     remoteUpdateCount: sharedUpdateCount,
                     undoLabel: undoCardSummaryText,
@@ -9745,13 +15887,17 @@ function RTE_Plugin_AIToolkit() {
                 }));
                 item.setAttribute("data-rte-ai-review-base-aria-label", item.getAttribute("aria-label") || "");
                 if (isCondensedReviewItem) {
+                    updateReviewCondensedPreviewAria(item, suggestion, panel);
                     updateReviewCondensedPreviewOpenHint(item, suggestion, panel);
                 }
 
                 var actions = append(item, "div", "", "rte-ai-review-item-actions");
                 var locateActions = append(actions, "div", "", "rte-ai-review-item-action-group is-locate");
+                locateActions.setAttribute("data-rte-ai-review-action-group", "locate");
                 var decisionActions = append(actions, "div", "", "rte-ai-review-item-action-group is-decision");
+                decisionActions.setAttribute("data-rte-ai-review-action-group", "decision");
                 var recoveryActions = append(actions, "div", "", "rte-ai-review-item-action-group is-recovery");
+                recoveryActions.setAttribute("data-rte-ai-review-action-group", "recovery");
                 var locateButton = append(locateActions, "button", "", "secondary rte-ai-review-action-button is-locate", "Locate");
                 locateButton.type = "button";
                 locateButton.setAttribute("data-rte-ai-review-action", "locate");
@@ -9815,6 +15961,8 @@ function RTE_Plugin_AIToolkit() {
 
         var shouldRestoreReviewFocus = !!focusPanel || preserveActiveReviewItemFocus || !!requestedReviewActionFocus;
         var focusedReviewItem = revealActiveReviewItem(feed, shouldRestoreReviewFocus, requestedReviewActionFocus || preserveActiveReviewAction);
+        syncActiveReviewActionSummary(requestedReviewActionFocus || preserveActiveReviewAction || getPreferredReviewActionFocus(panel));
+        syncActiveReviewEnterTarget(requestedReviewActionFocus || preserveActiveReviewAction || getPreferredReviewActionFocus(panel));
 
         var historyEntries = getReviewLogEntries().slice(0, 6);
         if (historyEntries.length) {
@@ -9876,6 +16024,8 @@ function RTE_Plugin_AIToolkit() {
         editor.__aiDialog = dialoginner;
         dialoginner.__aiOperationStates = {};
         dialoginner.__aiPlanStale = false;
+        dialoginner.__aiPlanStaleReason = "";
+        dialoginner.__aiPlanStaleAction = "";
 
         dialoginner._onclose = function () {
             if (editor.__aiDialog === dialoginner) {
@@ -9883,101 +16033,757 @@ function RTE_Plugin_AIToolkit() {
             }
         };
 
-        var grid = append(dialoginner, "div", "", "demo-ai-dialog-grid");
-        append(grid, "p", "", "demo-ai-dialog-note", "Preview an AI suggestion before applying it. Nothing is written to the editor until you accept a change.");
+        // 2026-05-13 (v20260513c): the header mode chip ("Proofread",
+        // "Translate · Spanish") is no longer painted into the dialog
+        // header. The Action select directly below the title already
+        // shows the active mode — and selecting a different mode in
+        // the dropdown is the only way to change it — so the chip was
+        // a second copy of the same fact. The Translate language was
+        // the only extra signal the chip carried; the Language select
+        // sitting right next to the Action select already shows it,
+        // so nothing's lost. Same shape Notion AI / Tiptap / ChatGPT
+        // inline edit ship — one title, no mode pill, the dropdown is
+        // the single source of truth for "what AI will run". Detached
+        // chip node kept so updateModeHelp's writes noop safely
+        // without each call site needing a guard.
+        var modeChip = document.createElement("span");
+        modeChip.className = "rte-ai-dialog-mode-chip is-detached";
+        modeChip.setAttribute("aria-hidden", "true");
 
-        var meta = append(grid, "div", "", "demo-ai-dialog-meta");
-        append(meta, "span", "", "demo-ai-inline-hint", (config.aiToolkitLabel || "Current editor") + " AI");
-        append(meta, "span", "", "demo-ai-inline-hint", snapshot.hasSelection ? "Selection ready" : "No selection - using whole document");
+        var grid = append(dialoginner, "div", "", "demo-ai-dialog-grid");
 
         var compactControls = append(grid, "div", "", "demo-ai-compact-controls");
 
+        // 2026-05-08 compact pass: dropped the per-field uppercase mini-labels
+        // ("Action" / "Language" / "Use" / blank-spacer) and the duplicate
+        // mode-help paragraph. The select labels its own value, the scope
+        // buttons label themselves, and the help string moved to the
+        // select's title attribute (still surfaced on hover).
         var actionField = append(compactControls, "div", "", "demo-ai-field demo-ai-action-field");
-        append(actionField, "label", "", "", "Action");
         var modeSelect = append(actionField, "select");
-        var modeHelp = append(actionField, "div", "", "demo-ai-mode-help");
+        modeSelect.setAttribute("aria-label", "AI action");
+        // 2026-05-17 (v20260517a): the mode help line is back on-screen,
+        // attached directly to the dialog grid (full-width row under the
+        // controls strip). The prior hover-only `title` attribute meant
+        // first-time users picked Proofread / Justify / Summarize from a
+        // 7-row dropdown without ever seeing what each mode does — a
+        // discoverability gap Notion AI / Tiptap / CKEditor all close
+        // with a one-line caption below their action picker. Compact
+        // 11px muted text, single line, ~14px reserved height. Pre-result
+        // the caption is the only context users have for the active mode
+        // until they paste text — so the cost of 14px is paid back by
+        // removing "what does this do?" friction. */
+        var modeHelp = document.createElement("div");
+        modeHelp.className = "demo-ai-mode-caption";
 
         var languageField = append(compactControls, "div", "", "demo-ai-field demo-ai-language-field");
-        append(languageField, "label", "", "", "Target language");
         var languageSelect = append(languageField, "select");
+        languageSelect.setAttribute("aria-label", "Translation target language");
         populateDialogModes();
         if (options.presetMode) {
-            modeSelect.value = options.presetMode;
+            // 2026-05-19 (v20260519a): only honor presetMode when it
+            // matches a known option value. The "Draft" menu item
+            // (id: "open-dialog") calls runQuickAction which falls back
+            // to `presetMode: action.resolverMode || actionId` — that
+            // resolves to "open-dialog", which is NOT a valid mode value.
+            // Assigning `modeSelect.value = "open-dialog"` silently
+            // unselects every option (selectedIndex -> -1), and
+            // downstream the title / caption / language-visibility
+            // logic all branch on a now-empty `modeSelect.value`. Guard
+            // the assignment so an unrecognised preset is a no-op and
+            // the default first option remains selected.
+            var presetIsValid = false;
+            for (var presetIndex = 0; presetIndex < modeSelect.options.length; presetIndex++) {
+                if (modeSelect.options[presetIndex].value === options.presetMode) {
+                    presetIsValid = true;
+                    break;
+                }
+            }
+            if (presetIsValid) {
+                modeSelect.value = options.presetMode;
+            }
+        }
+        if (modeSelect.options.length && modeSelect.selectedIndex < 0) {
+            modeSelect.selectedIndex = 0;
         }
         updateModeHelp();
 
         var scopeField = append(compactControls, "div", "", "demo-ai-field demo-ai-scope-field");
-        append(scopeField, "label", "", "", "Scope");
-        var loadRow = append(scopeField, "div", "", "demo-actions-row demo-ai-scope-row");
-        var loadSelectionButton = append(loadRow, "button", "", "", "Use selection");
+        // 2026-05-17 (v20260523a): Selection / Document segmented control
+        // swapped for a single labeled <select>. The earlier icon-only
+        // pair (cursor-T / document glyph, since v20260509j) gave no
+        // text affordance — first-time users couldn't tell what either
+        // glyph meant without hovering for the tooltip. The select
+        // option labels carry both the scope name AND the live char
+        // count ("Selection · 124 chars" / "Document · 2.4K chars") so
+        // users see WHAT AI will run on AND HOW BIG it is in one glance,
+        // killing the duplicate "Document · 117 chars" mode-caption row
+        // that v20260522a needed to compensate for the icon-only ambiguity.
+        // The original buttons stay in the DOM (detached, see below) so
+        // external integrations that walk `[data-rte-ai-dialog-action=
+        // "load-selection"]` / `"load-document"` keep resolving, and
+        // every syncDialogScopeUi / setBusyState pass that toggles
+        // `.disabled` / `aria-pressed` on them keeps working as a no-op
+        // off-screen. Customers who want the icon segmented control back
+        // can override with `.demo-ai-scope-select { display: none }` +
+        // `.demo-ai-scope-row.is-detached { display: flex !important }`.
+        var scopeSelect = append(scopeField, "select", "", "demo-ai-scope-select");
+        scopeSelect.setAttribute("aria-label", "Source for Ask AI");
+        scopeSelect.setAttribute("data-rte-ai-dialog-action", "scope");
+        var scopeOptionSelection = append(scopeSelect, "option", "", "", "Selection");
+        scopeOptionSelection.value = "selection";
+        var scopeOptionDocument = append(scopeSelect, "option", "", "", "Document");
+        scopeOptionDocument.value = "document";
+
+        // 2026-06-01 (v20260601a): scope caption surfaced inline when only
+        // one scope is valid (no editor selection captured). Pre-pass the
+        // <select> rendered with a disabled "Selection (none)" option +
+        // one valid "Document · X chars" option whenever the user opened
+        // Ask AI without selecting text first — a picker that couldn't
+        // actually be picked. Same shape the AI Chat panel has had since
+        // v20260515a, where the scope chip is suppressed via
+        // `is-no-selection-actionable` until a selection exists, and the
+        // shape every reference inline AI surface ships (Notion AI inline
+        // composer, Claude inline edit, Tiptap AI bubble — scope picker
+        // only appears when the choice is meaningful). The caption keeps
+        // the live char count visible so users still see WHAT AI will
+        // run on, just without the grey-out chevron noise. The select
+        // remains in the DOM (toggled via display) so every onchange /
+        // disabled / aria-label sync path keeps resolving without each
+        // call site needing a null guard.
+        var scopeCaption = append(scopeField, "span", "", "demo-ai-scope-caption");
+        scopeCaption.setAttribute("aria-hidden", "true");
+
+        var loadRow = scopeField.ownerDocument.createElement("div");
+        loadRow.className = "demo-actions-row demo-ai-scope-row is-detached";
+        loadRow.setAttribute("role", "group");
+        loadRow.setAttribute("aria-label", "Source scope");
+        var loadSelectionButton = scopeField.ownerDocument.createElement("button");
         loadSelectionButton.type = "button";
-        var loadDocumentButton = append(loadRow, "button", "", "secondary", "Whole document");
+        loadSelectionButton.className = "is-icon-only";
+        loadSelectionButton.setAttribute("data-rte-ai-dialog-action", "load-selection");
+        loadSelectionButton.title = "Use selection";
+        loadSelectionButton.setAttribute("aria-label", "Use selection");
+        setReviewV2ButtonContent(loadSelectionButton, "cursorText", "");
+        loadRow.appendChild(loadSelectionButton);
+        var loadDocumentButton = scopeField.ownerDocument.createElement("button");
         loadDocumentButton.type = "button";
+        loadDocumentButton.className = "secondary is-icon-only";
+        loadDocumentButton.setAttribute("data-rte-ai-dialog-action", "load-document");
+        loadDocumentButton.title = "Use document";
+        loadDocumentButton.setAttribute("aria-label", "Use document");
+        setReviewV2ButtonContent(loadDocumentButton, "document", "");
+        loadRow.appendChild(loadDocumentButton);
+        // 2026-05-17 (v20260523a): append the legacy scope row to
+        // scopeField so external integrations that walk
+        // `dialog.querySelector('[data-rte-ai-dialog-action="load-selection"]')`
+        // / `"load-document"` keep resolving. The row is hidden via the
+        // `.demo-ai-scope-row.is-detached` CSS rule below; the new
+        // labeled <select> above is the visible scope control.
+        scopeField.appendChild(loadRow);
 
         var runField = append(compactControls, "div", "", "demo-ai-field demo-ai-run-field");
-        append(runField, "label", "", "", "Run");
         var runRow = append(runField, "div", "", "demo-actions-row demo-ai-run-row");
-        var runButton = append(runRow, "button", "", "is-primary", "Ask AI");
+        runRow.setAttribute("role", "group");
+        runRow.setAttribute("aria-label", "Ask AI run actions");
+        var runButton = append(runRow, "button", "", "is-primary");
         runButton.type = "button";
-        var copyButton = append(runRow, "button", "", "secondary", "Copy to source");
+        runButton.setAttribute("data-rte-ai-dialog-action", "run");
+        // Sparkle glyph + "Generate" — same icon vocabulary as AI Chat
+        // composer's Send and AI Review V2's Accept buttons.
+        setReviewV2ButtonContent(runButton, "sparkles", "Generate");
+        // 2026-05-09 (v20260509j): surface the Ctrl/Cmd+Enter shortcut on
+        // hover and to screen readers. Same idiom every modern AI surface
+        // uses (ChatGPT Send: "Send (⌘↵)", Notion AI Generate: "Generate
+        // (Ctrl+Enter)"). aria-keyshortcuts is the WAI-ARIA standard way
+        // to advertise a keyboard shortcut so screen readers announce
+        // "Generate, Control+Enter" alongside the button name.
+        runButton.title = "Generate AI suggestion (Ctrl+Enter)";
+        runButton.setAttribute("aria-keyshortcuts", "Control+Enter");
+        // 2026-05-17 (v20260517a): visible Ctrl+↵ / ⌘↵ chip baked into
+        // the Generate button. Pre-v20260517a the shortcut only lived in
+        // the title attribute, which never reaches users who navigate
+        // by keyboard — they couldn't find it without hover. Same affordance
+        // ChatGPT composer's "Send ⌘↵" and Linear's command palette
+        // ship: a tiny muted glyph at the trailing edge of the primary
+        // button. Mac / non-Mac glyph is chosen at dialog-open time
+        // from navigator.platform so the hint matches the actual key
+        // the user would press. */
+        var isMacOs = /Mac|iPad|iPhone|iPod/i.test((navigator.platform || "") + " " + (navigator.userAgent || ""));
+        var runKbdLabel = isMacOs ? "⌘⏎" : "Ctrl ⏎";
+        function refreshRunKbdHint() {
+            if (!runButton) return;
+            var existing = runButton.querySelector(".demo-ai-kbd-hint");
+            if (existing) existing.parentNode.removeChild(existing);
+            var kbd = runButton.ownerDocument.createElement("span");
+            kbd.className = "demo-ai-kbd-hint";
+            kbd.setAttribute("aria-hidden", "true");
+            kbd.textContent = runKbdLabel;
+            runButton.appendChild(kbd);
+        }
+        refreshRunKbdHint();
+        // 2026-05-08 (v20260508s): Copy demoted to an icon-only button so
+        // Generate dominates the run row. Label moved to title/aria-label
+        // for hover + screen readers. Frees ~80px of horizontal space at
+        // 540px dialog width.
+        var copyButton = append(runRow, "button", "", "secondary is-icon-only");
         copyButton.type = "button";
+        copyButton.title = "Copy result into source";
+        copyButton.setAttribute("aria-label", "Copy result into source");
+        copyButton.setAttribute("data-rte-ai-dialog-action", "copy-to-source");
+        setReviewV2ButtonContent(copyButton, "checkAll", "");
+
+        var scopeHint = document.createElement("span");
+
+        // 2026-05-30 (v20260530a): mode caption row dropped from the visible
+        // grid. Pre-pass the caption claimed ~14px of vertical chrome under
+        // the controls strip to carry a one-line description of the active
+        // mode ("Clean up grammar, spacing, and readability issues."). With
+        // the source textarea placeholder already mode-aware ("Paste text
+        // to proofread…", "Paste text to translate…", etc., since v20260517a)
+        // AND the Action select itself naming the active mode AND the
+        // dialog frame title now reading "Ask AI · Proofread" (since
+        // v20260519a), the caption was the third place the mode signal
+        // landed on the same dialog — discoverability budget already paid
+        // by two more prominent surfaces. Same shape Notion AI inline
+        // composer / Claude inline edit / ChatGPT inline edit ship — the
+        // active mode is named ONCE (in the picker / title), not painted
+        // in a caption row beneath it. The detached `modeHelp` node is
+        // kept so `updateModeHelp`'s `modeHelp.innerText = helpText` write
+        // path noops safely, the Action select's `title` attribute
+        // continues to carry the description text for the hover tooltip,
+        // and any external integration that reads `modeHelp.innerText`
+        // still resolves. Saves ~14px on every pre-result dialog render.
+        // 2026-05-17 (v20260517a) baseline: caption added to the visible grid.
+        modeHelp.classList.add("is-detached");
 
         var textGrid = append(grid, "div", "", "demo-ai-text-grid");
 
+        // 2026-05-09 (v20260509j): dropped the "Source" / "Result"
+        // text-tag spans. They had no CSS rule (the class was
+        // .demo-ai-text-tag while the styled label is .demo-ai-text-label),
+        // so they rendered as un-styled inline text above each textarea
+        // — adding visual noise without legible affordance. The textarea
+        // placeholder + the chrome (editable left / readonly right with
+        // tinted background) already distinguish input from output, and
+        // the textarea aria-label still announces the field role for
+        // screen readers. Saves ~14px of vertical space per field.
         var sourceField = append(textGrid, "div", "", "demo-ai-field demo-ai-source-field");
-        append(sourceField, "label", "", "", "Source text");
+        // 2026-05-13 (v20260513a): inline "Source" / "Result" labels above
+        // each textarea. The earlier side-by-side text grid (now stacked
+        // vertically since today's CSS pass) used horizontal position
+        // alone to distinguish input from output — once stacked, both
+        // textareas look identical except for the readonly tint, so a
+        // tiny eyebrow label reads instantly. Hidden pre-result via the
+        // is-pre-result class because the Result field is hidden then
+        // and the lone Source field needs no eyebrow.
+        append(sourceField, "span", "", "demo-ai-text-label-inline", "Source");
         var sourceArea = append(sourceField, "textarea");
-        sourceArea.placeholder = "Load the current selection or the whole editor before running Ask AI.";
+        sourceArea.setAttribute("aria-label", "Source text for Ask AI");
+        // 2026-05-26 (v20260526a): reparent the run-row (Generate + Copy
+        // buttons) from the compact-controls strip INTO the source field,
+        // immediately after the source textarea. CSS positions it as an
+        // absolutely-anchored 32x32 round icon overlay at the textarea's
+        // bottom-right corner — same affordance the AI Chat composer
+        // adopted in v20260525a (v2.0.4.9) and every reference inline
+        // composer ships (Notion AI, ChatGPT inline edit, Tiptap AI
+        // bubble, Claude inline edit, CKEditor 5 AI Assistant). Pre-pass
+        // the Generate primary sat at the top of the dialog on its own
+        // 36px row with the Action/Scope selects, so users typing INTO
+        // the source textarea had to look UP to find Generate — exactly
+        // the friction the chat composer fix called out. With the
+        // reparent: (1) the controls strip drops to just Action + Scope,
+        // its row height collapses from ~36px to ~26px (no Generate
+        // forcing the floor); (2) Generate sits where users' eyes
+        // already are after typing a prompt; (3) Ctrl+Enter still
+        // routes through the same runButton.onclick path. Copy stays
+        // in the same runRow so the post-result "Copy result into
+        // source" affordance keeps working when the user expands
+        // source via the Edit prompt disclosure. Reparent is structural
+        // only — every `var` reference (runRow, runButton, copyButton)
+        // still resolves, and every selector / focus walker that
+        // targets `.demo-ai-run-row` / `[data-rte-ai-dialog-action="run"]`
+        // keeps working. Customers who want the prior top-row Generate
+        // back can override with `.demo-ai-source-field .demo-ai-run-row
+        // { position: static !important }` and remove the source-field
+        // padding-right reserve.
+        sourceField.appendChild(runRow);
+        // 2026-05-17 (v20260520b): rows=1 so the CSS min-height: 36px floor
+        // is the binding constraint. Without this, the browser default
+        // rows=2 sizes the textarea to ~47px at the dialog's 13px font /
+        // 18.85px line-height, overriding the 36px floor that v20260513a
+        // set. Same fix v20260518a (v2.0.4.1) applied to the chat composer
+        // textarea — the at-rest input reads as one calm row, not a
+        // 2-row paragraph box. Source still grows freely as the user
+        // pastes long text (resize handle on, no max-height set) and
+        // refreshSource sets multi-line content directly.
+        sourceArea.rows = 1;
+        // 2026-05-15 (v20260515e): trimmed from "Type or paste text —
+        // Ctrl+Enter to generate." (47 chars) to "Type or paste text…"
+        // (19 chars). The Ctrl/Cmd+Enter shortcut is still surfaced on
+        // the Generate button via title + aria-keyshortcuts (since
+        // v20260509j) and is universal keyboard convention every modern
+        // AI surface uses — the placeholder no longer doubles as a
+        // keyboard tutorial. Same shape Notion AI ("Tell AI what to
+        // do…") / Claude composer / ChatGPT composer ship — one calm
+        // verb phrase, no inline shortcut hint.
+        // Earlier baseline:
+        //   v20260509j: 95 → 47 chars after the scope toggle landed.
+        sourceArea.placeholder = "Type or paste text…";
 
+        // 2026-06-03 (v20260603a): live character counter pinned to the
+        // bottom-LEFT corner of the source textarea. Pre-pass users
+        // typed a prompt with no signal about how much they were
+        // feeding to AI — short fragments and long documents looked
+        // identical at the dialog level once the textarea auto-grew.
+        // The pre-result mode caption WAS surfacing scope + chars
+        // (v20260519a), but that line was dropped from the visible grid
+        // in v20260530a; only the Action select's title attribute (hover
+        // tooltip) carried the description, with no live char count.
+        // Same shape Notion AI inline composer / ChatGPT composer /
+        // Claude composer ship — a tiny muted counter pinned to the
+        // textarea corner that grows / shrinks as the user types. The
+        // bottom-right corner is owned by the Generate icon-overlay
+        // (since v20260526a), so the counter rides bottom-LEFT where
+        // there's nothing else. Hidden when source is empty so the
+        // fresh-open dialog stays clean; appears the moment text
+        // exists. Zero added vertical chrome (rides inside the
+        // textarea's existing padding).
+        var sourceCounter = append(sourceField, "span", "", "demo-ai-source-counter");
+        sourceCounter.setAttribute("aria-hidden", "true");
+        function refreshSourceCounter() {
+            if (!sourceCounter) {
+                return;
+            }
+            var text = sourceArea.value || "";
+            var len = text.length;
+            if (!len) {
+                sourceCounter.textContent = "";
+                sourceCounter.classList.remove("is-visible");
+                return;
+            }
+            var label = len > 999
+                ? (Math.round(len / 100) / 10) + "K chars"
+                : len + (len === 1 ? " char" : " chars");
+            sourceCounter.textContent = label;
+            sourceCounter.classList.add("is-visible");
+        }
+
+        // 2026-05-13 (v20260513a): Result field appended after Source so
+        // the result lands BELOW the source-edit area when source is
+        // expanded, but a CSS order flip + `is-source-collapsed` class
+        // hide the Source by default post-result and bubble Result to
+        // the top of the stack. The flow:
+        //   Pre-result: only Source visible (full-width prompt input).
+        //   Post-result default: only Result visible. A small "Source ▸"
+        //     toggle in the result header expands Source for retry/edit.
+        // Same shape Notion AI inline composer uses — post-result the
+        // prompt collapses out of the way and Result owns the visual
+        // weight; click the input to re-prompt.
+        sourceField.style.order = "2";
         var resultField = append(textGrid, "div", "", "demo-ai-field demo-ai-result-field");
-        append(resultField, "label", "", "", "Result");
+        resultField.style.order = "1";
+        var resultHead = append(resultField, "div", "", "demo-ai-result-head");
+        // 2026-05-13 (v20260513d): "RESULT" eyebrow label-inline dropped
+        // from the result-head. The readonly tinted textarea background +
+        // the right-aligned "Edit prompt" disclosure already mark this
+        // textarea as the AI output. The 10px uppercase eyebrow added
+        // ~12px of vertical chrome above the result for no informational
+        // gain — same shape Notion AI / Tiptap AI bubble / ChatGPT inline
+        // edit ship, where the AI output is the visible primary and the
+        // only header chrome is a disclosure for retry. Detached label
+        // node kept so any external integration that walks
+        // `.demo-ai-result-head .demo-ai-text-label-inline` resolves
+        // without throwing.
+        var resultLabel = document.createElement("span");
+        resultLabel.className = "demo-ai-text-label-inline is-detached";
+        resultLabel.innerText = "Result";
+        // 2026-06-03 (v20260603a): real "Copy to clipboard" affordance
+        // pinned to the result corner, sibling to the "Edit prompt"
+        // disclosure. Pre-pass the only copy path was the apply-row
+        // icon-only Copy button which writes the AI output back into
+        // the SOURCE field for chain-refinement (a power feature
+        // users rarely guess); grabbing the AI suggestion for use
+        // OUTSIDE the editor required a manual select-all + Ctrl+C
+        // inside the readonly textarea. Same shape every reference
+        // inline AI surface ships — Notion AI / Claude / ChatGPT /
+        // Tiptap all surface a one-click clipboard button on the AI
+        // output. The button briefly flips to a check glyph + "Copied"
+        // text as success confirmation, then restores after 1.4s.
+        // Hidden pre-result automatically because the entire result
+        // field is hidden via the `.is-pre-result .demo-ai-result-field`
+        // cascade.
+        var copyClipboardButton = append(resultHead, "button", "", "demo-ai-clipboard-toggle");
+        copyClipboardButton.type = "button";
+        copyClipboardButton.setAttribute("data-rte-ai-dialog-action", "copy-clipboard");
+        copyClipboardButton.title = "Copy AI output to clipboard";
+        copyClipboardButton.setAttribute("aria-label", "Copy AI output to clipboard");
+        setReviewV2ButtonContent(copyClipboardButton, "clipboard", "Copy");
+        var copyClipboardResetTimer = null;
+        copyClipboardButton.onclick = function (e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (!normalizeText(resultArea.value)) {
+                return;
+            }
+            copyTextToClipboard(resultArea.value).then(function (copied) {
+                if (!copied) {
+                    return;
+                }
+                copyClipboardButton.classList.add("is-copied");
+                setReviewV2ButtonContent(copyClipboardButton, "check", "Copied");
+                if (copyClipboardResetTimer) {
+                    clearTimeout(copyClipboardResetTimer);
+                }
+                copyClipboardResetTimer = setTimeout(function () {
+                    copyClipboardButton.classList.remove("is-copied");
+                    setReviewV2ButtonContent(copyClipboardButton, "clipboard", "Copy");
+                    copyClipboardResetTimer = null;
+                }, 1400);
+            });
+        };
+
+        var sourceToggle = append(resultHead, "button", "", "demo-ai-source-toggle");
+        sourceToggle.type = "button";
+        sourceToggle.setAttribute("aria-expanded", "false");
+        sourceToggle.setAttribute("aria-controls", "rte-ai-source-" + Date.now());
+        // 2026-05-13 (v20260513b): "Source" → "Edit prompt". The earlier
+        // label read as a field name ("Source" is what you read, not what
+        // you do), so first-time users skipped past it expecting a third
+        // label below Result. "Edit prompt" reads as an action — same
+        // affordance Notion AI's "Edit prompt" disclosure uses post-result.
+        sourceToggle.title = "Edit the prompt and retry";
+        sourceToggle.innerText = "Edit prompt";
+        sourceField.id = sourceToggle.getAttribute("aria-controls");
+        sourceToggle.onclick = function (e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            var expanded = grid.classList.toggle("is-source-expanded");
+            sourceToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+            if (expanded) sourceArea.focus();
+        };
         var resultArea = append(resultField, "textarea");
         resultArea.readOnly = true;
-        resultArea.placeholder = "Demo AI output will appear here.";
+        resultArea.setAttribute("aria-label", "AI suggestion result");
+        // 2026-05-17 (v20260520b): rows=1 lets the CSS min-height: 52px
+        // floor (since v20260513a) actually bind. Browser default rows=2
+        // sized the readonly textarea to ~62-67px (2 lines @ 13px /
+        // 18.85px line-height + 21/4 padding for the corner pill inset +
+        // 2px border), which overrode the intended 52px floor. With
+        // rows=1 the result textarea sits at exactly 52px when output is
+        // 1-2 short lines and auto-grows as AI suggestions expand. Saves
+        // ~10-15px on every post-result dialog.
+        resultArea.rows = 1;
+        // 2026-05-09 (v20260509j): trimmed from "AI output will appear
+        // here after you click Generate." (52 chars) to "Output appears
+        // here." (20 chars). Same idiom Notion AI's inline composer
+        // uses ("AI response..."). At 20 chars it never line-wraps
+        // inside the textarea even at 320px viewport.
+        resultArea.placeholder = "Output appears here.";
 
-        var reviewGrid = append(grid, "div", "", "demo-ai-review-grid");
-        var oldCard = append(reviewGrid, "div", "", "demo-ai-review-card preview-old");
-        append(oldCard, "strong", "", "", "Current content");
-        var oldPreview = append(oldCard, "pre", "", "demo-ai-review-text", "Load text from the editor to start a preview.");
-        var newCard = append(reviewGrid, "div", "", "demo-ai-review-card preview-new");
-        append(newCard, "strong", "", "", "Suggested change");
-        var newPreview = append(newCard, "pre", "", "demo-ai-review-text", "Run Ask AI to generate a suggestion preview.");
+        var oldPreview = document.createElement("pre");
+        var newPreview = document.createElement("pre");
 
-        var insightGrid = append(grid, "div", "", "demo-ai-insight-grid");
+        // 2026-05-30 (v20260530a): refine chips no longer paint a SEPARATE
+        // row above the apply row. They are now created on a detached
+        // container, then reparented INTO the apply row immediately after
+        // applyRowMoreToggle is built (see the move block below) so the
+        // post-result dialog reads as ONE compact action bar:
+        //   [Apply primary]  [Try again] [Shorter] [Longer] [Why ▸]  [⋯]
+        // Same visual idiom Notion AI inline composer / Claude inline edit
+        // / Tiptap AI bubble ship — primary action and refinements share
+        // one row, not two stacked rows. Saves ~29px of post-result vertical
+        // chrome (the prior dedicated refine row claimed ~26px chip height
+        // + 3px grid gap). The chips keep their `data-rte-ai-dialog-action`
+        // attrs, their `setBusyState` gate, the same `runRefinementInstruction`
+        // / `onclick` plumbing, and the same Why disclosure mechanics — the
+        // change is structural only. The `refineRow` div is kept on the
+        // grid with `is-detached` so any external integration that walks
+        // `.demo-ai-refine-row` still finds the node. Customers who want
+        // the prior stacked layout back can override with one CSS rule
+        // documented in the v20260530a comment block at the end of
+        // aitoolkit.css.
+        // 2026-05-28 (v20260528b) baseline: introduced the dedicated refine
+        // row directly under the result textarea.
+        var refineRow = document.createElement("div");
+        refineRow.className = "demo-ai-refine-row is-detached";
+        refineRow.setAttribute("role", "group");
+        refineRow.setAttribute("aria-label", "Refine AI suggestion");
+        // Keep the (now empty) refineRow attached to the dialog grid so any
+        // external integration that walks `.demo-ai-refine-row` from the
+        // dialog root keeps resolving. The `is-detached` class collapses it
+        // visually (display: none !important).
+        grid.appendChild(refineRow);
+        var refineRetryChip = append(refineRow, "button", "", "secondary demo-ai-refine-chip", "Try again");
+        refineRetryChip.type = "button";
+        refineRetryChip.title = "Re-run with the same prompt";
+        refineRetryChip.setAttribute("data-rte-ai-dialog-action", "refine-retry");
+        var refineShorterChip = append(refineRow, "button", "", "secondary demo-ai-refine-chip", "Shorter");
+        refineShorterChip.type = "button";
+        refineShorterChip.title = "Make the suggestion shorter";
+        refineShorterChip.setAttribute("data-rte-ai-dialog-action", "refine-shorter");
+        var refineLongerChip = append(refineRow, "button", "", "secondary demo-ai-refine-chip", "Longer");
+        refineLongerChip.type = "button";
+        refineLongerChip.title = "Expand the suggestion with more detail";
+        refineLongerChip.setAttribute("data-rte-ai-dialog-action", "refine-longer");
+        // 2026-05-29 (v20260529a): "Why" disclosure folded into the refine
+        // chip row as a 4th ghost chip — the standalone Details toggle row
+        // that previously sat on its own line between the chip strip and
+        // the Apply row drops off the screen as its visible interaction
+        // moves here. Pre-pass the post-result dialog painted four stacked
+        // rows below the result textarea (refine chips → Details toggle →
+        // [optional insight grid] → Apply row → status); each chip / row
+        // claimed its own grid track + 3px gap, so the Details toggle alone
+        // ate ~26px of vertical chrome for a one-button affordance. Same
+        // shape Notion AI inline composer / Tiptap AI bubble ship for post-
+        // result iteration — refinement options AND the rationale
+        // disclosure live in one chip strip directly under the suggestion,
+        // not two separate rows. The chip toggles the same `.is-collapsed`
+        // class on `insightGrid` that detailsToggle owns, and mirrors its
+        // aria-expanded / aria-controls plumbing, so external integrations
+        // that walk either `.demo-ai-details-toggle` (kept hidden in DOM
+        // for selector compatibility) or `.demo-ai-insight-grid` keep
+        // resolving. Visually pushed to the trailing edge via
+        // `margin-left: auto` so the three iteration chips cluster left
+        // and the rationale disclosure sits right — keyboard-Tab order
+        // still flows refine-retry → refine-shorter → refine-longer →
+        // refine-why, then continues to the Apply primary, matching
+        // reading order.
+        var refineWhyChip = append(refineRow, "button", "", "secondary demo-ai-refine-chip demo-ai-refine-why-chip", "Why");
+        refineWhyChip.type = "button";
+        refineWhyChip.title = "Show why this AI suggestion was generated";
+        refineWhyChip.setAttribute("data-rte-ai-dialog-action", "refine-why");
+        refineWhyChip.setAttribute("aria-expanded", "false");
 
-        var reasonPanel = append(insightGrid, "div", "", "demo-ai-reason-panel");
-        append(reasonPanel, "label", "", "", "Why this suggestion");
-        var reasonCopy = append(reasonPanel, "div", "", "demo-ai-reason-copy", "Run a suggestion to see why the AI recommends this change.");
-
-        var planPanel = append(insightGrid, "div", "", "demo-ai-plan-panel");
-        append(planPanel, "label", "", "", "Operation plan");
-        var planNote = append(planPanel, "div", "", "demo-ai-plan-note", "Steps the editor will run when you apply this suggestion.");
-        var planStatus = append(planPanel, "div", "", "demo-ai-plan-status");
-        var planStatusMessage = append(planStatus, "span", "", "demo-ai-plan-status-message");
-        var planStatusAction = append(planStatus, "button", "", "secondary demo-ai-plan-status-action", "Re-run from editor");
-        planStatusAction.type = "button";
-        planStatusAction.style.display = "none";
-        var planSummary = append(planPanel, "div", "", "demo-ai-plan-summary");
-        var planList = append(planPanel, "ul", "", "demo-ai-plan-list");
+        // Refine the *result*: the current AI output becomes the new
+        // source (same as the Copy icon does post-result) with a short
+        // instruction prepended that nudges the model toward the
+        // requested transformation. Source field stays collapsed behind
+        // the "Edit prompt" disclosure so the temporary instruction
+        // doesn't visually clutter the dialog — users see Result before
+        // and after the refinement, same shape Claude / ChatGPT / Notion
+        // AI ship. If there is no result yet, the chips no-op (they're
+        // hidden via .is-pre-result anyway, but the guard protects any
+        // programmatic caller).
+        function runRefinementInstruction(instruction) {
+            if (!normalizeText(resultArea.value)) {
+                return;
+            }
+            sourceArea.value = instruction + "\n\n" + resultArea.value;
+            handleDialogSourceEdit();
+            if (runButton && !runButton.disabled && runButton.onclick) {
+                runButton.onclick();
+            }
+        }
+        refineRetryChip.onclick = function () {
+            if (runButton && !runButton.disabled && runButton.onclick) {
+                runButton.onclick();
+            }
+        };
+        refineShorterChip.onclick = function () {
+            runRefinementInstruction("Rewrite to be noticeably shorter and more concise while keeping the meaning intact.");
+        };
+        refineLongerChip.onclick = function () {
+            runRefinementInstruction("Expand with more supporting detail, examples, and depth while keeping the same voice.");
+        };
+        // 2026-05-29 (v20260529a): Why chip click handler mirrors the
+        // detailsToggle that was previously the only entry point to the
+        // insight grid. Toggle the same `.is-collapsed` class, mirror
+        // aria-expanded across both nodes so screen readers see one
+        // disclosure state regardless of which control the keyboard
+        // landed on, and keep the detailsToggle's listener wired (we
+        // hide it in CSS rather than removing the DOM node, so any
+        // existing integration that walks `.demo-ai-details-toggle`
+        // still has a node to find).
+        refineWhyChip.onclick = function (e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            var stillCollapsed = insightGrid.classList.toggle("is-collapsed");
+            var isOpen = !stillCollapsed;
+            refineWhyChip.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            if (detailsToggle && detailsToggle.setAttribute) {
+                detailsToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            }
+        };
 
         var applyRow = append(grid, "div", "", "demo-actions-row demo-ai-apply-row");
-        var applyPlanButton = append(applyRow, "button", "", "is-primary", "Apply");
+        applyRow.setAttribute("role", "group");
+        applyRow.setAttribute("aria-label", "Ask AI apply actions");
+        var applyPlanButton = append(applyRow, "button", "", "is-primary");
         applyPlanButton.type = "button";
         applyPlanButton.disabled = true;
-        var acceptSelectionButton = append(applyRow, "button", "", "", "Replace selection");
+        applyPlanButton.setAttribute("data-rte-ai-dialog-action", "apply");
+        // 2026-05-22 (v20260522a): surface the Ctrl/Cmd+Enter apply shortcut
+        // on hover + to screen readers. Mirrors the Generate button's
+        // affordance pattern (since v20260509j) — title attribute for
+        // mouse users, aria-keyshortcuts for screen readers. The
+        // dialog-level keydown handler (added below) fires this button
+        // when the shortcut hits from anywhere in the dialog outside the
+        // source textarea.
+        applyPlanButton.title = "Apply AI suggestion (Ctrl+Enter)";
+        applyPlanButton.setAttribute("aria-keyshortcuts", "Control+Enter");
+        setReviewV2ButtonContent(applyPlanButton, "check", "Apply");
+        var acceptSelectionButton = append(applyRow, "button", "", "");
         acceptSelectionButton.type = "button";
         acceptSelectionButton.disabled = !snapshot.hasSelection;
-        var previewSelectionButton = append(applyRow, "button", "", "secondary", "Preview inline");
+        acceptSelectionButton.setAttribute("data-rte-ai-dialog-action", "selection");
+        setReviewV2ButtonContent(acceptSelectionButton, "check", "Replace selection");
+        var previewSelectionButton = append(applyRow, "button", "", "secondary");
         previewSelectionButton.type = "button";
         previewSelectionButton.disabled = !snapshot.hasSelection;
-        var acceptBelowButton = append(applyRow, "button", "", "secondary", "Insert below");
+        previewSelectionButton.setAttribute("data-rte-ai-dialog-action", "preview");
+        setReviewV2ButtonContent(previewSelectionButton, "eyeOn", "Preview");
+        var acceptBelowButton = append(applyRow, "button", "", "secondary");
         acceptBelowButton.type = "button";
-        var acceptDocumentButton = append(applyRow, "button", "", "secondary", "Replace document");
+        acceptBelowButton.setAttribute("data-rte-ai-dialog-action", "insert");
+        setReviewV2ButtonContent(acceptBelowButton, "arrowRight", "Insert below");
+        var acceptDocumentButton = append(applyRow, "button", "", "secondary");
         acceptDocumentButton.type = "button";
-        var rejectButton = append(applyRow, "button", "", "secondary", "Reject");
+        acceptDocumentButton.setAttribute("data-rte-ai-dialog-action", "document");
+        setReviewV2ButtonContent(acceptDocumentButton, "checkAll", "Replace doc");
+        // 2026-05-08 (v20260508t): "More" toggle pinned just before Discard.
+        // Hides Replace selection / Preview / Insert below / Replace doc by
+        // default so the default surface only shows Apply (smart primary) +
+        // Discard. Same pattern lives on chat assistant messages so both AI
+        // windows share a vocabulary. Hidden buttons stay in the DOM and
+        // keep their accessibility / recommended-action wiring intact.
+        // 2026-05-24 (v20260524a): More toggle → icon-only kebab. Pre-pass
+        // the toggle carried both the ⋯ glyph AND the "More" text label,
+        // claiming ~70px on the apply row (icon + 4px gap + text + padding).
+        // The kebab glyph is the universal "more options" affordance every
+        // modern AI surface uses (Notion AI inline composer, ChatGPT inline
+        // edit, Linear's command palette, Slack message hover) — the text
+        // was redundant once a user recognised the dot row. Dropping the
+        // label drops the toggle to a square 32px button and lets the
+        // smart-primary Apply button claim the freed ~38px so its label
+        // ("Replace selection" / "Apply 3 pending steps" / "Re-run from
+        // source") never truncates at 440px frame width. Hover title +
+        // aria-label still surface the long-form for affordance and
+        // screen readers.
+        var applyRowMoreToggle = append(applyRow, "button", "", "secondary demo-ai-apply-more-toggle is-icon-only");
+        applyRowMoreToggle.type = "button";
+        applyRowMoreToggle.setAttribute("data-rte-ai-dialog-action", "more");
+        applyRowMoreToggle.setAttribute("aria-expanded", "false");
+        applyRowMoreToggle.title = "More apply options";
+        applyRowMoreToggle.setAttribute("aria-label", "More apply options");
+        setReviewV2ButtonContent(applyRowMoreToggle, "more", "");
+        applyRowMoreToggle.onclick = function (e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            var expanded = applyRow.classList.toggle("is-show-more");
+            applyRowMoreToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+        };
+
+        // 2026-05-30 (v20260530a): reparent the four refine chips from the
+        // detached refineRow into the apply row, inserting them just before
+        // the kebab `applyRowMoreToggle` so DOM order reads:
+        //   Apply (primary) → alt-apply buttons (hidden by default) →
+        //   Try again → Shorter → Longer → Why ▸ → ⋯ kebab
+        // CSS hides the alt-apply buttons in the default non-`is-show-more`
+        // state, so the visible default is:
+        //   [Apply primary]  [Try again] [Shorter] [Longer] [Why ▸]  [⋯]
+        // One cohesive action bar instead of two stacked rows — matches the
+        // affordance Notion AI / Claude inline edit / Tiptap AI bubble ship.
+        applyRow.insertBefore(refineRetryChip, applyRowMoreToggle);
+        applyRow.insertBefore(refineShorterChip, applyRowMoreToggle);
+        applyRow.insertBefore(refineLongerChip, applyRowMoreToggle);
+        applyRow.insertBefore(refineWhyChip, applyRowMoreToggle);
+
+        // 2026-05-09 (v20260509j): Discard trash button detached from the
+        // visible apply row. The dialog frame already renders an X close
+        // button at top-right via editor.createDialog, and the ESC
+        // keydown handler dismisses on the keyboard — three close
+        // affordances in the same dialog confused first-time users
+        // about whether the trash meant "throw away the suggestion I
+        // just applied" vs "close without applying" (the same
+        // dual-affordance ambiguity earlier passes called out for the
+        // kebab More toggle). Same shape Notion AI inline composer /
+        // ChatGPT inline edit / Tiptap AI bubble use: the close X is
+        // the single dismissal affordance. Kept as a detached node so
+        // existing focus-traversal arrays (orderedButtons,
+        // remainingButtons, actionButtons) and disable-state syncs noop
+        // without each call site having to be split between detached
+        // and live render paths. Saves ~30px of horizontal real estate
+        // on the apply row.
+        var rejectButton = document.createElement("button");
         rejectButton.type = "button";
+        rejectButton.className = "secondary is-detached";
+        rejectButton.setAttribute("data-rte-ai-dialog-action", "reject");
+        setReviewV2ButtonContent(rejectButton, "trash", "Discard");
+
+        // 2026-05-08: removed the "Suggested next step" guidance card from
+        // the visible UI. The smart Apply-row primary button already shifts
+        // its label to mirror the recommended action (e.g. "Replace
+        // selection" / "Apply 3 pending steps" / "Re-run from source"), so
+        // the card was duplicating the same hint inside a separate panel.
+        // The guidance nodes are still created (detached) so the existing
+        // syncDialogRecommendedActionUi code path keeps writing to them
+        // and doesn't have to be split between two render flows.
+        var applyGuidance = document.createElement("div");
+        applyGuidance.className = "demo-ai-apply-guidance";
+        applyGuidance.style.display = "none";
+        applyGuidance.setAttribute("role", "group");
+        var applyGuidanceHeader = append(applyGuidance, "div", "", "demo-ai-apply-guidance-header");
+        var applyGuidanceTitle = append(applyGuidanceHeader, "span", "", "demo-ai-apply-guidance-title", "Next");
+        var applyGuidanceBadge = append(applyGuidanceHeader, "span", "", "demo-ai-apply-guidance-badge");
+        var applyGuidanceDetail = append(applyGuidance, "div", "", "demo-ai-apply-guidance-detail");
 
         var status = append(grid, "div", "", "demo-ai-dialog-status");
+
+        var detailsToggle = append(grid, "button", "", "demo-ai-details-toggle", "Details");
+        detailsToggle.type = "button";
+        detailsToggle.setAttribute("aria-expanded", "false");
+        detailsToggle.setAttribute("aria-controls", "rte-ai-details-" + (Date.now()));
+        detailsToggle.title = "Show why and the operation plan";
+
+        var insightGrid = append(grid, "div", "", "demo-ai-insight-grid is-collapsed");
+        insightGrid.id = detailsToggle.getAttribute("aria-controls");
+        // 2026-05-29 (v20260529a): the Why chip created above (before
+        // detailsToggle) shares the same disclosure target. Wire its
+        // aria-controls now that the insightGrid id has been minted so
+        // screen readers can announce the relationship from either
+        // control. The detailsToggle node itself is hidden via CSS
+        // (the chip is now the visible affordance) but kept in DOM
+        // for selector compatibility.
+        if (refineWhyChip && refineWhyChip.setAttribute) {
+            refineWhyChip.setAttribute("aria-controls", insightGrid.id);
+        }
+
+        // 2026-05-24 (v20260524a): reading order — Details disclosure and
+        // its insight panel pulled above the Apply row so the flow reads
+        // result → (optional) Why → Apply. Pre-pass the order was
+        // result → Apply → status → Details, which forced users curious
+        // about the rationale to scroll past the action buttons before
+        // they could open the explanation. Same shape Notion AI inline
+        // composer / Tiptap AI bubble / ChatGPT inline edit ship — the
+        // "Why this change" affordance sits next to the suggestion, NOT
+        // below the accept/reject controls. status stays where it is
+        // (below applyRow) so transient feedback ("Apply succeeded",
+        // "Generation failed") remains a quiet trailing line. The DOM
+        // reordering is structural-only — every `var` reference above
+        // still resolves, and every selector / focus-traversal walker
+        // that targets `.demo-ai-details-toggle` / `.demo-ai-insight-grid`
+        // keeps working. Customers who want the prior order back can
+        // override with two `order` rules on `.demo-ai-dialog-grid > *`.
+        grid.insertBefore(detailsToggle, applyRow);
+        grid.insertBefore(insightGrid, applyRow);
+
+        detailsToggle.onclick = function () {
+            var isOpen = insightGrid.classList.toggle("is-collapsed");
+            detailsToggle.setAttribute("aria-expanded", isOpen ? "false" : "true");
+        };
+
+        var reasonPanel = append(insightGrid, "div", "", "demo-ai-reason-panel");
+        append(reasonPanel, "label", "", "", "Why");
+        var reasonCopy = append(reasonPanel, "div", "", "demo-ai-reason-copy", "The reason will appear here once a suggestion is generated.");
+
+        var planPanel = append(insightGrid, "div", "", "demo-ai-plan-panel");
+        append(planPanel, "label", "", "", "Plan");
+        var planNote = document.createElement("div");
+        var planStatus = append(planPanel, "div", "", "demo-ai-plan-status");
+        var planStatusMessage = append(planStatus, "span", "", "demo-ai-plan-status-message");
+        var planStatusAction = append(planStatus, "button", "", "secondary demo-ai-plan-status-action", "Re-run");
+        planStatusAction.type = "button";
+        planStatusAction.style.display = "none";
+        planStatusAction.setAttribute("data-rte-ai-dialog-action", "rerun");
+        var planSummary = append(planPanel, "div", "", "demo-ai-plan-summary");
+        var planList = append(planPanel, "ul", "", "demo-ai-plan-list");
 
         function getDialogResolvedAction(mode) {
             var latest = dialoginner.__aiResolved;
@@ -9993,6 +16799,20 @@ function RTE_Plugin_AIToolkit() {
             for (var index = 0; index < modes.length; index++) {
                 var option = append(modeSelect, "option", "", "", modes[index].title || modes[index].id);
                 option.value = modes[index].id;
+            }
+            // 2026-05-19 (v20260519a): defensively force the first option
+            // to be the selected one after populating. Without this the
+            // <select> opens with selectedIndex=-1 in some host contexts
+            // (observed when the dialog is created on a focus-traversal
+            // path that disconnects the select briefly during append) so
+            // `modeSelect.value` reads "" — and every downstream piece
+            // that branches on `modeSelect.value === "translate"` etc.
+            // sees an empty string. The first option is the visible
+            // default anyway (browsers paint it selected on render); we
+            // just need the DOM property to match so the title/caption/
+            // language-visibility flows resolve at dialog-open. */
+            if (modeSelect.options.length && modeSelect.selectedIndex < 0) {
+                modeSelect.selectedIndex = 0;
             }
             populateTranslateLanguages();
             updateModeHelp();
@@ -10014,24 +16834,214 @@ function RTE_Plugin_AIToolkit() {
         }
 
         function updateLanguageVisibility() {
-            languageField.style.display = modeSelect.value === "translate" ? "" : "none";
+            var showLanguage = modeSelect.value === "translate";
+            languageField.style.display = showLanguage ? "" : "none";
+            if (compactControls && compactControls.classList) {
+                compactControls.classList.toggle("is-no-language", !showLanguage);
+            }
+        }
+
+        // 2026-05-19 (v20260519a): build the trailing scope+scale tail
+        // (" · On selection, 124 chars") for the pre-result mode caption.
+        // Reads sourceArea.value when present (user typed/loaded text),
+        // else falls back to the captured snapshot at the requested scope.
+        // Returns "" if there's nothing to operate on yet (empty source
+        // with no snapshot), so the caption stays clean on a fresh-open
+        // dialog with no editor selection.
+        // 2026-05-22 (v20260522a): tightened the wording from the verbose
+        // " · On selection, 124 chars" to "Selection · 124 chars" so
+        // updateModeHelp can swap the entire caption to the scope summary
+        // (dropping the redundant mode description) once there's text to
+        // run AI on. The leading " · " separator is no longer prepended
+        // here; updateModeHelp owns the join.
+        function buildModeContextSuffix() {
+            if (!sourceArea) {
+                return "";
+            }
+            var requestedScope = dialoginner.__aiSourceScope === "selection" ? "selection" : "document";
+            var snapshot = dialoginner.__aiSnapshot;
+            var liveText = sourceArea.value || "";
+            var effectiveScope = requestedScope;
+            var charCount = 0;
+            if (liveText) {
+                charCount = liveText.length;
+                if (!dialoginner.__aiSourceLinkedToEditor) {
+                    // User typed directly into the source area — show
+                    // "Typed" so they know the scope toggle won't
+                    // overwrite their input unless they click reload.
+                    effectiveScope = "typed";
+                }
+            }
+            else if (snapshot) {
+                var fallback = requestedScope === "selection"
+                    ? (snapshot.text || "")
+                    : (snapshot.wholeText || "");
+                charCount = fallback.length;
+                if (requestedScope === "selection" && !snapshot.hasSelection) {
+                    effectiveScope = "document";
+                    charCount = (snapshot.wholeText || "").length;
+                }
+            }
+            if (!charCount) {
+                return "";
+            }
+            var countLabel = charCount > 999
+                ? (Math.round(charCount / 100) / 10) + "K"
+                : String(charCount);
+            var scopeLabel;
+            if (effectiveScope === "typed") {
+                scopeLabel = "Typed prompt";
+            }
+            else if (effectiveScope === "selection") {
+                scopeLabel = "Selection";
+            }
+            else {
+                scopeLabel = "Document";
+            }
+            return scopeLabel + " · " + countLabel + " chars";
+        }
+
+        // 2026-05-19 (v20260519a): mirror the active AI mode into the
+        // dialog frame's header title so the surface name reads as
+        // "Ask AI · Proofread" / "Ask AI · Translate (Spanish)" instead
+        // of the static "Ask AI". The header span was rendered by
+        // __UI_CreateDialogFrame in rte.js as `.rte-dialog-header-text`
+        // inside `.rte-dialog-header`, both children of dialoginner.
+        // Falls back to the static title when no mode label resolves
+        // (e.g. an extension registered a mode without a title).
+        function updateDialogFrameTitle(modeLabel) {
+            if (!dialoginner || !dialoginner.querySelector) {
+                return;
+            }
+            // __UI_CreateDialogFrame in rte.js renders the header as a
+            // <rte-dialog-header> custom element containing a
+            // <rte-dialog-header-text> custom element (NOT classes — the
+            // CSS targets the tag name directly). The header is appended
+            // to dialoginner and our content is appended after.
+            var titleSpan = dialoginner.querySelector("rte-dialog-header rte-dialog-header-text")
+                || dialoginner.querySelector("rte-dialog-header-text");
+            if (!titleSpan) {
+                return;
+            }
+            // 2026-05-31 (v20260531a): drop the "Ask AI · " prefix from the
+            // visible title. Pre-pass the title row read as "Ask AI ·
+            // Proofread" / "Ask AI · Translate (Spanish)" — but the gradient
+            // AI toolbar button that opens this dialog already names the
+            // surface, and the only thing changing across renders is the
+            // active mode after the "·". The prefix was the third place
+            // "Ask AI" landed in the same screen (toolbar button hover,
+            // dialog header, and the Action select's surrounding panel).
+            // Same shape Notion AI inline composer ("Improve writing"),
+            // Claude inline edit ("Make shorter"), ChatGPT inline edit
+            // ("Rewrite") use — the surface name is implied by entry
+            // context; the title names ONLY the active mode. Falls back
+            // to the configured surface name when no mode has resolved
+            // yet (first paint before populateDialogModes returns), so
+            // the dialog never opens with an empty title. Aria-label
+            // keeps the full "Ask AI · Mode" form for screen readers
+            // since that's the role-name they announce on dialog open;
+            // visual users see the shorter form.
+            var base = config.text_aiassist || "Ask AI";
+            var resolvedLabel = modeLabel || "";
+            if (resolvedLabel && modeSelect.value === "translate") {
+                resolvedLabel = resolvedLabel + " (" + getTranslateLanguageLabel(languageSelect.value || "spanish") + ")";
+            }
+            titleSpan.innerText = resolvedLabel || base;
+            if (dialoginner.setAttribute) {
+                dialoginner.setAttribute("aria-label", resolvedLabel ? (base + " · " + resolvedLabel) : base);
+            }
         }
 
         function updateModeHelp() {
+            // 2026-05-08: visible mode-help paragraph removed from the
+            // dialog. Same text now lives on the action select's title
+            // attribute (browser tooltip) plus the detached modeHelp node
+            // so downstream callers that read modeHelp.innerText still
+            // resolve to the latest hint.
             var modes = getDialogModes();
+            var helpText = "Run this AI mode against the current source text.";
+            var modeLabel = "";
             for (var index = 0; index < modes.length; index++) {
                 if (modes[index].id === modeSelect.value) {
+                    modeLabel = modes[index].title || modes[index].id;
                     if (modes[index].id === "translate") {
-                        modeHelp.innerText = (modes[index].description || "Prepare a translated draft in the selected language.") + " Current target: " + getTranslateLanguageLabel(languageSelect.value || "spanish") + ".";
+                        helpText = (modes[index].description || "Prepare a translated draft in the selected language.") + " Current target: " + getTranslateLanguageLabel(languageSelect.value || "spanish") + ".";
                     }
                     else {
-                        modeHelp.innerText = modes[index].description || "Run this AI mode against the current source text.";
+                        helpText = modes[index].description || "Run this AI mode against the current source text.";
                     }
-                    updateLanguageVisibility();
-                    return;
+                    break;
                 }
             }
-            modeHelp.innerText = "Run this AI mode against the current source text.";
+            // 2026-05-17 (v20260523a): caption reverts to the mode
+            // DESCRIPTION as its single signal. Previously (v20260522a)
+            // the caption swapped to a scope+count suffix once text was
+            // loaded — but now the new labeled scope <select> shows
+            // scope + count in its closed-state label ("Document · 124
+            // chars"), so the caption is free to carry the discoverability
+            // signal it was originally designed for: what the active mode
+            // actually does ("Clean up grammar, spacing, and readability
+            // issues.").
+            //
+            // Empty-source fresh-open still shows the same description;
+            // post-result the caption stays hidden via the existing
+            // `.demo-ai-dialog-grid:not(.is-pre-result) .demo-ai-mode-caption
+            // { display: none }` rule.
+            //
+            // `buildModeContextSuffix` is still called below to keep its
+            // detached node legacy intact (modeChip writes), so existing
+            // integrations and the scopeHint readback path remain
+            // wired without each call site needing to be split between
+            // caption-fed and select-fed flows.
+            modeHelp.innerText = helpText;
+            if (modeSelect && modeSelect.setAttribute) {
+                modeSelect.setAttribute("title", helpText);
+            }
+            // 2026-05-19 (v20260519a): dialog frame title now reflects
+            // the active mode ("Ask AI · Proofread" / "Ask AI · Translate
+            // (Spanish)") instead of the static "Ask AI". Earlier baseline
+            // forced the user's eye to read two pieces of info — the
+            // frame title ("Ask AI") plus the Action dropdown ("Proofread")
+            // — to know what the dialog was about to do. Same idiom Notion
+            // AI / Linear's command palette use: the surface title names
+            // the active command, not the surface category. The Action
+            // dropdown remains the switcher; the frame title now mirrors
+            // the dropdown value so both surfaces reinforce the same
+            // signal at a glance. Zero vertical cost (rides on existing
+            // dialog header).
+            updateDialogFrameTitle(modeLabel);
+            // 2026-05-17 (v20260517a): mode-aware source placeholder. The
+            // generic "Type or paste text…" placeholder gave no signal
+            // about what the active mode would do — same friction Notion AI
+            // closes by saying "Tell AI what to write…" vs "Improve writing
+            // for…" depending on the active command. Updating the
+            // placeholder per mode is a near-zero-cost discoverability win
+            // that costs no vertical real estate. */
+            if (sourceArea && !sourceArea.value) {
+                var modeId = modeSelect.value || "";
+                var placeholders = {
+                    proofread: "Paste text to proofread…",
+                    rewrite: "Paste text to rewrite…",
+                    shorten: "Paste text to shorten…",
+                    expand: "Paste text to expand…",
+                    summarize: "Paste text to summarize…",
+                    translate: "Paste text to translate…",
+                    justify: "Paste text to justify the edit…",
+                    explain: "Paste text to explain…"
+                };
+                sourceArea.placeholder = placeholders[modeId] || "Type or paste text…";
+            }
+            // 2026-05-08 (v20260508s): refresh the header mode-name chip.
+            // For Translate the chip carries the target language so users
+            // see "Translate · Spanish" instead of just "Translate".
+            if (modeChip) {
+                var chipLabel = modeLabel || "";
+                if (modeLabel && modeSelect.value === "translate") {
+                    chipLabel = modeLabel + " · " + getTranslateLanguageLabel(languageSelect.value || "spanish");
+                }
+                modeChip.innerText = chipLabel;
+                modeChip.style.display = chipLabel ? "" : "none";
+            }
             updateLanguageVisibility();
         }
 
@@ -10046,11 +17056,259 @@ function RTE_Plugin_AIToolkit() {
             dialoginner.__aiOperationStates["step-" + index] = state || "";
         }
 
-        function markPlanStale(message) {
+        function expandDialogDetails() {
+            if (insightGrid && insightGrid.classList && insightGrid.classList.contains("is-collapsed")) {
+                insightGrid.classList.remove("is-collapsed");
+                if (detailsToggle && detailsToggle.setAttribute) {
+                    detailsToggle.setAttribute("aria-expanded", "true");
+                }
+            }
+        }
+
+        function markPlanStale(message, actionType) {
             dialoginner.__aiPlanStale = true;
-            status.innerText = message || "The editor changed. Re-run Ask AI to refresh the remaining plan.";
+            dialoginner.__aiPlanStaleReason = message || "Editor changed. Re-run to refresh.";
+            dialoginner.__aiPlanStaleAction = actionType === "source" ? "source" : "editor";
+            status.innerText = dialoginner.__aiPlanStaleReason;
             renderOperationPlan(dialoginner.__aiResolved);
             updatePreview();
+            expandDialogDetails();
+        }
+
+        function getDialogSourceTextForScope(snapshotValue, scope) {
+            if (!snapshotValue) {
+                return "";
+            }
+            return scope === "selection"
+                ? (snapshotValue.text || snapshotValue.wholeText || "")
+                : (snapshotValue.wholeText || "");
+        }
+
+        function isDialogDetachedSelectionScopeActiveWithoutLiveSelection(snapshotValue, scope) {
+            return scope === "selection"
+                && (!snapshotValue || !snapshotValue.hasSelection)
+                && !dialoginner.__aiSourceLinkedToEditor
+                && !!normalizeText(sourceArea.value);
+        }
+
+        function buildDialogScopeHint(snapshotValue, scope) {
+            if (scope === "selection") {
+                return snapshotValue && snapshotValue.hasSelection
+                    ? "Selection ready"
+                    : (isDialogDetachedSelectionScopeActiveWithoutLiveSelection(snapshotValue, scope)
+                        ? "Selection source loaded - select text to apply inline"
+                        : "No selection - using whole document");
+            }
+            if (snapshotValue && snapshotValue.hasSelection) {
+                return "Whole document loaded - selection available";
+            }
+            return "Whole document loaded";
+        }
+
+        function getDialogEffectiveSourceScope(snapshotValue, scope) {
+            return scope === "selection" && snapshotValue && snapshotValue.hasSelection
+                ? "selection"
+                : "document";
+        }
+
+        function isSelectionDependentOperation(operation) {
+            return !!operation && (operation.type === "preview-suggestion" || operation.type === "replace-selection");
+        }
+
+        function hasSelectionDependentOperations(operations, indexes) {
+            var list = indexes && indexes.length ? indexes : null;
+            if (!list) {
+                for (var operationIndex = 0; operationIndex < operations.length; operationIndex++) {
+                    if (isSelectionDependentOperation(operations[operationIndex])) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            for (var index = 0; index < list.length; index++) {
+                if (isSelectionDependentOperation(operations[list[index]])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function getDialogRunScope(snapshotValue) {
+            var requestedScope = dialoginner.__aiSourceScope === "selection" ? "selection" : "document";
+            return dialoginner.__aiSourceLinkedToEditor
+                ? getDialogEffectiveSourceScope(snapshotValue, requestedScope)
+                : requestedScope;
+        }
+
+        function getDialogActionScope(resolved, requestedScope, sourceScope) {
+            if (dialoginner.__aiPlanStale) {
+                return dialoginner.__aiSourceLinkedToEditor ? sourceScope : requestedScope;
+            }
+            if (resolved && resolved.request) {
+                return resolved.request.scope === "selection" ? "selection" : "document";
+            }
+            return dialoginner.__aiSourceLinkedToEditor ? sourceScope : requestedScope;
+        }
+
+        function buildDialogScopeButtonAriaLabel(scopeId, snapshotValue, activeScope, selectionScopeHeld) {
+            var useSelection = scopeId === "selection";
+            if (useSelection) {
+                if (selectionScopeHeld) {
+                    return "Use selection. Active scope. Ask AI is keeping the current selection-based source. Select text to apply or reload it again.";
+                }
+                if (!snapshotValue || !snapshotValue.hasSelection) {
+                    return "Use selection. Unavailable until text is selected.";
+                }
+                return activeScope === "selection"
+                    ? "Use selection. Active scope. Ask AI is using the current selection."
+                    : "Use selection. Available scope. Switch Ask AI to the current selection.";
+            }
+            return activeScope === "selection"
+                ? "Use document. Available scope. Switch Ask AI to the whole document."
+                : "Use document. Active scope. Ask AI is using the whole document.";
+        }
+
+        function syncDialogScopeUi() {
+            var scope = dialoginner.__aiSourceScope === "selection" ? "selection" : "document";
+            var effectiveScope = getDialogEffectiveSourceScope(dialoginner.__aiSnapshot, scope);
+            var selectionScopeHeld = isDialogDetachedSelectionScopeActiveWithoutLiveSelection(dialoginner.__aiSnapshot, scope);
+            var activeScope = selectionScopeHeld ? "selection" : effectiveScope;
+            if (scopeHint) {
+                scopeHint.innerText = buildDialogScopeHint(dialoginner.__aiSnapshot, scope);
+            }
+            if (loadSelectionButton) {
+                loadSelectionButton.disabled = !dialoginner.__aiSnapshot || !dialoginner.__aiSnapshot.hasSelection;
+            }
+            if (loadSelectionButton && loadSelectionButton.setAttribute) {
+                loadSelectionButton.setAttribute("aria-pressed", activeScope === "selection" ? "true" : "false");
+                loadSelectionButton.setAttribute("aria-label", buildDialogScopeButtonAriaLabel("selection", dialoginner.__aiSnapshot, activeScope, selectionScopeHeld));
+            }
+            if (loadDocumentButton && loadDocumentButton.setAttribute) {
+                loadDocumentButton.setAttribute("aria-pressed", activeScope === "document" ? "true" : "false");
+                loadDocumentButton.setAttribute("aria-label", buildDialogScopeButtonAriaLabel("document", dialoginner.__aiSnapshot, activeScope, selectionScopeHeld));
+            }
+            // 2026-05-17 (v20260523a): mirror scope + live char count
+            // into the labeled <select>. Option labels stay short
+            // ("Selection · 124", "Document · 2.4K") so the dropdown
+            // closed-state shows the active scope and size at a glance.
+            // Selection option is disabled when no selection is captured
+            // — same as the old icon-only Selection button's disabled
+            // state, surfaced visibly inside the dropdown instead of
+            // hidden behind a hover tooltip.
+            if (scopeSelect) {
+                var snap = dialoginner.__aiSnapshot;
+                var hasSelection = !!(snap && snap.hasSelection);
+                var selChars = hasSelection ? (snap.text || "").length : 0;
+                var docChars = snap ? (snap.wholeText || "").length : 0;
+                scopeOptionSelection.disabled = !hasSelection;
+                scopeOptionSelection.text = hasSelection
+                    ? "Selection · " + formatDialogScopeCount(selChars)
+                    : "Selection (none)";
+                scopeOptionDocument.text = docChars
+                    ? "Document · " + formatDialogScopeCount(docChars)
+                    : "Document";
+                scopeSelect.value = activeScope === "selection" ? "selection" : "document";
+                scopeSelect.setAttribute("title", buildDialogScopeHint(snap, scope));
+                // 2026-06-01 (v20260601a): swap the <select> for a quiet inline
+                // caption whenever only one scope is valid (no editor selection
+                // captured). The select rendered with a disabled "Selection
+                // (none)" option felt like a picker that couldn't be picked —
+                // hide it and surface the same Document · X chars info as
+                // plain text so the user sees WHAT AI will run on without
+                // a chevron promising a choice. When selection appears, the
+                // select returns. is-scope-implicit on compactControls drives
+                // the CSS toggle so both nodes stay in DOM.
+                var captionText = docChars
+                    ? "Document · " + formatDialogScopeCount(docChars)
+                    : "Document";
+                if (scopeCaption) {
+                    scopeCaption.innerText = captionText;
+                }
+                if (compactControls && compactControls.classList) {
+                    if (hasSelection) {
+                        compactControls.classList.remove("is-scope-implicit");
+                    }
+                    else {
+                        compactControls.classList.add("is-scope-implicit");
+                    }
+                }
+            }
+        }
+
+        function formatDialogScopeCount(n) {
+            if (!n) return "0";
+            if (n > 999) return (Math.round(n / 100) / 10) + "K chars";
+            return n + " chars";
+        }
+
+        function markDialogSourceDetached() {
+            dialoginner.__aiSourceLinkedToEditor = false;
+        }
+
+        function hasDialogSelectionContentChanged(previousSnapshot, liveSnapshot) {
+            return normalizeText(previousSnapshot && previousSnapshot.text ? previousSnapshot.text : "")
+                !== normalizeText(liveSnapshot && liveSnapshot.text ? liveSnapshot.text : "");
+        }
+
+        // 2026-05-13 (v20260513e): status messages trimmed of repeated
+        // boilerplate. The earlier "The editor selection cleared. Re-run
+        // Ask AI to refresh this suggestion." (62 chars) duplicated the
+        // dialog title ("Ask AI") and stamped redundant articles. With
+        // the status row sitting directly below the Result/Apply row,
+        // the user already knows which dialog they're in — the message
+        // just needs to name the thing that changed and the action.
+        // Same shape ChatGPT inline edit / Notion AI status lines ship
+        // ("Selection changed. Retry.", "Document edited. Refresh.").
+        function getDialogEditorChangeMessage(scope, liveSnapshot, previousSnapshot) {
+            if (scope === "selection") {
+                if (previousSnapshot && previousSnapshot.hasSelection && liveSnapshot && !liveSnapshot.hasSelection) {
+                    return "Selection cleared. Re-run to refresh.";
+                }
+                if (previousSnapshot && liveSnapshot && previousSnapshot.hasSelection && liveSnapshot.hasSelection
+                    && areRangesEquivalent(previousSnapshot.range, liveSnapshot.range)
+                    && hasDialogSelectionContentChanged(previousSnapshot, liveSnapshot)) {
+                    return "Selection text changed. Re-run to refresh.";
+                }
+                return "Selection changed. Re-run to refresh.";
+            }
+            return "Document changed. Re-run to refresh.";
+        }
+
+        function getDialogSourceChangeMessage(sourceText) {
+            return normalizeText(sourceText)
+                ? "Source changed. Re-run to refresh."
+                : "Source cleared. Reload from the editor or type source text before re-running.";
+        }
+
+        function getDialogModeChangeMessage() {
+            return "Mode changed. Re-run to refresh.";
+        }
+
+        function getDialogLanguageChangeMessage(language) {
+            return "Language → " + getTranslateLanguageLabel(language || "spanish") + ". Re-run to refresh.";
+        }
+
+        function getDialogScopeChangeMessage(scope) {
+            return "Scope → " + (scope === "selection" ? "selection" : "document") + ". Re-run to refresh.";
+        }
+
+        function getDialogEditorReloadMessage(scope) {
+            return "Reloaded from " + (scope === "selection" ? "selection" : "document") + ". Re-run to refresh.";
+        }
+
+        function getDialogDetachedEditorChangeMessage(scope, liveSnapshot, previousSnapshot) {
+            if (scope === "selection") {
+                if (previousSnapshot && previousSnapshot.hasSelection && liveSnapshot && !liveSnapshot.hasSelection) {
+                    return "Selection cleared. Re-run to refresh.";
+                }
+                if (previousSnapshot && liveSnapshot && previousSnapshot.hasSelection && liveSnapshot.hasSelection
+                    && areRangesEquivalent(previousSnapshot.range, liveSnapshot.range)
+                    && hasDialogSelectionContentChanged(previousSnapshot, liveSnapshot)) {
+                    return "Selection text changed. Re-run to refresh.";
+                }
+                return "Selection changed. Re-run to refresh.";
+            }
+            return "Document changed. Re-run to refresh.";
         }
 
         function getPendingOperationIndexes(operations) {
@@ -10063,9 +17321,500 @@ function RTE_Plugin_AIToolkit() {
             return pending;
         }
 
+        function getDialogSinglePendingOperationType() {
+            var operations = dialoginner.__aiResolved && dialoginner.__aiResolved.operations
+                ? dialoginner.__aiResolved.operations
+                : [];
+            var pendingIndexes = getPendingOperationIndexes(operations);
+            if (pendingIndexes.length !== 1) {
+                return "";
+            }
+            var operation = operations[pendingIndexes[0]];
+            return operation && operation.type ? operation.type : "";
+        }
+
+        function getDialogActionState() {
+            var resolved = dialoginner.__aiResolved || null;
+            var operations = resolved && resolved.operations ? resolved.operations : [];
+            var pendingIndexes = getPendingOperationIndexes(operations);
+            var requestedScope = dialoginner.__aiSourceScope === "selection" ? "selection" : "document";
+            var sourceScope = getDialogEffectiveSourceScope(dialoginner.__aiSnapshot, requestedScope);
+            var hasSelection = !!(dialoginner.__aiSnapshot && dialoginner.__aiSnapshot.hasSelection);
+            var hasResult = !!normalizeText(resultArea.value);
+            var actionScope = getDialogActionScope(resolved, requestedScope, sourceScope);
+            var pendingSelectionDependent = hasSelectionDependentOperations(operations, pendingIndexes);
+            return {
+                hasSource: !!normalizeText(sourceArea.value),
+                hasResult: hasResult,
+                hasSelection: hasSelection,
+                isStale: !!dialoginner.__aiPlanStale,
+                requestedScope: requestedScope,
+                scope: sourceScope,
+                actionScope: actionScope,
+                staleAction: dialoginner.__aiPlanStaleAction === "source" ? "source" : "editor",
+                operations: operations,
+                pendingIndexes: pendingIndexes,
+                pendingSelectionDependent: pendingSelectionDependent,
+                canApplyPlan: !!pendingIndexes.length && (!pendingSelectionDependent || hasSelection),
+                canPreview: hasResult && actionScope === "selection" && hasSelection,
+                canReplaceSelection: hasResult && actionScope === "selection" && hasSelection,
+                canInsert: hasResult,
+                canReplaceDocument: hasResult && actionScope === "document",
+                pendingOperationType: pendingIndexes.length === 1 && operations[pendingIndexes[0]] && operations[pendingIndexes[0]].type
+                    ? operations[pendingIndexes[0]].type
+                    : ""
+            };
+        }
+
+        function getDialogActionDetail(actionId, actionState) {
+            actionState = actionState || getDialogActionState();
+            if (actionId === "load-selection") {
+                return actionState.hasSelection
+                    ? "Reload the current editor selection into Ask AI."
+                    : "Select text in the editor, then reload it into Ask AI.";
+            }
+            if (actionId === "load-document") {
+                return "Reload the current editor document into Ask AI.";
+            }
+            if (actionId === "run") {
+                return actionState.hasSource
+                    ? "Generate a new AI suggestion from the current source text using the selected mode."
+                    : "Load or type source text, then run Ask AI to generate a suggestion.";
+            }
+            if (actionId === "rerun") {
+                return actionState.staleAction === "source"
+                    ? "Refresh this suggestion from the current dialog source before applying it."
+                    : "Refresh this suggestion from the current editor state before applying it.";
+            }
+            if (actionId === "copy-to-source") {
+                return actionState.hasResult
+                    ? "Copy the current AI result back into the source field before rerunning it."
+                    : "Run Ask AI first, then copy the generated result back into the source field.";
+            }
+            if (actionId === "apply") {
+                if (actionState.pendingIndexes.length > 1) {
+                    return actionState.pendingSelectionDependent && !actionState.hasSelection
+                        ? "Select text before applying this selection-based AI plan."
+                        : "Run the remaining " + actionState.pendingIndexes.length + "-step AI plan directly in the editor.";
+                }
+                switch (actionState.pendingOperationType) {
+                    case "preview-suggestion":
+                        return actionState.hasSelection
+                            ? "Show the prepared inline diff in the editor before deciding it."
+                            : "Select text before previewing this prepared inline diff in the editor.";
+                    case "replace-selection":
+                        return actionState.hasSelection
+                            ? "Replace the current selection with this prepared draft."
+                            : "Select text before replacing it with this prepared draft.";
+                    case "replace-document":
+                        return "Replace the full document with this prepared draft.";
+                    case "insert-below":
+                        return actionState.hasSelection
+                            ? "Insert this prepared draft below the current selection."
+                            : "Insert this prepared draft below the current content.";
+                    case "add-comment":
+                        return "Add this prepared AI comment without rewriting the document body.";
+                    default:
+                        return "Run the prepared AI plan directly in the editor.";
+                }
+            }
+            if (actionId === "selection") {
+                return actionState.hasSelection
+                    ? "Replace the current selection with this prepared draft."
+                    : "Select text before replacing it with this prepared draft.";
+            }
+            if (actionId === "preview") {
+                return actionState.hasSelection
+                    ? "Show this change inline in the editor before deciding it."
+                    : "Select text to preview this change inline in the editor.";
+            }
+            if (actionId === "insert") {
+                return actionState.hasSelection
+                    ? "Insert this prepared draft below the current selection."
+                    : "Insert this prepared draft below the current content.";
+            }
+            if (actionId === "document") {
+                return "Replace the full document with this prepared draft.";
+            }
+            if (actionId === "reject") {
+                return "Dismiss this prepared suggestion without changing the document.";
+            }
+            return "";
+        }
+
+        function getDialogActionLabel(actionId, actionState) {
+            actionState = actionState || getDialogActionState();
+            if (actionId === "selection") {
+                return actionState.hasSelection ? "Replace selection" : "Select text to replace";
+            }
+            if (actionId === "preview") {
+                return actionState.hasSelection ? "Preview inline" : "Select text to preview";
+            }
+            return "";
+        }
+
+        function getDialogReadyCoveredActions(actionState, recommended) {
+            var covered = {};
+            if (!recommended || !recommended.actionId) {
+                return covered;
+            }
+            if (recommended.actionId === "apply") {
+                switch (actionState.pendingOperationType) {
+                    case "preview-suggestion":
+                        covered.preview = true;
+                        break;
+                    case "replace-selection":
+                        covered.selection = true;
+                        break;
+                    case "replace-document":
+                        covered.document = true;
+                        break;
+                    case "insert-below":
+                        covered.insert = true;
+                        break;
+                }
+                return covered;
+            }
+            covered[recommended.actionId] = true;
+            return covered;
+        }
+
+        function addDialogReadyAlternative(alternatives, covered, actionId, label) {
+            if (!label || covered[actionId]) {
+                return;
+            }
+            for (var index = 0; index < alternatives.length; index++) {
+                if ((alternatives[index] || "").toLowerCase() === label.toLowerCase()) {
+                    return;
+                }
+            }
+            alternatives.push(label);
+        }
+
+        function formatDialogReadyAlternatives(alternatives) {
+            if (!alternatives || !alternatives.length) {
+                return "";
+            }
+            if (alternatives.length === 1) {
+                return alternatives[0];
+            }
+            if (alternatives.length === 2) {
+                return alternatives[0] + " or " + alternatives[1];
+            }
+            return alternatives.slice(0, alternatives.length - 1).join(", ") + ", or " + alternatives[alternatives.length - 1];
+        }
+
+        function getDialogReadyAlternativeLabels(actionState, recommended) {
+            actionState = actionState || getDialogActionState();
+            if (!actionState.hasResult || actionState.isStale) {
+                return [];
+            }
+            if (actionState.actionScope === "selection" && !actionState.hasSelection) {
+                return ["select text to apply inline"];
+            }
+            var alternatives = [];
+            var covered = getDialogReadyCoveredActions(actionState, recommended);
+            var pendingOperationType = actionState.pendingOperationType || "";
+            if (actionState.actionScope === "selection") {
+                if (actionState.hasSelection && pendingOperationType !== "preview-suggestion") {
+                    addDialogReadyAlternative(alternatives, covered, "preview", "preview inline");
+                }
+                if (actionState.hasSelection && pendingOperationType !== "replace-selection") {
+                    addDialogReadyAlternative(alternatives, covered, "selection", "replace the selection");
+                }
+                if (actionState.canInsert && pendingOperationType !== "insert-below") {
+                    addDialogReadyAlternative(alternatives, covered, "insert", "insert below");
+                }
+                return alternatives;
+            }
+            if (actionState.actionScope === "document") {
+                if (actionState.canReplaceDocument && pendingOperationType !== "replace-document") {
+                    addDialogReadyAlternative(alternatives, covered, "document", "replace the document");
+                }
+                if (actionState.canInsert && pendingOperationType !== "insert-below") {
+                    addDialogReadyAlternative(alternatives, covered, "insert", "insert below");
+                }
+            }
+            return alternatives;
+        }
+
+        function getDialogReadyStatusMessage(actionState) {
+            // 2026-05-08 (v20260508s): trimmed from a 2-3 sentence help
+            // paragraph to a one-line "Ready · <next step>" pill so the
+            // status bar stops dominating the bottom of the dialog. The
+            // longer alternative-actions copy still lives on each apply
+            // button's title/aria-label for screen readers and hover.
+            actionState = actionState || getDialogActionState();
+            var recommended = getDialogRecommendedActionInfo(actionState);
+            var recommendedLabel = recommended && recommended.label
+                ? (recommended.label || "").replace(/\s+/g, " ").trim()
+                : "";
+            if (recommendedLabel) {
+                return "Ready · " + recommendedLabel;
+            }
+            if (actionState.actionScope === "selection" && !actionState.hasSelection) {
+                return "Ready · Insert below";
+            }
+            return "Ready";
+        }
+
+        function getDialogRecommendedSummaryDetail(actionState, recommended) {
+            actionState = actionState || getDialogActionState();
+            recommended = recommended || getDialogRecommendedActionInfo(actionState);
+            var detail = recommended && recommended.detail ? (recommended.detail || "").replace(/\s+/g, " ").trim() : "";
+            var alternativeText = formatDialogReadyAlternatives(getDialogReadyAlternativeLabels(actionState, recommended));
+            if (alternativeText) {
+                detail += (detail ? " " : "") + "Other available actions: " + alternativeText + ".";
+            }
+            return detail;
+        }
+
+        function syncDialogApplyRowOrder(recommended) {
+            if (!applyRow || !applyRow.appendChild) {
+                return;
+            }
+            // 2026-05-30 (v20260530a): include the refine chips and the kebab
+            // "More" toggle in the ordered list so this function's
+            // `appendChild` re-shuffle preserves the intended row layout:
+            //   [Apply primary] → [alt-apply hidden] →
+            //   [refine chips] → [kebab] → [reject detached]
+            // Pre-pass the array only listed the apply-family buttons, so
+            // appendChild moved them to the end of the row and pushed the
+            // refine chips + kebab to the front — exactly the layout bug a
+            // post-pass live check surfaced (Apply at x=789, refine-retry
+            // at x=494 inside a 420px row). Including the chips + kebab
+            // keeps the visible default reading as:
+            //   [Apply primary]  [Try again] [Shorter] [Longer] [Why ▸]  [⋯]
+            var orderedButtons = [
+                applyPlanButton, acceptSelectionButton, previewSelectionButton,
+                acceptBelowButton, acceptDocumentButton,
+                refineRetryChip, refineShorterChip, refineLongerChip, refineWhyChip,
+                applyRowMoreToggle, rejectButton
+            ];
+            if (recommended && recommended.button && recommended.button.parentNode === applyRow) {
+                orderedButtons = [recommended.button];
+                var remainingButtons = [
+                    applyPlanButton, acceptSelectionButton, previewSelectionButton,
+                    acceptBelowButton, acceptDocumentButton,
+                    refineRetryChip, refineShorterChip, refineLongerChip, refineWhyChip,
+                    applyRowMoreToggle, rejectButton
+                ];
+                for (var buttonIndex = 0; buttonIndex < remainingButtons.length; buttonIndex++) {
+                    if (remainingButtons[buttonIndex] !== recommended.button) {
+                        orderedButtons.push(remainingButtons[buttonIndex]);
+                    }
+                }
+            }
+            for (var index = 0; index < orderedButtons.length; index++) {
+                if (orderedButtons[index] && orderedButtons[index].parentNode === applyRow) {
+                    applyRow.appendChild(orderedButtons[index]);
+                }
+            }
+        }
+
+        function syncDialogActionButtonAccessibility(button, actionId, actionState, isRecommended) {
+            if (!button) {
+                return;
+            }
+            var label = (button.innerText || button.textContent || "").replace(/\s+/g, " ").trim() || "Action";
+            var detail = getDialogActionDetail(actionId, actionState);
+            var recommendedInfo = isRecommended ? {
+                actionId: actionId,
+                label: label,
+                detail: detail
+            } : null;
+            var alternativeText = recommendedInfo
+                ? formatDialogReadyAlternatives(getDialogReadyAlternativeLabels(actionState, recommendedInfo))
+                : "";
+            var parts = [label];
+            if (detail) {
+                parts.push(detail);
+            }
+            if (alternativeText) {
+                parts.push("Other available actions: " + alternativeText + ".");
+            }
+            if (isRecommended) {
+                parts.push("Recommended next step.");
+                button.setAttribute("data-rte-ai-dialog-recommended", "true");
+            }
+            else {
+                button.removeAttribute("data-rte-ai-dialog-recommended");
+            }
+            button.setAttribute("aria-label", parts.join(". "));
+            var titleParts = [label];
+            if (detail) {
+                titleParts.push(detail);
+            }
+            if (alternativeText) {
+                titleParts.push("Other available actions: " + alternativeText + ".");
+            }
+            if (isRecommended) {
+                titleParts.push("Recommended next step.");
+            }
+            // 2026-05-22 (v20260522a): preserve any pre-set keyboard shortcut
+            // hint on the button by reading aria-keyshortcuts (the WAI-ARIA
+            // attribute set at button-create time for Generate / Apply).
+            // Without this, the dynamic title rewrite below would drop the
+            // "(Ctrl+Enter)" suffix added at button creation, so the
+            // shortcut would only be discoverable via screen-reader
+            // announcement of aria-keyshortcuts and never via mouse hover.
+            // Formatting matches the Generate button's pre-existing title
+            // suffix ("Generate AI suggestion (Ctrl+Enter)").
+            var keyHint = button.getAttribute && button.getAttribute("aria-keyshortcuts");
+            if (keyHint) {
+                var keyHintLabel = keyHint
+                    .replace(/Control\+/gi, "Ctrl+")
+                    .replace(/Meta\+/gi, "Cmd+");
+                titleParts.push("(" + keyHintLabel + ")");
+            }
+            button.title = titleParts.join(" - ");
+        }
+
+        function getDialogRecommendedActionInfo(actionState) {
+            actionState = actionState || getDialogActionState();
+            var canLoadSelectionSource = !!normalizeText(getDialogSourceTextForScope(dialoginner.__aiSnapshot, "selection"))
+                && !!(dialoginner.__aiSnapshot && dialoginner.__aiSnapshot.hasSelection);
+            var canLoadDocumentSource = !!normalizeText(getDialogSourceTextForScope(dialoginner.__aiSnapshot, "document"));
+            if (!actionState.hasSource) {
+                var preferredLoadButton = actionState.scope === "selection" ? loadSelectionButton : loadDocumentButton;
+                var preferredLoadActionId = actionState.scope === "selection" ? "load-selection" : "load-document";
+                var preferredLoadAvailable = preferredLoadActionId === "load-selection" ? canLoadSelectionSource : canLoadDocumentSource;
+                if (preferredLoadAvailable && preferredLoadButton && !preferredLoadButton.disabled) {
+                    return {
+                        actionId: preferredLoadActionId,
+                        button: preferredLoadButton,
+                        label: (preferredLoadButton.innerText || preferredLoadButton.textContent || "").replace(/\s+/g, " ").trim() || "Load source",
+                        detail: getDialogActionDetail(preferredLoadActionId, actionState)
+                    };
+                }
+                if (canLoadDocumentSource && loadDocumentButton && !loadDocumentButton.disabled) {
+                    return {
+                        actionId: "load-document",
+                        button: loadDocumentButton,
+                        label: (loadDocumentButton.innerText || loadDocumentButton.textContent || "").replace(/\s+/g, " ").trim() || "Whole document",
+                        detail: getDialogActionDetail("load-document", actionState)
+                    };
+                }
+                if (canLoadSelectionSource && loadSelectionButton && !loadSelectionButton.disabled) {
+                    return {
+                        actionId: "load-selection",
+                        button: loadSelectionButton,
+                        label: (loadSelectionButton.innerText || loadSelectionButton.textContent || "").replace(/\s+/g, " ").trim() || "Use selection",
+                        detail: getDialogActionDetail("load-selection", actionState)
+                    };
+                }
+            }
+            if (actionState.isStale && planStatusAction && planStatusAction.style.display !== "none" && !planStatusAction.disabled) {
+                return {
+                    actionId: "rerun",
+                    button: planStatusAction,
+                    label: (planStatusAction.innerText || planStatusAction.textContent || "").replace(/\s+/g, " ").trim() || (actionState.staleAction === "source" ? "Re-run from source" : "Re-run from editor"),
+                    detail: getDialogActionDetail("rerun", actionState)
+                };
+            }
+            if (!actionState.hasResult && runButton && !runButton.disabled && normalizeText(sourceArea.value)) {
+                return {
+                    actionId: "run",
+                    button: runButton,
+                    label: (runButton.innerText || runButton.textContent || "").replace(/\s+/g, " ").trim() || "Ask AI",
+                    detail: getDialogActionDetail("run", actionState)
+                };
+            }
+            if (actionState.pendingIndexes.length && applyPlanButton && !applyPlanButton.disabled) {
+                return {
+                    actionId: "apply",
+                    button: applyPlanButton,
+                    label: (applyPlanButton.innerText || applyPlanButton.textContent || "").replace(/\s+/g, " ").trim() || "Apply",
+                    detail: getDialogActionDetail("apply", actionState)
+                };
+            }
+            if (previewSelectionButton && previewSelectionButton.style.display !== "none" && !previewSelectionButton.disabled) {
+                return {
+                    actionId: "preview",
+                    button: previewSelectionButton,
+                    label: (previewSelectionButton.innerText || previewSelectionButton.textContent || "").replace(/\s+/g, " ").trim() || "Preview inline",
+                    detail: getDialogActionDetail("preview", actionState)
+                };
+            }
+            if (acceptSelectionButton && acceptSelectionButton.style.display !== "none" && !acceptSelectionButton.disabled) {
+                return {
+                    actionId: "selection",
+                    button: acceptSelectionButton,
+                    label: (acceptSelectionButton.innerText || acceptSelectionButton.textContent || "").replace(/\s+/g, " ").trim() || "Replace selection",
+                    detail: getDialogActionDetail("selection", actionState)
+                };
+            }
+            if (acceptDocumentButton && acceptDocumentButton.style.display !== "none" && !acceptDocumentButton.disabled) {
+                return {
+                    actionId: "document",
+                    button: acceptDocumentButton,
+                    label: (acceptDocumentButton.innerText || acceptDocumentButton.textContent || "").replace(/\s+/g, " ").trim() || "Replace document",
+                    detail: getDialogActionDetail("document", actionState)
+                };
+            }
+            if (acceptBelowButton && acceptBelowButton.style.display !== "none" && !acceptBelowButton.disabled) {
+                return {
+                    actionId: "insert",
+                    button: acceptBelowButton,
+                    label: (acceptBelowButton.innerText || acceptBelowButton.textContent || "").replace(/\s+/g, " ").trim() || "Insert below",
+                    detail: getDialogActionDetail("insert", actionState)
+                };
+            }
+            return null;
+        }
+
+        function syncDialogRecommendedActionUi(actionState) {
+            actionState = actionState || getDialogActionState();
+            var recommended = getDialogRecommendedActionInfo(actionState);
+            syncDialogApplyRowOrder(recommended);
+            var actionButtons = [loadSelectionButton, loadDocumentButton, runButton, copyButton, planStatusAction, applyPlanButton, acceptSelectionButton, previewSelectionButton, acceptBelowButton, acceptDocumentButton, rejectButton];
+            for (var index = 0; index < actionButtons.length; index++) {
+                var button = actionButtons[index];
+                var actionId = button && button.getAttribute ? button.getAttribute("data-rte-ai-dialog-action") || (button === planStatusAction ? "rerun" : "") : "";
+                syncDialogActionButtonAccessibility(button, actionId, actionState, !!(recommended && button === recommended.button));
+            }
+            // 2026-05-20 (v20260520a): when the smart-primary recommendation
+            // is an alternative apply action (Replace doc / Insert below /
+            // Replace selection / Preview) because applyPlanButton is
+            // disabled — typically post-result with no editor selection —
+            // promote the recommended alt to the visible primary slot and
+            // hide the dimmed disabled Apply. Pre-pass the apply row sat
+            // with a faded blue "Select text to preview" (disabled) as the
+            // only visible primary, while the actually-actionable Replace
+            // doc / Insert below were hidden behind the "More" toggle. Same
+            // shape Notion AI / ChatGPT inline edit / Tiptap AI bubble ship:
+            // the visible primary always names a doable next step. The
+            // `is-alt-recommended` class on the apply row is the hook the
+            // CSS uses to re-skin the recommended button as primary blue and
+            // suppress the disabled Apply.
+            if (applyRow && applyRow.classList) {
+                var altRecommended = !!(recommended && recommended.actionId && recommended.actionId !== "apply"
+                    && recommended.button && recommended.button.parentNode === applyRow
+                    && applyPlanButton && applyPlanButton.disabled);
+                applyRow.classList.toggle("is-alt-recommended", altRecommended);
+            }
+            if (!recommended) {
+                applyGuidance.style.display = "none";
+                applyGuidanceBadge.innerText = "";
+                applyGuidanceDetail.innerText = "";
+                applyGuidance.setAttribute("aria-label", "No recommended Ask AI follow-up action yet.");
+                return;
+            }
+            applyGuidance.style.display = "";
+            applyGuidanceTitle.innerText = "Suggested next step";
+            applyGuidanceBadge.innerText = recommended.label || "";
+            var summaryDetail = getDialogRecommendedSummaryDetail(actionState, recommended);
+            applyGuidanceDetail.innerText = summaryDetail || "";
+            applyGuidance.setAttribute("aria-label", "Best next step: " + (recommended.label || "Action") + "." + (summaryDetail ? " " + summaryDetail : ""));
+        }
+
         function rerunDialogPlanFromEditor() {
             var scope = dialoginner.__aiSourceScope || (dialoginner.__aiSnapshot && dialoginner.__aiSnapshot.hasSelection ? "selection" : "document");
             refreshSource(scope);
+            runButton.onclick();
+        }
+
+        function rerunDialogPlanFromSource() {
             runButton.onclick();
         }
 
@@ -10082,12 +17831,17 @@ function RTE_Plugin_AIToolkit() {
 
         function renderOperationPlan(resolved) {
             var operations = resolved && resolved.operations ? resolved.operations : [];
+            var actionState = getDialogActionState();
             planList.innerHTML = "";
             planStatusMessage.innerText = dialoginner.__aiPlanStale
-                ? "A step was already applied to the editor. Re-run Ask AI against the current editor state before applying any remaining pending steps."
+                ? (dialoginner.__aiPlanStaleReason || "Editor changed. Re-run to refresh.")
                 : "";
-            planStatusAction.style.display = dialoginner.__aiPlanStale ? "" : "none";
-            planStatusAction.disabled = false;
+            var isMissingSourceForRerun = dialoginner.__aiPlanStaleAction === "source" && !normalizeText(sourceArea.value);
+            planStatusAction.innerText = dialoginner.__aiPlanStaleAction === "source"
+                ? "Re-run from source"
+                : "Re-run from editor";
+            planStatusAction.style.display = dialoginner.__aiPlanStale && !isMissingSourceForRerun ? "" : "none";
+            planStatusAction.disabled = isMissingSourceForRerun;
             planStatus.className = dialoginner.__aiPlanStale
                 ? "demo-ai-plan-status is-stale"
                 : "demo-ai-plan-status";
@@ -10127,14 +17881,24 @@ function RTE_Plugin_AIToolkit() {
                 append(item, "span", "", "demo-ai-plan-copy", copy);
                 var actions = append(item, "div", "", "demo-ai-plan-actions");
                 if (stepState !== "done") {
-                    var runStepButton = append(actions, "button", "", "secondary demo-ai-plan-button", getSingleOperationPlanButtonLabel(operation));
+                    var selectionStepBlocked = isSelectionDependentOperation(operation) && !actionState.hasSelection;
+                    var runStepLabel = selectionStepBlocked ? getSelectionRequiredPlanButtonLabel([operation]) : getSingleOperationPlanButtonLabel(operation);
+                    var runStepButton = append(actions, "button", "", "secondary demo-ai-plan-button", runStepLabel);
                     runStepButton.type = "button";
-                    runStepButton.disabled = !!dialoginner.__aiPlanStale;
+                    runStepButton.disabled = !!dialoginner.__aiPlanStale || selectionStepBlocked;
+                    syncPlanButtonAccessibility(
+                        runStepButton,
+                        runStepLabel,
+                        getPlanOperationButtonDetail(operation, actionState),
+                        dialoginner.__aiPlanStale
+                            ? "Currently unavailable until Ask AI is rerun."
+                            : (selectionStepBlocked ? "Currently unavailable until text is selected in the editor." : "")
+                    );
                     runStepButton.onclick = (function (stepIndex, stepOperation, stepTitle) {
                         return function () {
                             if (executeDialogOperations([stepOperation], "Applied \"" + stepTitle + "\".")) {
                                 setOperationExecutionState(stepIndex, "done");
-                                markPlanStale("Applied \"" + stepTitle + "\". Re-run Ask AI to refresh the remaining plan.");
+                                markPlanStale("Applied \"" + stepTitle + "\". Re-run to refresh the remaining plan.", "editor");
                             }
                         };
                     })(index, operation, display.title);
@@ -10143,6 +17907,14 @@ function RTE_Plugin_AIToolkit() {
                     var skipButton = append(actions, "button", "", "secondary demo-ai-plan-button", stepState === "skipped" ? "Include step" : "Skip step");
                     skipButton.type = "button";
                     skipButton.disabled = !!dialoginner.__aiPlanStale;
+                    syncPlanButtonAccessibility(
+                        skipButton,
+                        skipButton.innerText || skipButton.textContent || "Skip step",
+                        stepState === "skipped"
+                            ? "Add this step back into the pending AI plan."
+                            : "Skip this step from the pending AI plan.",
+                        dialoginner.__aiPlanStale ? "Currently unavailable until Ask AI is rerun." : ""
+                    );
                     skipButton.onclick = (function (stepIndex, isSkipped) {
                         return function () {
                             setOperationExecutionState(stepIndex, isSkipped ? "" : "skipped");
@@ -10154,15 +17926,22 @@ function RTE_Plugin_AIToolkit() {
             }
 
             var pendingIndexes = getPendingOperationIndexes(operations);
+            var pendingOperations = [];
+            for (var pendingIndex = 0; pendingIndex < pendingIndexes.length; pendingIndex++) {
+                pendingOperations.push(operations[pendingIndexes[pendingIndex]]);
+            }
             planSummary.innerText = pendingIndexes.length + " pending"
                 + " \u2022 " + doneCount + " applied"
                 + " \u2022 " + skippedCount + " skipped";
-            applyPlanButton.disabled = !pendingIndexes.length || !!dialoginner.__aiPlanStale;
+            applyPlanButton.disabled = !pendingIndexes.length || !!dialoginner.__aiPlanStale || !actionState.canApplyPlan;
             if (dialoginner.__aiPlanStale) {
                 applyPlanButton.innerText = "Re-run to refresh plan";
             }
             else if (!pendingIndexes.length) {
                 applyPlanButton.innerText = "No pending steps";
+            }
+            else if (actionState.pendingSelectionDependent && !actionState.hasSelection) {
+                applyPlanButton.innerText = getSelectionRequiredPlanButtonLabel(pendingOperations);
             }
             else if (pendingIndexes.length === operations.length) {
                 applyPlanButton.innerText = getOperationPlanButtonLabel(resolved);
@@ -10174,10 +17953,13 @@ function RTE_Plugin_AIToolkit() {
 
         function setBusyState(isBusy, message) {
             var text = message || "";
-            runButton.disabled = !!isBusy;
-            copyButton.disabled = !!isBusy;
-            loadSelectionButton.disabled = !!isBusy;
+            runButton.disabled = !!isBusy || !normalizeText(sourceArea.value);
+            copyButton.disabled = !!isBusy || !normalizeText(resultArea.value);
+            loadSelectionButton.disabled = !!isBusy || !dialoginner.__aiSnapshot || !dialoginner.__aiSnapshot.hasSelection;
             loadDocumentButton.disabled = !!isBusy;
+            if (scopeSelect) {
+                scopeSelect.disabled = !!isBusy;
+            }
             modeSelect.disabled = !!isBusy;
             sourceArea.readOnly = !!isBusy;
             planStatusAction.disabled = !!isBusy;
@@ -10191,75 +17973,365 @@ function RTE_Plugin_AIToolkit() {
             for (var i = 0; i < planButtons.length; i++) {
                 planButtons[i].disabled = !!isBusy;
             }
+            // 2026-05-28 (v20260528b): refinement chips (Try again /
+            // Shorter / Longer) ride the same busy gate as Generate.
+            // While streaming a suggestion the chips would otherwise
+            // accept clicks that queue a second runButton.onclick before
+            // the first stream resolves — same race the Generate button
+            // guards against. Disable all three for the duration of the
+            // request; updatePreview re-enables them once a result is
+            // present (and hides them again pre-result via CSS).
+            if (refineRetryChip) refineRetryChip.disabled = !!isBusy || !normalizeText(resultArea.value);
+            if (refineShorterChip) refineShorterChip.disabled = !!isBusy || !normalizeText(resultArea.value);
+            if (refineLongerChip) refineLongerChip.disabled = !!isBusy || !normalizeText(resultArea.value);
+            // 2026-05-29 (v20260529a): Why chip is a disclosure (no
+            // network round-trip), but rides the busy gate so the chip
+            // strip reads as a uniform cluster — all 4 chips share the
+            // same disabled-while-thinking opacity drop. Once the
+            // suggestion lands, Why re-enables independent of result
+            // text presence (insight grid may still carry stale
+            // reason/plan content from the prior run).
+            if (refineWhyChip) refineWhyChip.disabled = !!isBusy;
+            // 2026-05-15 (v20260515e): Generate button now carries the busy
+            // affordance directly — spinner glyph + "Thinking..." label, same
+            // idiom the AI Chat send button has used since v20260508. The
+            // earlier build only disabled the button and showed "Generating
+            // suggestion..." text in the status row below the apply row, so
+            // the user's eye (which is on the button they just clicked) saw
+            // nothing change. With the inline spinner the busy state reads
+            // at a glance; the status row stays empty so two copies of the
+            // same fact don't compete. updatePreview() restores the idle
+            // "Generate" / "Regenerate" label + sparkles glyph the moment
+            // setBusyState(false) is called.
+            if (isBusy) {
+                runButton.classList.add("is-busy");
+                setReviewV2ButtonContent(runButton, "spinner", "Thinking...");
+            } else {
+                runButton.classList.remove("is-busy");
+            }
             status.innerText = text;
+            syncDialogRecommendedActionUi();
         }
 
         function refreshSource(scope) {
             dialoginner.__aiSourceScope = scope === "selection" ? "selection" : "document";
-            if (scope === "selection") {
-                dialoginner.__aiSnapshot = captureSelectionSnapshot();
-                sourceArea.value = dialoginner.__aiSnapshot.text || dialoginner.__aiSnapshot.wholeText;
+            dialoginner.__aiSourceLinkedToEditor = true;
+            dialoginner.__aiSnapshot = captureSelectionSnapshot();
+            sourceArea.value = getDialogSourceTextForScope(dialoginner.__aiSnapshot, dialoginner.__aiSourceScope);
+            dialoginner.__aiLastLinkedSourceText = sourceArea.value;
+            // 2026-06-03 (v20260603a): scope toggle / live-sync just
+            // rewrote the source field — refresh the bottom-left
+            // char counter so it tracks the new loaded text.
+            refreshSourceCounter();
+            syncDialogScopeUi();
+            updatePreview();
+            // 2026-05-19 (v20260519a): scope/source just changed, so the
+            // pre-result caption's "On selection, 124 chars" tail is
+            // stale. Re-run updateModeHelp to refresh the suffix without
+            // re-touching modeSelect.
+            updateModeHelp();
+        }
+
+        function updatePreview() {
+            var actionState = getDialogActionState();
+            var hasResult = actionState.hasResult;
+            var hasSource = actionState.hasSource;
+            var isStale = actionState.isStale;
+            // 2026-05-09 (v20260509j): mark the dialog grid as
+            // pre-result when no AI output has landed yet. CSS uses
+            // this to collapse the empty Details toggle / insight grid
+            // (pre-result there's nothing to disclose — clicking
+            // Details would surface an empty Why panel + a "No plan
+            // yet" placeholder, which is exactly the broken-feeling
+            // affordance prior passes called out). The flag clears the
+            // moment Generate produces output. Same idiom Notion AI /
+            // Tiptap use — "Why this?" only appears once a suggestion
+            // exists.
+            if (grid && grid.classList) {
+                if (hasResult || isStale) {
+                    grid.classList.remove("is-pre-result");
+                } else {
+                    grid.classList.add("is-pre-result");
+                }
             }
-            else {
-                dialoginner.__aiSnapshot = captureSelectionSnapshot();
-                sourceArea.value = dialoginner.__aiSnapshot.wholeText;
+            var pendingOperationType = actionState.pendingOperationType;
+            var actionScope = hasResult || isStale ? actionState.actionScope : actionState.scope;
+            var showsSelectionAction = actionScope === "selection" && pendingOperationType !== "replace-selection";
+            var showsPreviewAction = actionScope === "selection" && pendingOperationType !== "preview-suggestion";
+            var showsInsertAction = actionState.canInsert && pendingOperationType !== "insert-below";
+            var showsDocumentAction = actionState.canReplaceDocument && pendingOperationType !== "replace-document";
+            oldPreview.innerText = normalizeText(sourceArea.value) || "Load text from the editor to start a preview.";
+            newPreview.innerText = hasResult ? resultArea.value : "Run Ask AI to generate a suggestion preview.";
+            var primaryReasonText = getPrimaryResolvedReason(dialoginner.__aiResolved) || "";
+            reasonCopy.innerText = primaryReasonText || "This suggestion does not include an explicit AI rationale yet.";
+            renderOperationPlan(dialoginner.__aiResolved);
+            // 2026-05-13 (v20260513b): Details toggle hidden when the
+            // resolved action returned no rationale AND no operation plan.
+            // Earlier the toggle was shown unconditionally post-result, but
+            // for the common single-step proofread/rewrite flow (resolver
+            // returns just `{result, operations}` with no `reason` and a
+            // 1-step plan that's already implied by the smart Apply label)
+            // expanding Details surfaced the placeholder "This suggestion
+            // does not include an explicit AI rationale yet." + a single
+            // "Replace selection" step — exactly the broken-feeling
+            // affordance prior passes called out for the pre-result Details
+            // and the empty Apply row. Same idiom Notion AI / Tiptap use —
+            // "Why this?" only appears when the model actually returned a
+            // reason. Multi-step agentic plans (where there ARE operations
+            // worth exposing) keep the toggle. Hidden via inline style so
+            // the same node can be flipped back the moment a richer
+            // resolver returns content. */
+            if (detailsToggle && detailsToggle.style) {
+                var resolvedDialog = dialoginner.__aiResolved;
+                var planOpCount = resolvedDialog && resolvedDialog.operations ? resolvedDialog.operations.length : 0;
+                var hasDetailsContent = !!primaryReasonText || planOpCount > 1;
+                detailsToggle.style.display = (hasResult && hasDetailsContent) ? "" : "none";
+                if (!hasDetailsContent && insightGrid && insightGrid.classList && !insightGrid.classList.contains("is-collapsed")) {
+                    insightGrid.classList.add("is-collapsed");
+                    detailsToggle.setAttribute("aria-expanded", "false");
+                }
+            }
+            acceptSelectionButton.innerText = getDialogActionLabel("selection", actionState) || "Replace selection";
+            previewSelectionButton.innerText = getDialogActionLabel("preview", actionState) || "Preview inline";
+            acceptSelectionButton.style.display = showsSelectionAction ? "" : "none";
+            previewSelectionButton.style.display = showsPreviewAction ? "" : "none";
+            acceptBelowButton.style.display = showsInsertAction ? "" : "none";
+            acceptDocumentButton.style.display = showsDocumentAction ? "" : "none";
+            // 2026-05-08 (v20260508t): hide the "More" toggle when none of
+            // the four alt apply paths are applicable in the current state
+            // (typically: no selection + no result yet). Otherwise users
+            // would click "More" and get an empty reveal. When nothing to
+            // reveal, also collapse the row so the next applicable state
+            // starts clean.
+            if (applyRowMoreToggle) {
+                var anyMoreAvailable = showsSelectionAction || showsPreviewAction || showsInsertAction || showsDocumentAction;
+                applyRowMoreToggle.style.display = anyMoreAvailable ? "" : "none";
+                if (!anyMoreAvailable && applyRow.classList.contains("is-show-more")) {
+                    applyRow.classList.remove("is-show-more");
+                    applyRowMoreToggle.setAttribute("aria-expanded", "false");
+                }
+            }
+            acceptSelectionButton.disabled = isStale || !actionState.canReplaceSelection;
+            previewSelectionButton.disabled = isStale || !actionState.canPreview;
+            acceptBelowButton.disabled = isStale || !actionState.canInsert;
+            acceptDocumentButton.disabled = isStale || !actionState.canReplaceDocument;
+            runButton.disabled = !hasSource;
+            copyButton.disabled = !hasResult;
+            rejectButton.disabled = !hasResult;
+            // 2026-05-08 (v20260508s): clarify the run button — when a
+            // result already exists the button re-runs the same source, so
+            // call it Regenerate. Also flips when the plan goes stale.
+            var runLabel = (hasResult || isStale) ? "Regenerate" : "Generate";
+            setReviewV2ButtonContent(runButton, "sparkles", runLabel);
+            // 2026-05-17 (v20260517a): re-attach the keyboard hint chip,
+            // since setReviewV2ButtonContent clears textContent and loses
+            // the previous kbd span. */
+            refreshRunKbdHint();
+            syncDialogRecommendedActionUi(actionState);
+        }
+
+        function syncDialogFromEditor() {
+            if (!dialoginner.isConnected || editor.__aiDialog !== dialoginner) {
+                return;
+            }
+
+            var scope = dialoginner.__aiSourceScope === "selection" ? "selection" : "document";
+            var isLinkedToEditor = !!dialoginner.__aiSourceLinkedToEditor;
+            var previousSnapshot = dialoginner.__aiSnapshot || captureSelectionSnapshot();
+            var liveSnapshot = captureSelectionSnapshot();
+            var previousLiveSourceText = getDialogSourceTextForScope(previousSnapshot, scope);
+            var liveSourceText = getDialogSourceTextForScope(liveSnapshot, scope);
+            var selectionChanged = scope === "selection" && (
+                !!previousSnapshot.hasSelection !== !!liveSnapshot.hasSelection
+                || !areRangesEquivalent(previousSnapshot.range, liveSnapshot.range)
+                || previousLiveSourceText !== liveSourceText
+            );
+            var editorSourceChanged = scope === "document"
+                ? (previousSnapshot.wholeText || "") !== (liveSnapshot.wholeText || "")
+                : selectionChanged;
+            var uiChanged = editorSourceChanged || !!previousSnapshot.hasSelection !== !!liveSnapshot.hasSelection;
+
+            dialoginner.__aiSnapshot = liveSnapshot;
+            if (isLinkedToEditor) {
+                dialoginner.__aiLastLinkedSourceText = liveSourceText;
+            }
+
+            if (!uiChanged) {
+                return;
+            }
+
+            syncDialogScopeUi();
+
+            if (isLinkedToEditor) {
+                sourceArea.value = liveSourceText;
+                // 2026-06-03 (v20260603a): live editor sync rewrote source —
+                // keep the bottom-left char counter in sync.
+                refreshSourceCounter();
+                if (editorSourceChanged && normalizeText(resultArea.value) && !dialoginner.__aiPlanStale) {
+                    markPlanStale(getDialogEditorChangeMessage(scope, liveSnapshot, previousSnapshot), "editor");
+                    return;
+                }
+            }
+            else if (editorSourceChanged && normalizeText(resultArea.value) && !dialoginner.__aiPlanStale) {
+                markPlanStale(getDialogDetachedEditorChangeMessage(scope, liveSnapshot, previousSnapshot), "source");
+                return;
+            }
+
+            updatePreview();
+            // 2026-05-19 (v20260519a): live selection/document change in
+            // the editor — refresh the caption tail with the new
+            // scope/char count so the pre-result dialog tracks the
+            // editor's current state.
+            updateModeHelp();
+        }
+
+        function handleDialogSourceEdit() {
+            markDialogSourceDetached();
+            // 2026-06-03 (v20260603a): keep the bottom-left char counter
+            // in sync with every keystroke / paste / programmatic write
+            // into the source textarea. Cheap (.value.length) so safe
+            // to fire on every input event.
+            refreshSourceCounter();
+            if (normalizeText(resultArea.value)) {
+                markPlanStale(getDialogSourceChangeMessage(sourceArea.value), "source");
+                return;
+            }
+            updatePreview();
+            // 2026-05-19 (v20260519a): typed-prompt edits change the
+            // caption's char count + flip the scope label from
+            // selection/document to "typed prompt".
+            updateModeHelp();
+        }
+
+        function handleDialogRequestChange(message) {
+            if (normalizeText(resultArea.value)) {
+                markPlanStale(message, "source");
+                return;
             }
             updatePreview();
         }
 
-        function updatePreview() {
-            var hasResult = !!normalizeText(resultArea.value);
-            var isStale = !!dialoginner.__aiPlanStale;
-            oldPreview.innerText = normalizeText(sourceArea.value) || "Load text from the editor to start a preview.";
-            newPreview.innerText = hasResult ? resultArea.value : "Run Ask AI to generate a suggestion preview.";
-            reasonCopy.innerText = getPrimaryResolvedReason(dialoginner.__aiResolved) || "This suggestion does not include an explicit AI rationale yet.";
-            renderOperationPlan(dialoginner.__aiResolved);
-            acceptSelectionButton.disabled = isStale || !hasResult || !dialoginner.__aiSnapshot || !dialoginner.__aiSnapshot.hasSelection;
-            previewSelectionButton.disabled = isStale || !hasResult || !dialoginner.__aiSnapshot || !dialoginner.__aiSnapshot.hasSelection;
-            acceptBelowButton.disabled = isStale || !hasResult;
-            acceptDocumentButton.disabled = isStale || !hasResult;
-            rejectButton.disabled = !hasResult;
+        function handleDialogScopeChange(scope) {
+            var targetScope = scope === "selection" ? "selection" : "document";
+            var previousScope = dialoginner.__aiSourceScope === "selection" ? "selection" : "document";
+            var previousSourceText = normalizeText(sourceArea.value);
+            var wasLinkedToEditor = !!dialoginner.__aiSourceLinkedToEditor;
+
+            refreshSource(targetScope);
+
+            if (!normalizeText(resultArea.value)) {
+                return;
+            }
+
+            var currentSourceText = normalizeText(sourceArea.value);
+            if (previousScope !== targetScope) {
+                markPlanStale(getDialogScopeChangeMessage(targetScope), "editor");
+                return;
+            }
+
+            if (!wasLinkedToEditor || previousSourceText !== currentSourceText) {
+                markPlanStale(getDialogEditorReloadMessage(targetScope), "editor");
+            }
         }
 
         loadSelectionButton.onclick = function () {
-            refreshSource("selection");
+            handleDialogScopeChange("selection");
         };
 
         loadDocumentButton.onclick = function () {
-            refreshSource("document");
+            handleDialogScopeChange("document");
         };
 
+        // 2026-05-17 (v20260523a): visible scope select drives the same
+        // handleDialogScopeChange path the detached buttons used. The
+        // buttons still fire from their own onclick handlers above so
+        // any external integration that programmatically clicks
+        // `[data-rte-ai-dialog-action="load-selection"]` keeps working.
+        if (scopeSelect) {
+            scopeSelect.onchange = function () {
+                handleDialogScopeChange(scopeSelect.value);
+            };
+        }
+
         planStatusAction.onclick = function () {
+            if (dialoginner.__aiPlanStaleAction === "source") {
+                rerunDialogPlanFromSource();
+                return;
+            }
             rerunDialogPlanFromEditor();
         };
 
         modeSelect.onchange = function () {
             updateModeHelp();
+            handleDialogRequestChange(getDialogModeChangeMessage());
         };
 
         languageSelect.onchange = function () {
             updateModeHelp();
+            handleDialogRequestChange(getDialogLanguageChangeMessage(languageSelect.value));
         };
 
         runButton.onclick = function () {
-            setBusyState(true, "Generating suggestion...");
+            var liveSnapshot = captureSelectionSnapshot();
+            dialoginner.__aiSnapshot = liveSnapshot;
+            if (dialoginner.__aiSourceLinkedToEditor) {
+                sourceArea.value = getDialogSourceTextForScope(liveSnapshot, dialoginner.__aiSourceScope);
+                dialoginner.__aiLastLinkedSourceText = sourceArea.value;
+                // 2026-06-03 (v20260603a): generate-time re-link to editor
+                // rewrote source — refresh char counter to match.
+                refreshSourceCounter();
+            }
+            syncDialogScopeUi();
+            if (!normalizeText(sourceArea.value)) {
+                status.innerText = "Load or type source text before running Ask AI.";
+                updatePreview();
+                return;
+            }
+            // 2026-05-15 (v20260515e): empty status string — the Generate
+            // button itself now flips to spinner + "Thinking..." (see
+            // setBusyState above), so painting "Generating suggestion..."
+            // in the status row below the apply row was a second copy of
+            // the same fact. Same shape Notion AI inline composer / Tiptap
+            // AI bubble ship: the action button carries the busy state,
+            // no separate status string.
+            setBusyState(true, "");
             resolveAction(modeSelect.value, {
-                snapshot: dialoginner.__aiSnapshot,
+                snapshot: liveSnapshot,
                 source: sourceArea.value,
+                scope: getDialogRunScope(liveSnapshot),
                 mode: modeSelect.value,
                 language: languageSelect.value
             }).then(function (resolved) {
                 dialoginner.__aiResolved = resolved;
                 dialoginner.__aiOperationStates = {};
                 dialoginner.__aiPlanStale = false;
+                dialoginner.__aiPlanStaleReason = "";
+                dialoginner.__aiPlanStaleAction = "";
                 resultArea.value = getPrimaryResolvedText(resolved) || "";
                 updatePreview();
-                setBusyState(false, resultArea.value ? "Suggestion ready for review." : "No suggestion returned.");
+                // 2026-05-17 (v20260517a): the "Ready · Replace doc" message
+                // that lived here duplicated the smart Apply button's label
+                // — the apply row's primary already says "Replace doc" /
+                // "Replace selection" / "Apply 3 pending steps" via the
+                // syncDialogRecommendedActionUi pass. Showing the same fact
+                // twice (once on the button, once in the status row below)
+                // burned ~17px of vertical space without adding information.
+                // Same shape Notion AI / Tiptap inline composers ship — the
+                // primary button is the single source of "what AI suggests
+                // you do next"; no echo strip below. Empty status hides
+                // entirely via the `.demo-ai-dialog-status:empty` rule
+                // (added 2026-05-09). The status row still surfaces actual
+                // signal: stale-plan warnings (markPlanStale), error
+                // messages from the resolver, and "No suggestion returned."
+                // when the model produced empty output. */
+                setBusyState(false, resultArea.value ? "" : "No suggestion returned.");
             }).catch(function (error) {
                 console.error("AI Toolkit dialog run failed", error);
                 dialoginner.__aiResolved = null;
                 dialoginner.__aiOperationStates = {};
                 dialoginner.__aiPlanStale = false;
+                dialoginner.__aiPlanStaleReason = "";
+                dialoginner.__aiPlanStaleAction = "";
                 resultArea.value = "";
                 updatePreview();
                 setBusyState(false, "AI suggestion failed.");
@@ -10267,8 +18339,29 @@ function RTE_Plugin_AIToolkit() {
         };
 
         copyButton.onclick = function () {
+            if (!normalizeText(resultArea.value)) {
+                return;
+            }
             sourceArea.value = resultArea.value;
-            updatePreview();
+            handleDialogSourceEdit();
+        };
+
+        sourceArea.oninput = function () {
+            handleDialogSourceEdit();
+        };
+
+        // 2026-05-08 (v20260508s): Ctrl/Cmd+Enter from inside the Source
+        // textarea triggers Generate. Matches the keyboard idiom used by
+        // most modern AI dialogs (CKEditor, ChatGPT, Notion AI). The
+        // hint is surfaced in the Source placeholder so users discover it.
+        sourceArea.onkeydown = function (event) {
+            if (!event) return;
+            if ((event.ctrlKey || event.metaKey) && event.keyCode === 13) {
+                event.preventDefault();
+                if (runButton && !runButton.disabled && runButton.onclick) {
+                    runButton.onclick();
+                }
+            }
         };
 
         applyPlanButton.onclick = function () {
@@ -10318,17 +18411,101 @@ function RTE_Plugin_AIToolkit() {
             dialoginner.close();
         };
 
+        // 2026-05-22 (v20260522a): dialog-level Ctrl/Cmd+Enter binding so
+        // the keyboard shortcut works post-result outside the source
+        // textarea. Pre-pass the only Ctrl+Enter binding lived on the
+        // source textarea (since v20260508s, where it triggered Generate).
+        // Once a result lands, users typically tab away from source to read
+        // the result — pressing Ctrl+Enter from anywhere else in the
+        // dialog used to do nothing. Now the same shortcut fires the
+        // currently-active primary apply action: applyPlanButton when
+        // enabled (the normal post-result case), else the alt-recommended
+        // primary the v20260520a smart-primary pass surfaces (typically
+        // Replace doc when there's no selection). When the source textarea
+        // owns focus the binding short-circuits — the sourceArea handler
+        // (Generate) continues to win, so source-edit + regenerate flow
+        // is unchanged. Same shortcut idiom Notion AI / ChatGPT inline
+        // edit / Tiptap AI bubble ship — Ctrl+Enter accepts the AI
+        // suggestion from anywhere inside the suggestion surface.
+        dialoginner.addEventListener("keydown", function (event) {
+            if (!event) return;
+            if (!((event.ctrlKey || event.metaKey) && event.keyCode === 13)) return;
+            var target = event.target;
+            if (target === sourceArea) return; // sourceArea owns Generate
+            // Find the active primary apply button. If applyPlanButton is
+            // visible+enabled, fire that. Otherwise look for the
+            // alt-recommended button promoted to primary by
+            // syncDialogRecommendedActionUi.
+            var primary = null;
+            if (applyPlanButton && !applyPlanButton.disabled && applyPlanButton.offsetParent !== null) {
+                primary = applyPlanButton;
+            }
+            else if (applyRow && applyRow.classList && applyRow.classList.contains("is-alt-recommended")) {
+                var recommended = applyRow.querySelector('[data-rte-ai-dialog-recommended="true"]:not([disabled])');
+                if (recommended && recommended.offsetParent !== null) {
+                    primary = recommended;
+                }
+            }
+            if (primary && typeof primary.onclick === "function") {
+                event.preventDefault();
+                primary.onclick();
+            }
+        });
+
+        dialoginner.__aiSourceLinkedToEditor = true;
+        dialoginner.__aiLastLinkedSourceText = "";
+        dialoginner.__aiSyncFromEditor = syncDialogFromEditor;
         refreshSource(options.useDocument ? "document" : (snapshot.hasSelection ? "selection" : "document"));
         updatePreview();
         if (options.autoRun) {
             runButton.onclick();
         }
+        // 2026-05-09 (v20260509j): auto-focus Generate on dialog open
+        // when source is pre-loaded (the common path — selection or
+        // document was captured at open time). Users open the dialog
+        // after selecting text and expect to hit Enter to generate
+        // (muscle memory from Notion AI inline composer, Tiptap AI
+        // bubble, ChatGPT inline edit, and every IDE command palette).
+        // setTimeout(fn, 0) so the focus lands after createDialog's own
+        // initial focus pass. When no source is loaded yet (rare —
+        // only possible if the editor is empty AND document scope was
+        // forced), focus falls back to the Action select so the user
+        // can change mode or expand Source to type. Wrapped in
+        // try/catch so customer button overrides can't break dialog
+        // open.
+        try {
+            setTimeout(function () {
+                try {
+                    if (normalizeText(sourceArea.value) && runButton && !runButton.disabled && runButton.focus) {
+                        runButton.focus();
+                    } else if (sourceArea && sourceArea.focus) {
+                        // 2026-05-17 (v20260517a): empty-source path now
+                        // focuses the prompt textarea instead of the action
+                        // select. Prior baseline landed focus on the
+                        // mode dropdown — but the user has already picked
+                        // a mode (either from the quick menu they just
+                        // clicked through, or via the dialog open API).
+                        // What they actually want next is to start
+                        // typing their prompt. Landing focus on the
+                        // textarea makes the caret blink in the empty
+                        // input the user is about to fill — same shape
+                        // Notion AI inline composer / ChatGPT inline edit
+                        // / Tiptap AI bubble use. mode select is still
+                        // one Shift+Tab away.
+                        sourceArea.focus();
+                    } else if (modeSelect && modeSelect.focus) {
+                        modeSelect.focus();
+                    }
+                } catch (innerErr) { /* noop */ }
+            }, 0);
+        } catch (outerErr) { /* noop */ }
     }
 }
+
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 if (!RTE_DefaultConfig.svgCode_commentadd) {
-    RTE_DefaultConfig.svgCode_commentadd = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-7l-4 4v-4H4a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>';
+    RTE_DefaultConfig.svgCode_commentadd = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-7l-4 4v-4H4a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg>';
 }
 
 RTE_DefaultConfig.plugin_comments = RTE_Plugin_Comments;
@@ -10910,7 +19087,377 @@ function RTE_Plugin_Comments() {
             editdoc.head.appendChild(iStyle);
         }
     }
+
+    // Block-anchored comments: img, table, figure, video, audio, iframe, embed, object, hr, svg.
+    function resolveCommentTarget(range, editdoc) {
+        if (!range) return null;
+        var container = range.commonAncestorContainer;
+        var el = container && container.nodeType === 1 ? container : (container && container.parentNode);
+        if (!el) return null;
+        // If selection collapses on/inside an embedded block, anchor to that element instead of a text range.
+        var block = el.closest && el.closest("img,table,figure,video,audio,iframe,embed,object,hr,svg");
+        if (!block && el.querySelector) {
+            block = el.querySelector("img,table,figure,video,audio,iframe,embed,object,hr,svg");
+        }
+        if (block) {
+            block.setAttribute("data-rte-comment-anchor", "element");
+            return { kind: "element", element: block };
+        }
+        return { kind: "range", range: range };
+    }
+
+    function isElementAnchoredComment(el) {
+        if (!el || el.nodeType !== 1 || !el.getAttribute) return false;
+        if (el.getAttribute("data-rte-comment-anchor") === "element") return true;
+        return false;
+    }
 }
+
+if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
+
+RTE_DefaultConfig.plugin_contentminimap = RTE_Plugin_ContentMinimap;
+
+function RTE_Plugin_ContentMinimap() {
+    var obj = this;
+    var config;
+    var editor;
+    var shell = null;
+    var panel = null;
+    var preview = null;
+    var viewport = null;
+    var empty = null;
+    var refreshTimer = 0;
+    var dragState = null;
+
+    obj.PluginName = "ContentMinimap";
+
+    obj.InitConfig = function (argconfig) {
+        config = argconfig;
+        if (config.contentMinimapEnabled === false) return;
+
+        if (typeof config.contentMinimapAutoOpen !== "boolean") config.contentMinimapAutoOpen = false;
+        if (typeof config.contentMinimapWidth !== "number") config.contentMinimapWidth = 168;
+        if (typeof config.contentMinimapScale !== "number") config.contentMinimapScale = 0.14;
+        config.contentMinimapTitle = config.contentMinimapTitle || "Minimap";
+        config.contentMinimapHint = config.contentMinimapHint || "Keep your place in long documents and jump by clicking the miniature preview.";
+        config.contentMinimapEmptyText = config.contentMinimapEmptyText || "Start typing to build the document preview.";
+
+        appendToolbarCommand("toolbar_default", "#{contentminimap}");
+        appendToolbarCommand("toolbar_full", "#{contentminimap}");
+    };
+
+    obj.InitEditor = function (argeditor) {
+        editor = argeditor;
+        if (config.contentMinimapEnabled === false) return;
+
+        editor.contentMinimap = {
+            close: function () { closePanel(); },
+            isOpen: function () { return !!(shell && shell.classList.contains("is-open")); },
+            open: function () { openPanel(); },
+            refresh: function () { renderSnapshot(); syncViewport(); },
+            toggle: function () { togglePanel(); }
+        };
+
+        injectStyles();
+
+        editor.toolbarFactoryMap = editor.toolbarFactoryMap || {};
+        editor.toolbarFactoryMap["contentminimap"] = function (cmd) {
+            return editor.createToolbarButton(cmd);
+        };
+
+        editor.attachEvent("exec_command_contentminimap", function (state) {
+            state.returnValue = true;
+            state.stopBubble = true;
+            togglePanel();
+        });
+        editor.attachEvent("change", function () {
+            scheduleRefresh();
+        });
+
+        ensureShell();
+        bindScroll();
+        bindResize();
+        renderSnapshot();
+        syncViewport();
+        if (config.contentMinimapAutoOpen) openPanel();
+    };
+
+    function appendToolbarCommand(toolbar, item) {
+        if (!config[toolbar]) return;
+        if (config[toolbar].indexOf(item) !== -1) return;
+        config[toolbar] = config[toolbar] + item;
+    }
+
+    function injectStyles() {
+        var hostDoc = config.container.ownerDocument;
+        if (hostDoc.getElementById("rte-content-minimap-style")) return;
+        var style = hostDoc.createElement("style");
+        style.id = "rte-content-minimap-style";
+        style.innerHTML = [
+            ".rte-content-minimap-shell{display:flex;align-items:stretch;gap:12px;}",
+            ".rte-content-minimap-shell>.rte-content-minimap-host{flex:1 1 auto;min-width:0;}",
+            ".rte-content-minimap-panel{display:none;flex:0 0 var(--rte-content-minimap-width,168px);min-width:148px;max-width:220px;border:1px solid #dbe4f0;border-radius:18px;background:linear-gradient(180deg,#fbfdff 0%,#f5f9ff 100%);box-shadow:0 18px 40px rgba(15,23,42,.08);overflow:hidden;}",
+            ".rte-content-minimap-shell.is-open>.rte-content-minimap-panel{display:flex;flex-direction:column;}",
+            ".rte-content-minimap-header{padding:14px 14px 10px 14px;border-bottom:1px solid rgba(148,163,184,.18);}",
+            ".rte-content-minimap-kicker{font-size:11px;line-height:1.3;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:700;}",
+            ".rte-content-minimap-title{margin-top:4px;font-size:17px;line-height:1.2;font-weight:700;color:#0f172a;}",
+            ".rte-content-minimap-copy{margin-top:6px;font-size:12px;line-height:1.5;color:#475569;}",
+            ".rte-content-minimap-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(148,163,184,.18);gap:10px;}",
+            ".rte-content-minimap-meta{font-size:12px;color:#64748b;}",
+            ".rte-content-minimap-close{appearance:none;border:0;background:transparent;color:#475569;cursor:pointer;font-size:12px;font-weight:600;padding:0;}",
+            ".rte-content-minimap-body{padding:10px;overflow:auto;min-height:140px;max-height:520px;}",
+            ".rte-content-minimap-canvas{position:relative;border-radius:14px;background:#fff;border:1px solid rgba(148,163,184,.22);overflow:hidden;min-height:120px;}",
+            ".rte-content-minimap-preview{position:relative;transform-origin:top left;pointer-events:none;color:#0f172a;background:#fff;}",
+            ".rte-content-minimap-preview>*{max-width:100%;}",
+            ".rte-content-minimap-preview img,.rte-content-minimap-preview table,.rte-content-minimap-preview iframe,.rte-content-minimap-preview video{max-width:100% !important;}",
+            ".rte-content-minimap-preview [contenteditable]{pointer-events:none;}",
+            ".rte-content-minimap-viewport{position:absolute;left:0;right:0;border:1px solid rgba(37,99,235,.55);background:linear-gradient(180deg,rgba(37,99,235,.14) 0%,rgba(14,165,233,.1) 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);border-radius:10px;cursor:grab;}",
+            ".rte-content-minimap-viewport.is-dragging{cursor:grabbing;}",
+            ".rte-content-minimap-empty{position:absolute;inset:auto 10px 10px 10px;padding:10px;border-radius:10px;background:rgba(248,250,252,.95);color:#64748b;font-size:12px;line-height:1.5;}",
+            "@media (max-width: 1100px){.rte-content-minimap-shell{display:block;}.rte-content-minimap-panel{margin-top:12px;max-width:none;width:100%;}.rte-content-minimap-body{max-height:280px;}}"
+        ].join("");
+        hostDoc.head.appendChild(style);
+    }
+
+    function ensureShell() {
+        if (shell) return shell;
+        var container = config.container;
+        var hostDoc = container.ownerDocument;
+        shell = hostDoc.createElement("div");
+        shell.className = "rte-content-minimap-shell";
+
+        var host = hostDoc.createElement("div");
+        host.className = "rte-content-minimap-host";
+
+        var parent = container.parentNode;
+        parent.insertBefore(shell, container);
+        shell.appendChild(host);
+        host.appendChild(container);
+
+        panel = hostDoc.createElement("aside");
+        panel.className = "rte-content-minimap-panel";
+        panel.style.setProperty("--rte-content-minimap-width", String(Math.max(148, config.contentMinimapWidth || 168)) + "px");
+        panel.setAttribute("aria-label", config.contentMinimapTitle);
+
+        var header = hostDoc.createElement("div");
+        header.className = "rte-content-minimap-header";
+        var kicker = hostDoc.createElement("div");
+        kicker.className = "rte-content-minimap-kicker";
+        kicker.innerText = "Document";
+        var title = hostDoc.createElement("div");
+        title.className = "rte-content-minimap-title";
+        title.innerText = config.contentMinimapTitle;
+        var copy = hostDoc.createElement("div");
+        copy.className = "rte-content-minimap-copy";
+        copy.innerText = config.contentMinimapHint;
+        header.appendChild(kicker);
+        header.appendChild(title);
+        header.appendChild(copy);
+
+        var toolbar = hostDoc.createElement("div");
+        toolbar.className = "rte-content-minimap-toolbar";
+        var meta = hostDoc.createElement("div");
+        meta.className = "rte-content-minimap-meta";
+        meta.setAttribute("data-rte-content-minimap-meta", "1");
+        var close = hostDoc.createElement("button");
+        close.type = "button";
+        close.className = "rte-content-minimap-close";
+        close.innerText = "Hide";
+        close.onclick = function () { closePanel(); };
+        toolbar.appendChild(meta);
+        toolbar.appendChild(close);
+
+        var body = hostDoc.createElement("div");
+        body.className = "rte-content-minimap-body";
+        var canvas = hostDoc.createElement("div");
+        canvas.className = "rte-content-minimap-canvas";
+        canvas.addEventListener("click", handleCanvasClick, false);
+
+        preview = hostDoc.createElement("div");
+        preview.className = "rte-content-minimap-preview";
+
+        viewport = hostDoc.createElement("div");
+        viewport.className = "rte-content-minimap-viewport";
+        viewport.addEventListener("mousedown", beginViewportDrag, false);
+
+        empty = hostDoc.createElement("div");
+        empty.className = "rte-content-minimap-empty";
+        empty.innerText = config.contentMinimapEmptyText;
+
+        canvas.appendChild(preview);
+        canvas.appendChild(viewport);
+        canvas.appendChild(empty);
+        body.appendChild(canvas);
+
+        panel.appendChild(header);
+        panel.appendChild(toolbar);
+        panel.appendChild(body);
+        shell.appendChild(panel);
+        return shell;
+    }
+
+    function bindScroll() {
+        var doc = editor.getDocument ? editor.getDocument() : null;
+        if (!doc || doc.__rteContentMinimapBound) return;
+        doc.__rteContentMinimapBound = true;
+        doc.addEventListener("scroll", function () {
+            syncViewport();
+        }, true);
+    }
+
+    function bindResize() {
+        var hostWindow = config.container.ownerDocument.defaultView;
+        if (!hostWindow || hostWindow.__rteContentMinimapBound) return;
+        hostWindow.__rteContentMinimapBound = true;
+        hostWindow.addEventListener("resize", function () {
+            scheduleRefresh();
+        });
+    }
+
+    function togglePanel() {
+        if (shell && shell.classList.contains("is-open")) closePanel();
+        else openPanel();
+    }
+
+    function openPanel() {
+        ensureShell();
+        shell.classList.add("is-open");
+        renderSnapshot();
+        syncViewport();
+    }
+
+    function closePanel() {
+        if (!shell) return;
+        shell.classList.remove("is-open");
+    }
+
+    function scheduleRefresh() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(function () {
+            renderSnapshot();
+            syncViewport();
+        }, 80);
+    }
+
+    function getEditable() {
+        return editor.getEditable ? editor.getEditable() : null;
+    }
+
+    function getScrollElement() {
+        var doc = editor.getDocument ? editor.getDocument() : null;
+        if (!doc) return null;
+        return doc.scrollingElement || doc.documentElement || doc.body || getEditable();
+    }
+
+    function getScale() {
+        var scale = config.contentMinimapScale || 0.14;
+        if (scale < 0.06) scale = 0.06;
+        if (scale > 0.22) scale = 0.22;
+        return scale;
+    }
+
+    function renderSnapshot() {
+        ensureShell();
+        var editable = getEditable();
+        if (!editable || !preview) return;
+
+        var html = editable.innerHTML || "";
+        preview.innerHTML = html;
+
+        var scale = getScale();
+        var sourceWidth = Math.max(editable.scrollWidth || editable.clientWidth || 600, 320);
+        var sourceHeight = Math.max(editable.scrollHeight || editable.clientHeight || 0, 0);
+        var targetWidth = Math.max(120, Math.round(sourceWidth * scale));
+        var targetHeight = Math.max(120, Math.round(sourceHeight * scale));
+
+        preview.style.width = sourceWidth + "px";
+        preview.style.transform = "scale(" + scale + ")";
+        preview.parentNode.style.height = targetHeight + "px";
+        preview.parentNode.style.width = targetWidth + "px";
+
+        empty.style.display = html.replace(/<[^>]+>/g, "").replace(/\s+/g, "") ? "none" : "block";
+
+        var meta = panel.querySelector("[data-rte-content-minimap-meta]");
+        if (meta) meta.innerText = Math.max(1, Math.round(sourceHeight / Math.max(editable.clientHeight || 1, 1))) + " screens";
+    }
+
+    function syncViewport() {
+        if (!viewport || !preview) return;
+        var editable = getEditable();
+        var scrollEl = getScrollElement();
+        if (!editable || !scrollEl) return;
+
+        var scale = getScale();
+        var sourceHeight = Math.max(editable.scrollHeight || scrollEl.scrollHeight || editable.clientHeight || 1, 1);
+        var scrollHeight = Math.max(scrollEl.scrollHeight || sourceHeight, sourceHeight);
+        var clientHeight = Math.max(scrollEl.clientHeight || editable.clientHeight || 1, 1);
+        var maxScroll = Math.max(0, scrollHeight - clientHeight);
+        var scaledHeight = Math.max(120, Math.round(sourceHeight * scale));
+        var viewportHeight = Math.max(18, Math.round(clientHeight * scale));
+        if (viewportHeight > scaledHeight) viewportHeight = scaledHeight;
+        var top = maxScroll ? Math.round((scrollEl.scrollTop / maxScroll) * Math.max(0, scaledHeight - viewportHeight)) : 0;
+
+        viewport.style.height = viewportHeight + "px";
+        viewport.style.top = top + "px";
+        viewport.style.display = scaledHeight > 0 ? "block" : "none";
+    }
+
+    function handleCanvasClick(evt) {
+        if (evt.target === viewport) return;
+        jumpToPreviewOffset(evt.clientY);
+    }
+
+    function beginViewportDrag(evt) {
+        evt.preventDefault();
+        dragState = {
+            startY: evt.clientY,
+            startTop: parseFloat(viewport.style.top || "0") || 0
+        };
+        viewport.classList.add("is-dragging");
+        var hostDoc = config.container.ownerDocument;
+        hostDoc.addEventListener("mousemove", handleViewportDrag, true);
+        hostDoc.addEventListener("mouseup", endViewportDrag, true);
+    }
+
+    function handleViewportDrag(evt) {
+        if (!dragState) return;
+        evt.preventDefault();
+        var delta = evt.clientY - dragState.startY;
+        jumpToScaledOffset(dragState.startTop + delta);
+    }
+
+    function endViewportDrag() {
+        if (!dragState) return;
+        dragState = null;
+        viewport.classList.remove("is-dragging");
+        var hostDoc = config.container.ownerDocument;
+        hostDoc.removeEventListener("mousemove", handleViewportDrag, true);
+        hostDoc.removeEventListener("mouseup", endViewportDrag, true);
+    }
+
+    function jumpToPreviewOffset(clientY) {
+        var rect = preview.parentNode.getBoundingClientRect();
+        var offset = clientY - rect.top - ((parseFloat(viewport.style.height || "0") || 0) / 2);
+        jumpToScaledOffset(offset);
+    }
+
+    function jumpToScaledOffset(offset) {
+        var editable = getEditable();
+        var scrollEl = getScrollElement();
+        if (!editable || !scrollEl || !preview) return;
+
+        var scale = getScale();
+        var sourceHeight = Math.max(editable.scrollHeight || scrollEl.scrollHeight || editable.clientHeight || 1, 1);
+        var scaledHeight = Math.max(120, Math.round(sourceHeight * scale));
+        var viewportHeight = Math.max(18, parseFloat(viewport.style.height || "0") || 18);
+        var maxTop = Math.max(0, scaledHeight - viewportHeight);
+        var nextTop = Math.max(0, Math.min(maxTop, offset));
+        var maxScroll = Math.max(0, (scrollEl.scrollHeight || sourceHeight) - (scrollEl.clientHeight || editable.clientHeight || 1));
+        scrollEl.scrollTop = maxTop ? Math.round((nextTop / maxTop) * maxScroll) : 0;
+        syncViewport();
+    }
+}
+
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 RTE_DefaultConfig.plugin_dictation = RTE_Plugin_Dictation;
@@ -11179,6 +19726,344 @@ function RTE_Plugin_Dictation() {
         if (typeof window !== "undefined" && window.console) window.console.warn("[dictation]", msg);
     }
 }
+
+if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
+
+RTE_DefaultConfig.plugin_documentoutline = RTE_Plugin_DocumentOutline;
+
+function RTE_Plugin_DocumentOutline() {
+    var obj = this;
+    var config;
+    var editor;
+    var shell = null;
+    var panel = null;
+    var list = null;
+    var empty = null;
+    var refreshTimer = 0;
+    var activeHeadingId = "";
+
+    obj.PluginName = "DocumentOutline";
+
+    obj.InitConfig = function (argconfig) {
+        config = argconfig;
+        if (config.documentOutlineEnabled === false) return;
+
+        config.documentOutlineTitle = config.documentOutlineTitle || "Outline";
+        config.documentOutlineHint = config.documentOutlineHint || "Browse headings and jump through long documents without leaving the editor.";
+        config.documentOutlineEmptyText = config.documentOutlineEmptyText || "Add headings to build the document outline.";
+        if (typeof config.documentOutlineAutoOpen !== "boolean") config.documentOutlineAutoOpen = false;
+        if (typeof config.documentOutlineMinLevel !== "number") config.documentOutlineMinLevel = 1;
+        if (typeof config.documentOutlineMaxLevel !== "number") config.documentOutlineMaxLevel = 6;
+
+        appendToolbarCommand("toolbar_default", "#{documentoutline}");
+        appendToolbarCommand("toolbar_full", "#{documentoutline}");
+    };
+
+    obj.InitEditor = function (argeditor) {
+        editor = argeditor;
+        if (config.documentOutlineEnabled === false) return;
+
+        editor.documentOutline = {
+            close: function () { closePanel(); },
+            list: function () { return collectHeadings(); },
+            open: function () { openPanel(); },
+            refresh: function () { renderOutline(); },
+            toggle: function () { togglePanel(); }
+        };
+
+        injectStyles();
+
+        editor.toolbarFactoryMap = editor.toolbarFactoryMap || {};
+        editor.toolbarFactoryMap["documentoutline"] = function (cmd) {
+            return editor.createToolbarButton(cmd);
+        };
+
+        editor.attachEvent("exec_command_documentoutline", function (state) {
+            state.returnValue = true;
+            state.stopBubble = true;
+            togglePanel();
+        });
+        editor.attachEvent("change", function () {
+            scheduleRefresh();
+        });
+        editor.attachEvent("selectionchange", function () {
+            updateActiveHeading();
+        });
+
+        ensureShell();
+        renderOutline();
+        if (config.documentOutlineAutoOpen) openPanel();
+    };
+
+    function appendToolbarCommand(toolbar, item) {
+        if (!config[toolbar]) return;
+        if (config[toolbar].indexOf(item) !== -1) return;
+        config[toolbar] = config[toolbar] + item;
+    }
+
+    function injectStyles() {
+        var hostDoc = config.container.ownerDocument;
+        if (hostDoc.getElementById("rte-document-outline-style")) return;
+        var style = hostDoc.createElement("style");
+        style.id = "rte-document-outline-style";
+        style.innerHTML = [
+            ".rte-document-outline-shell{display:flex;align-items:stretch;gap:12px;}",
+            ".rte-document-outline-shell>.rte-document-outline-host{flex:1 1 auto;min-width:0;}",
+            ".rte-document-outline-panel{display:none;flex:0 0 280px;min-width:240px;max-width:320px;border:1px solid #dbe4f0;border-radius:18px;background:linear-gradient(180deg,#fbfdff 0%,#f5f9ff 100%);box-shadow:0 18px 40px rgba(15,23,42,.08);overflow:hidden;}",
+            ".rte-document-outline-shell.is-open>.rte-document-outline-panel{display:flex;flex-direction:column;}",
+            ".rte-document-outline-header{padding:16px 18px 10px 18px;border-bottom:1px solid rgba(148,163,184,.18);}",
+            ".rte-document-outline-kicker{font-size:11px;line-height:1.3;letter-spacing:.08em;text-transform:uppercase;color:#64748b;font-weight:700;}",
+            ".rte-document-outline-title{margin-top:4px;font-size:18px;line-height:1.2;font-weight:700;color:#0f172a;}",
+            ".rte-document-outline-copy{margin-top:6px;font-size:12px;line-height:1.5;color:#475569;}",
+            ".rte-document-outline-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid rgba(148,163,184,.18);gap:12px;}",
+            ".rte-document-outline-count{font-size:12px;color:#64748b;}",
+            ".rte-document-outline-close{appearance:none;border:0;background:transparent;color:#475569;cursor:pointer;font-size:12px;font-weight:600;padding:0;}",
+            ".rte-document-outline-body{padding:8px 10px 10px 10px;overflow:auto;min-height:140px;max-height:520px;}",
+            ".rte-document-outline-list{display:flex;flex-direction:column;gap:4px;}",
+            ".rte-document-outline-item{appearance:none;width:100%;text-align:left;border:0;background:transparent;color:#0f172a;cursor:pointer;border-radius:12px;padding:10px 12px 10px calc(12px + (var(--rte-outline-level,1) - 1) * 14px);font-size:13px;line-height:1.4;font-weight:500;}",
+            ".rte-document-outline-item:hover{background:rgba(37,99,235,.08);}",
+            ".rte-document-outline-item.is-active{background:linear-gradient(90deg,rgba(37,99,235,.12) 0%,rgba(14,165,233,.08) 100%);color:#1d4ed8;}",
+            ".rte-document-outline-item-level{display:block;font-size:10px;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin-bottom:2px;}",
+            ".rte-document-outline-empty{padding:20px 12px;color:#64748b;font-size:13px;line-height:1.5;}",
+            "@media (max-width: 1100px){.rte-document-outline-shell{display:block;}.rte-document-outline-panel{margin-top:12px;max-width:none;width:100%;}.rte-document-outline-body{max-height:320px;}}"
+        ].join("");
+        hostDoc.head.appendChild(style);
+    }
+
+    function ensureShell() {
+        if (shell) return shell;
+        var container = config.container;
+        var hostDoc = container.ownerDocument;
+        shell = hostDoc.createElement("div");
+        shell.className = "rte-document-outline-shell";
+
+        var host = hostDoc.createElement("div");
+        host.className = "rte-document-outline-host";
+
+        var parent = container.parentNode;
+        parent.insertBefore(shell, container);
+        shell.appendChild(host);
+        host.appendChild(container);
+
+        panel = hostDoc.createElement("aside");
+        panel.className = "rte-document-outline-panel";
+        panel.setAttribute("aria-label", config.documentOutlineTitle);
+
+        var header = hostDoc.createElement("div");
+        header.className = "rte-document-outline-header";
+        var kicker = hostDoc.createElement("div");
+        kicker.className = "rte-document-outline-kicker";
+        kicker.innerText = "Document";
+        var title = hostDoc.createElement("div");
+        title.className = "rte-document-outline-title";
+        title.innerText = config.documentOutlineTitle;
+        var copy = hostDoc.createElement("div");
+        copy.className = "rte-document-outline-copy";
+        copy.innerText = config.documentOutlineHint;
+        header.appendChild(kicker);
+        header.appendChild(title);
+        header.appendChild(copy);
+
+        var toolbar = hostDoc.createElement("div");
+        toolbar.className = "rte-document-outline-toolbar";
+        var count = hostDoc.createElement("div");
+        count.className = "rte-document-outline-count";
+        count.setAttribute("data-rte-outline-count", "1");
+        var close = hostDoc.createElement("button");
+        close.type = "button";
+        close.className = "rte-document-outline-close";
+        close.innerText = "Hide";
+        close.onclick = function () { closePanel(); };
+        toolbar.appendChild(count);
+        toolbar.appendChild(close);
+
+        var body = hostDoc.createElement("div");
+        body.className = "rte-document-outline-body";
+        list = hostDoc.createElement("div");
+        list.className = "rte-document-outline-list";
+        empty = hostDoc.createElement("div");
+        empty.className = "rte-document-outline-empty";
+        empty.innerText = config.documentOutlineEmptyText;
+        body.appendChild(list);
+        body.appendChild(empty);
+
+        panel.appendChild(header);
+        panel.appendChild(toolbar);
+        panel.appendChild(body);
+        shell.appendChild(panel);
+        return shell;
+    }
+
+    function togglePanel() {
+        if (shell && shell.classList.contains("is-open")) closePanel();
+        else openPanel();
+    }
+
+    function openPanel() {
+        ensureShell();
+        shell.classList.add("is-open");
+        renderOutline();
+    }
+
+    function closePanel() {
+        if (!shell) return;
+        shell.classList.remove("is-open");
+    }
+
+    function scheduleRefresh() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(function () {
+            renderOutline();
+        }, 80);
+    }
+
+    function slugifyHeading(text) {
+        var slug = String(text || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-")
+            .replace(/^-|-$/g, "");
+        return slug || "section";
+    }
+
+    function collectHeadings() {
+        var editable = editor.getEditable();
+        if (!editable) return [];
+        var minLevel = Math.max(1, Math.min(6, config.documentOutlineMinLevel || 1));
+        var maxLevel = Math.max(minLevel, Math.min(6, config.documentOutlineMaxLevel || 6));
+        var headings = editable.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        var counts = {};
+        var items = [];
+        var i;
+        for (i = 0; i < headings.length; i++) {
+            var heading = headings[i];
+            var level = parseInt(heading.nodeName.substring(1), 10);
+            if (level < minLevel || level > maxLevel) continue;
+            var text = (heading.innerText || heading.textContent || "").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+            var baseId = heading.id || slugifyHeading(text);
+            counts[baseId] = (counts[baseId] || 0) + 1;
+            var resolvedId = heading.id || (counts[baseId] === 1 ? baseId : (baseId + "-" + counts[baseId]));
+            if (!heading.id) heading.id = resolvedId;
+            items.push({
+                id: heading.id,
+                level: level,
+                text: text || ("Heading " + (items.length + 1)),
+                element: heading
+            });
+        }
+        return items;
+    }
+
+    function getCaretRange() {
+        var selection = editor.getSelection ? editor.getSelection() : null;
+        if (!selection || selection.rangeCount === 0) return null;
+        try {
+            var range = selection.getRangeAt(0).cloneRange();
+            range.collapse(true);
+            return range;
+        } catch (ignore) {
+            return null;
+        }
+    }
+
+    function resolveActiveHeadingId(items) {
+        var range = getCaretRange();
+        if (!range || !items.length) return "";
+        var doc = range.startContainer.ownerDocument || editor.getEditable().ownerDocument;
+        var probe = doc.createRange();
+        var active = "";
+        try {
+            probe.setStart(range.startContainer, range.startOffset);
+            probe.collapse(true);
+            for (var i = 0; i < items.length; i++) {
+                var headingRange = doc.createRange();
+                headingRange.selectNodeContents(items[i].element);
+                headingRange.collapse(true);
+                if (headingRange.compareBoundaryPoints(Range.START_TO_START, probe) <= 0) active = items[i].id;
+            }
+        } catch (ignore) {
+            return activeHeadingId;
+        }
+        return active;
+    }
+
+    function focusHeading(item) {
+        if (!item || !item.element) return;
+        item.element.scrollIntoView({ behavior: "smooth", block: "center" });
+        try {
+            var selection = editor.getSelection ? editor.getSelection() : null;
+            var range = item.element.ownerDocument.createRange();
+            range.selectNodeContents(item.element);
+            range.collapse(true);
+            if (selection) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        } catch (ignore) { }
+        editor.focus();
+        activeHeadingId = item.id;
+        syncActiveButton();
+    }
+
+    function syncActiveButton() {
+        if (!list) return;
+        var buttons = list.querySelectorAll(".rte-document-outline-item");
+        for (var i = 0; i < buttons.length; i++) {
+            var button = buttons[i];
+            if (button.getAttribute("data-rte-outline-id") === activeHeadingId) button.classList.add("is-active");
+            else button.classList.remove("is-active");
+        }
+    }
+
+    function updateActiveHeading() {
+        var items = collectHeadings();
+        var nextId = resolveActiveHeadingId(items);
+        if (nextId === activeHeadingId && list && list.childNodes.length) {
+            syncActiveButton();
+            return;
+        }
+        activeHeadingId = nextId;
+        renderOutline(items);
+    }
+
+    function renderOutline(cachedItems) {
+        ensureShell();
+        var items = cachedItems || collectHeadings();
+        activeHeadingId = resolveActiveHeadingId(items) || activeHeadingId;
+
+        while (list.firstChild) list.removeChild(list.firstChild);
+
+        var count = panel.querySelector("[data-rte-outline-count]");
+        if (count) count.innerText = items.length + " heading" + (items.length === 1 ? "" : "s");
+        empty.style.display = items.length ? "none" : "block";
+
+        for (var i = 0; i < items.length; i++) {
+            (function (item) {
+                var button = panel.ownerDocument.createElement("button");
+                button.type = "button";
+                button.className = "rte-document-outline-item";
+                button.style.setProperty("--rte-outline-level", String(item.level));
+                button.setAttribute("data-rte-outline-id", item.id);
+
+                var level = panel.ownerDocument.createElement("span");
+                level.className = "rte-document-outline-item-level";
+                level.innerText = "H" + item.level;
+
+                var text = panel.ownerDocument.createElement("span");
+                text.innerText = item.text;
+
+                button.appendChild(level);
+                button.appendChild(text);
+                button.onclick = function () { focusHeading(item); };
+                list.appendChild(button);
+            })(items[i]);
+        }
+
+        syncActiveButton();
+    }
+}
+
 
 
 if (!RTE_DefaultConfig.svgCode_html2pdf) {
@@ -11933,6 +20818,26 @@ function RTE_Plugin_InsertEmoji() {
 					clearTimeout(tid_key);
 					tid_key = setTimeout(show_result, 100);
 				}
+				// 2026-05-11 quick-load rewrite: bulk-build via innerHTML and
+				// only render the active category. Previous version eagerly
+				// built ~4000 DOM nodes for 1,037 emojis on every panel open,
+				// noticeably slow on low-end machines. New flow:
+				//   - panel opens → render first category only (~125 nodes)
+				//   - tab click → swap to that category's HTML
+				//   - search → bulk innerHTML build of filtered results
+				function buildCategoryHTML(group) {
+					var parts = [];
+					parts.push('<div style="padding:3px;margin-top:5px;color:darkblue;">' + group.name[0].toUpperCase() + group.name.substring(1) + '</div>');
+					parts.push('<div style="display:flex;flex-direction:row;flex-wrap:wrap;">');
+					for (var i = 0; i < group.items.length; i++) {
+						var item = group.items[i];
+						var htmlcode = CharToHTMLCode(item.emoji);
+						parts.push('<gitem class="rte-flex-column-center" style="width:32px;height:32px;margin:2px"><gspan htmlcode="' + htmlcode + '" title="' + item.emoji + ' ' + (item.keyword || '').replace(/"/g, '') + '">' + htmlcode + '</gspan></gitem>');
+					}
+					parts.push('</div>');
+					return parts.join('');
+				}
+
 				function show_result() {
 					var keyword = searchbox.value.trim().toLowerCase();
 					if (!keyword) {
@@ -11945,38 +20850,22 @@ function RTE_Plugin_InsertEmoji() {
 					tabpanel.style.display =
 						grouppanel.style.display = "none";
 					resultpanel.style.display = "flex";
-					resultpanel.innerHTML = "";
 
-					var resultline = __Append(resultpanel, "div", "width:100%;padding:3px;margin-top:5px;color:darkblue;text-align:center;");
-
+					var hitsHtml = [];
 					var itemindex = 0;
-
-
 					for (var gi = 0; gi < emojidata.length; gi++) {
 						var group = emojidata[gi];
 						for (var ii = 0; ii < group.items.length; ii++) {
 							var item = group.items[ii];
-
 							if (!item.keyword || item.keyword.indexOf(keyword) == -1)
 								continue;
-
 							itemindex++;
-
-							//if (itemindex > 20)break;
-							var gitem = __Append(resultpanel, "gitem", "width:32px;height:32px;margin:2px", "rte-flex-column-center")
-							var gspan = __Append(gitem, "gspan", "");
 							var htmlcode = CharToHTMLCode(item.emoji);
-							gspan.setAttribute("title", item.emoji + " " + item.keyword)
-							gspan.setAttribute("htmlcode", htmlcode)
-							gspan.innerHTML = htmlcode;
+							hitsHtml.push('<gitem class="rte-flex-column-center" style="width:32px;height:32px;margin:2px"><gspan htmlcode="' + htmlcode + '" title="' + item.emoji + ' ' + (item.keyword || '').replace(/"/g, '') + '">' + htmlcode + '</gspan></gitem>');
 						}
 					}
-
-					resultline.innerText = itemindex + " items";
-
+					resultpanel.innerHTML = '<div style="width:100%;padding:3px;margin-top:5px;color:darkblue;text-align:center;">' + itemindex + ' items</div>' + hitsHtml.join('');
 				}
-
-				searchbox.focus();
 
 				panel.setAttribute("id", "emoji-picker");
 
@@ -11986,25 +20875,14 @@ function RTE_Plugin_InsertEmoji() {
 
 				var grouppanel = __Append(panel, "div", "overflow-y:scroll;padding-bottom:55px;flex:999");
 
-				var groupdivs = [];
-
-				for (var gi = 0; gi < emojidata.length; gi++) {
-					var group = emojidata[gi];
-					var gdiv = __Append(grouppanel, "div", "padding:3px;margin-top:5px;color:darkblue;");
-					groupdivs.push(gdiv);
-					gdiv.innerText = group.name[0].toUpperCase() + group.name.substring(1);
-
-					gdiv = __Append(grouppanel, "div", "display:flex;flex-direction:row;flex-wrap:wrap;");
-
-					for (var itemindex = 0; itemindex < group.items.length; itemindex++) {
-						var item = group.items[itemindex];
-						//if (itemindex > 20)break;
-						var gitem = __Append(gdiv, "gitem", "width:32px;height:32px;margin:2px", "rte-flex-column-center")
-						var gspan = __Append(gitem, "gspan", "");
-						var htmlcode = CharToHTMLCode(item.emoji);
-						gspan.setAttribute("title", item.emoji + " " + item.keyword)
-						gspan.setAttribute("htmlcode", htmlcode)
-						gspan.innerHTML = htmlcode;
+				// Lazy-render: only build the active category. Each tab click swaps the html.
+				var activeGroupIndex = 0;
+				function renderCategory(gi) {
+					activeGroupIndex = gi;
+					grouppanel.innerHTML = buildCategoryHTML(emojidata[gi]);
+					grouppanel.scrollTop = 0;
+					for (var bi = 0; bi < tabuibtns.length; bi++) {
+						tabuibtns[bi].className = bi === gi ? "rte-ui-active" : "";
 					}
 				}
 
@@ -12012,40 +20890,20 @@ function RTE_Plugin_InsertEmoji() {
 				tabui.setAttribute("id", "emoji-picker");
 				var tabuitoolbar = __Append(tabui, "rte-tabui-toolbar");
 				var tabuibtns = [];
-				function CreateTabBtn(group) {
-					var btn = __Append(tabuitoolbar, "rte-tabui-toolbar-button", "width:32px;text-align:center;margin:4px")
-					tabuibtns.push(btn);
-					btn.setAttribute("title", group.name);
-					btn.innerHTML = group.items[0].emoji
-					btn.onclick = function () {
-						grouppanel.scrollTop = groupdivs[group.index].getBoundingClientRect().top - grouppanel.getBoundingClientRect().top + grouppanel.scrollTop;
-						grouppanel.onscroll();
-					}
-					btn.group = group;
-				}
 				for (var gi = 0; gi < emojidata.length; gi++) {
-					var group = emojidata[gi];
-					CreateTabBtn(group)
+					(function (group) {
+						var btn = __Append(tabuitoolbar, "rte-tabui-toolbar-button", "width:32px;text-align:center;margin:4px");
+						btn.setAttribute("title", group.name);
+						btn.innerHTML = group.items[0].emoji;
+						btn.onclick = function () { renderCategory(group.index); };
+						tabuibtns.push(btn);
+					})(emojidata[gi]);
 				}
 
-				var lastactivebtn = null;
-				grouppanel.onscroll = function () {
-					var ptop = grouppanel.getBoundingClientRect().top;
-					if (lastactivebtn) lastactivebtn.className = "";
-					for (var bi = 0; bi < tabuibtns.length; bi++) {
-						var btn = tabuibtns[bi];
-						var gdiv = groupdivs[btn.group.index];
-						if (gdiv.getBoundingClientRect().top > ptop) {
-							lastactivebtn = tabuibtns[btn.group.index - 1] || btn;
-							lastactivebtn.className = "rte-ui-active";
-							return;
-						}
-					}
+				// Initial render: just the first category (~125 emojis instead of all 1037).
+				renderCategory(0);
 
-					lastactivebtn = tabuibtns[tabuibtns.length - 1];
-					lastactivebtn.className = "rte-ui-active";
-				}
-				grouppanel.onscroll();
+				searchbox.focus();
 
 
 			})
@@ -12231,11 +21089,10 @@ function RTE_Plugin_InsertGallery() {
         };
 
         var browser = append(dialoginner, "div", "", "rte-gallery-browser");
+        // The outer dialog frame already supplies a title bar + close button via
+        // __UI_CreateDialogFrame, so we only render a short subtitle here (no
+        // duplicate "Image gallery" heading underneath the frame title).
         var header = append(browser, "div", "", "rte-dialog-browser-header");
-        var kicker = append(header, "div", "", "rte-dialog-browser-kicker");
-        kicker.innerText = "Media Library";
-        var title = append(header, "div", "", "rte-dialog-browser-title");
-        title.innerText = "Image gallery";
         var copy = append(header, "div", "", "rte-dialog-browser-copy");
         copy.innerText = "Browse uploaded assets, filter by name, and insert the selected image into the editor.";
 
@@ -12423,6 +21280,7 @@ function RTE_Plugin_InsertGallery() {
         search.focus();
     };
 }
+
 RTE_DefaultConfig.plugin_inserttemplate = RTE_Plugin_InsertTemplate;
 
 function RTE_Plugin_InsertTemplate() {
@@ -12525,11 +21383,8 @@ function RTE_Plugin_InsertTemplate() {
         };
 
         var browser = append(dialoginner, "div", "", "rte-dialog-browser");
+        // The outer dialog frame supplies the title bar — only render a subtitle here.
         var header = append(browser, "div", "", "rte-dialog-browser-header");
-        var kicker = append(header, "div", "", "rte-dialog-browser-kicker");
-        kicker.innerText = "Content Blocks";
-        var title = append(header, "div", "", "rte-dialog-browser-title");
-        title.innerText = "Insert template";
         var copy = append(header, "div", "", "rte-dialog-browser-copy");
         copy.innerText = "Preview reusable layouts, search by name, and replace the current editor content with a selected template.";
 
@@ -12680,6 +21535,7 @@ function RTE_Plugin_InsertTemplate() {
         search.focus();
     };
 }
+
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 RTE_DefaultConfig.plugin_mention = RTE_Plugin_Mention;
@@ -13200,10 +22056,220 @@ function RTE_Plugin_Mention() {
         }
     }
 }
+
+if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
+
+// Restricted editing — Word-style "protect document with editable regions".
+// When `restrictedEditingMode` is true on the editor's config, all content
+// is read-only EXCEPT spans tagged with `data-rte-editable="true"`. Use it
+// for templates with fillable fields, contracts with author-only edits, etc.
+//
+//   var ed = new RichTextEditor("#editor", { restrictedEditingMode: true });
+//   ed.restrictedEditing.markSelection();     // mark current selection editable
+//   ed.restrictedEditing.enable();            // turn on lockdown
+//   ed.restrictedEditing.disable();           // turn off lockdown
+//   ed.restrictedEditing.goToNext();          // move caret to next editable region
+//   ed.restrictedEditing.goToPrev();          // move caret to previous editable region
+//   ed.restrictedEditing.list();              // -> Array<Element>
+
+if (!RTE_DefaultConfig.svgCode_restrictedediting) {
+    RTE_DefaultConfig.svgCode_restrictedediting = '<svg viewBox="0 0 24 24" fill="none" stroke="#5F6368" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+}
+
+RTE_DefaultConfig.plugin_restrictedediting = RTE_Plugin_RestrictedEditing;
+
+function RTE_Plugin_RestrictedEditing() {
+    var obj = this;
+    var config;
+    var editor;
+    var enabled = false;
+    var editableAttr = "data-rte-editable";
+
+    obj.PluginName = "RestrictedEditing";
+
+    obj.InitConfig = function (argconfig) {
+        config = argconfig;
+        config.text_restrictedediting = config.text_restrictedediting || "Restricted editing";
+        config.text_restrictedediting_mark = config.text_restrictedediting_mark || "Mark as editable";
+        config.text_restrictedediting_next = config.text_restrictedediting_next || "Next editable region";
+        config.text_restrictedediting_hint = config.text_restrictedediting_hint || "Lock the document; only marked regions accept input.";
+    };
+
+    obj.InitEditor = function (argeditor) {
+        editor = argeditor;
+        enabled = !!config.restrictedEditingMode;
+
+        editor.restrictedEditing = {
+            isEnabled: function () { return enabled; },
+            enable: enable,
+            disable: disable,
+            toggle: function () { return enabled ? disable() : enable(); },
+            markSelection: markSelection,
+            unmark: unmark,
+            list: list,
+            goToNext: function () { return navigate(1); },
+            goToPrev: function () { return navigate(-1); }
+        };
+
+        editor.attachEvent("exec_command_restrictedediting", function (state) {
+            state.returnValue = true;
+            state.stopBubble = true;
+            // Toolbar click toggles the lockdown.
+            editor.restrictedEditing.toggle();
+        });
+
+        if (enabled) enable();
+
+        // Refresh styles when content changes (newly-pasted marked spans inherit visuals).
+        editor.attachEvent("change", refreshStyles);
+        refreshStyles();
+    };
+
+    function getEditable() {
+        return editor.getEditable ? editor.getEditable() : null;
+    }
+
+    function refreshStyles() {
+        var body = getEditable();
+        if (!body) return;
+        var doc = body.ownerDocument;
+        if (!doc || doc.getElementById("__rte_restrictedediting_styles")) return;
+        var s = doc.createElement("style");
+        s.id = "__rte_restrictedediting_styles";
+        s.textContent = [
+            "[" + editableAttr + "='true']{background:rgba(34,197,94,.10);outline:1px dashed rgba(34,197,94,.55);outline-offset:1px;border-radius:2px;padding:1px 2px}",
+            "body.rte-restricted [contenteditable='false']{cursor:not-allowed}",
+            "body.rte-restricted [" + editableAttr + "='true']{background:rgba(34,197,94,.16)}"
+        ].join("\n");
+        (doc.head || doc.getElementsByTagName("head")[0]).appendChild(s);
+    }
+
+    function enable() {
+        var body = getEditable();
+        if (!body) return false;
+        enabled = true;
+        body.classList.add("rte-restricted");
+        // Walk top-level children — anything WITHOUT a descendant marked region
+        // becomes contenteditable=false. Marked regions stay editable.
+        for (var i = 0; i < body.children.length; i++) {
+            var node = body.children[i];
+            if (node.querySelector("[" + editableAttr + "='true']")) {
+                node.setAttribute("contenteditable", "true");
+                // Lock the wrapper itself but keep the marked descendants editable.
+                node.setAttribute(editableAttr + "-wrapper", "true");
+            } else {
+                node.setAttribute("contenteditable", "false");
+            }
+        }
+        // Make the body itself NOT editable; rely on per-element contenteditable.
+        body.setAttribute("contenteditable", "false");
+        refreshStyles();
+        return true;
+    }
+
+    function disable() {
+        var body = getEditable();
+        if (!body) return false;
+        enabled = false;
+        body.classList.remove("rte-restricted");
+        var locked = body.querySelectorAll("[contenteditable]");
+        for (var i = 0; i < locked.length; i++) {
+            locked[i].removeAttribute("contenteditable");
+            locked[i].removeAttribute(editableAttr + "-wrapper");
+        }
+        body.setAttribute("contenteditable", "true");
+        return true;
+    }
+
+    // Mark the current selection as an editable region. Returns the wrapper element.
+    function markSelection(options) {
+        options = options || {};
+        var body = getEditable();
+        if (!body) return null;
+        var doc = body.ownerDocument;
+        var sel = doc.getSelection();
+        if (!sel || sel.rangeCount === 0) return null;
+        var range = sel.getRangeAt(0);
+        if (range.collapsed) return null;
+        var span = doc.createElement("span");
+        span.setAttribute(editableAttr, "true");
+        if (options.label) span.setAttribute("aria-label", options.label);
+        try {
+            range.surroundContents(span);
+        } catch (e) {
+            // surroundContents fails on partial-element selections; fall back
+            // to extract → wrap → insert.
+            var frag = range.extractContents();
+            span.appendChild(frag);
+            range.insertNode(span);
+        }
+        // Restore selection inside the new wrapper.
+        var r2 = doc.createRange();
+        r2.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r2);
+        refreshStyles();
+        if (enabled) enable(); // recompute lockdown around new editable region
+        return span;
+    }
+
+    function unmark(node) {
+        node = node || (function () {
+            var body = getEditable();
+            var sel = body && body.ownerDocument.getSelection();
+            if (!sel || sel.rangeCount === 0) return null;
+            var n = sel.anchorNode;
+            while (n && n !== body) {
+                if (n.nodeType === 1 && n.getAttribute && n.getAttribute(editableAttr) === "true") return n;
+                n = n.parentNode;
+            }
+            return null;
+        })();
+        if (!node) return false;
+        // Replace the wrapper with its children (preserve content).
+        var parent = node.parentNode;
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+        if (enabled) enable();
+        return true;
+    }
+
+    function list() {
+        var body = getEditable();
+        if (!body) return [];
+        return Array.prototype.slice.call(body.querySelectorAll("[" + editableAttr + "='true']"));
+    }
+
+    function navigate(direction) {
+        var regions = list();
+        if (regions.length === 0) return null;
+        var body = getEditable();
+        var sel = body && body.ownerDocument.getSelection();
+        var current = null;
+        if (sel && sel.anchorNode) {
+            var n = sel.anchorNode;
+            while (n && n !== body) {
+                if (n.nodeType === 1 && n.getAttribute && n.getAttribute(editableAttr) === "true") { current = n; break; }
+                n = n.parentNode;
+            }
+        }
+        var idx = current ? regions.indexOf(current) : -1;
+        var next = regions[(idx + direction + regions.length) % regions.length];
+        if (!next) return null;
+        var range = body.ownerDocument.createRange();
+        range.selectNodeContents(next);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        next.scrollIntoView({ block: "center", behavior: "smooth" });
+        return next;
+    }
+}
+
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 if (!RTE_DefaultConfig.svgCode_revisionhistory) {
-    RTE_DefaultConfig.svgCode_revisionhistory = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg>';
+    RTE_DefaultConfig.svgCode_revisionhistory = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg>';
 }
 
 RTE_DefaultConfig.plugin_revisionhistory = RTE_Plugin_RevisionHistory;
@@ -13783,6 +22849,7 @@ function RTE_Plugin_RevisionHistory() {
         host.head.appendChild(style);
     }
 }
+
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 RTE_DefaultConfig.plugin_slashcommand = RTE_Plugin_SlashCommand;
@@ -14341,6 +23408,7 @@ function RTE_Plugin_SlashCommand() {
     function iconDate() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="14" rx="1.5"/><path d="M4 10h16"/><path d="M9 3v4"/><path d="M15 3v4"/></svg>'; }
     function iconDot() { return '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>'; }
 }
+
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 if (!RTE_DefaultConfig.svgCode_trackchanges) {
@@ -14966,6 +24034,7 @@ function RTE_Plugin_TrackedChanges() {
         }
     }
 }
+
 if (!window.RTE_DefaultConfig) window.RTE_DefaultConfig = {};
 
 RTE_DefaultConfig.plugin_yjscollab = RTE_Plugin_YjsCollab;
@@ -15033,14 +24102,38 @@ function RTE_Plugin_YjsCollab() {
         var user = options.user || config.currentUser || { id: "user", name: "User", color: "#2563eb" };
         var ledgerMap = doc.getMap(config.collabLedgerMapName);
 
-        // Text-sync (preview): when enabled, bind a shared Y.Text to the editor's
-        // HTML as an opaque string. This unlocks concurrent editing with CRDT
-        // merge semantics, at the cost of coarse caret snap-back on remote apply.
-        // The proper per-node binding is on the roadmap — this MVP buys parity
-        // on the basic "two people typing" RFP checkbox without blocking on it.
-        var textSyncEnabled = options.textSync === true
-            || (options.textSync !== false && config.collabTextSync === true);
-        var textMap = textSyncEnabled ? doc.getText(config.collabTextName || "richtextbox.body") : null;
+        // textSync modes:
+        //   false / unset → awareness/presence/ledger only.
+        //   true          → legacy shared-Y.Text snapshot mode (last-write-
+        //                   wins on same-paragraph conflicts; kept for
+        //                   back-compat).
+        //   "crdt"        → per-node Yjs CRDT via crdt-engine.js. Falls
+        //                   back to legacy mode (with console.warn) if
+        //                   the engine bundle isn't loaded.
+        var requestedTextSync = options.textSync;
+        if (requestedTextSync === undefined) {
+            requestedTextSync = config.collabTextSync === "crdt"
+                ? "crdt"
+                : (config.collabTextSync === true);
+        }
+        var textSyncMode;       // "off" | "legacy" | "crdt"
+        var textMap = null;
+        var crdtBinding = null;
+        if (requestedTextSync === "crdt") {
+            var Crdt = (typeof window !== "undefined") ? window.RichTextEditorCrdt : null;
+            if (Crdt && typeof Crdt.attachCrdtBinding === "function") {
+                textSyncMode = "crdt";
+            } else {
+                console.warn("yjscollab: textSync \"crdt\" requested but richtexteditor/plugins/crdt-engine.js is not loaded — falling back to legacy snapshot mode.");
+                textSyncMode = "legacy";
+                textMap = doc.getText(config.collabTextName || "richtextbox.body");
+            }
+        } else if (requestedTextSync === true) {
+            textSyncMode = "legacy";
+            textMap = doc.getText(config.collabTextName || "richtextbox.body");
+        } else {
+            textSyncMode = "off";
+        }
 
         session = {
             doc: doc,
@@ -15048,7 +24141,9 @@ function RTE_Plugin_YjsCollab() {
             awareness: provider.awareness,
             ledgerMap: ledgerMap,
             textMap: textMap,
-            textSyncEnabled: textSyncEnabled,
+            textSyncEnabled: textSyncMode !== "off",
+            textSyncMode: textSyncMode,
+            crdtBinding: crdtBinding,
             user: user,
             cleanup: []
         };
@@ -15072,8 +24167,30 @@ function RTE_Plugin_YjsCollab() {
             seedLedgerFromRemote();
         }
 
-        // Bind shared Y.Text <-> editor HTML (opt-in; MVP).
-        if (session.textSyncEnabled && session.textMap) {
+        // Wire text sync per the requested mode. For "crdt" the engine
+        // owns Y.XmlFragment ↔ DOM mirroring + selection preservation;
+        // we retain awareness, presence panel, remote-cursor overlay,
+        // and the review ledger bridge.
+        if (session.textSyncMode === "crdt") {
+            try {
+                session.crdtBinding = window.RichTextEditorCrdt.attachCrdtBinding({
+                    editable: editor.getEditable(),
+                    ydoc: doc,
+                    provider: provider,
+                    awareness: provider.awareness,
+                    fragmentName: options.fragmentName || "default"
+                });
+                session.cleanup.push(function () {
+                    try { session.crdtBinding && session.crdtBinding.dispose(); }
+                    catch (ignore) { }
+                });
+            } catch (err) {
+                console.warn("yjscollab: CRDT engine attach failed; falling back to legacy mode.", err);
+                session.textSyncMode = "legacy";
+                session.textMap = doc.getText(config.collabTextName || "richtextbox.body");
+                wireTextSync();
+            }
+        } else if (session.textSyncMode === "legacy" && session.textMap) {
             wireTextSync();
         }
 
@@ -15579,6 +24696,7 @@ function RTE_Plugin_YjsCollab() {
         document.head.appendChild(style);
     }
 }
+
 RTE_DefaultConfig.plugin_zz_richtextbox_dialog_style = RTE_Plugin_RichTextBoxDialogStyle;
 
 function RTE_Plugin_RichTextBoxDialogStyle() {
@@ -15914,5 +25032,6 @@ function RTE_Plugin_RichTextBoxDialogStyle() {
         start();
     }
 }
+
 
 //END of all_plugins.js 

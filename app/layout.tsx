@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import '@/app/src/style/globals.css';
 import Header from '@/app/src/layout_components/header';
 import Footer from '@/app/src/layout_components/footer';
@@ -44,38 +43,10 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 						__html: `(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();`,
 					}}
 				/>
-				{/* <script src='/richtexteditor/rte.js' />
-				<script src='/richtexteditor/plugins/all_plugins.js' />
-				<script src="/richtexteditor/patch.js"></script> */}
 			</head>
 			<body
 				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}
 			>
-				<Script
-		          src='/richtexteditor/rte.js'
-		          strategy='beforeInteractive'
-		        />
-		
-		        <Script
-		          id='rte-config'
-		          strategy='beforeInteractive'
-		          dangerouslySetInnerHTML={{
-		            __html: `
-		              window.RTE_DefaultConfig = window.RTE_DefaultConfig || {};
-		              window.RTE_DefaultConfig.url_base = '/richtexteditor';
-		            `,
-		          }}
-		        />
-		
-		        <Script
-		          src='/richtexteditor/plugins/all_plugins.js'
-		          strategy='afterInteractive'
-		        />
-		
-		        <Script
-		          src='/richtexteditor/patch.js'
-		          strategy='afterInteractive'
-		        />
 				<SidebarProvider
 					defaultOpen={false}
 					className='flex-col'
@@ -90,7 +61,9 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 						</TooltipProvider>
 					</ReduxProvider>
 				</SidebarProvider>
-				<script>RTE_DefaultConfig.url_base='/richtexteditor'</script>
+				<script src='/richtexteditor/rte.js' />
+				<script src='/richtexteditor/plugins/all_plugins.js' />
+				<script src="/richtexteditor/patch.js"></script>
 			</body>
 		</html>
 	);

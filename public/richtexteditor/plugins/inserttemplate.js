@@ -100,11 +100,8 @@ function RTE_Plugin_InsertTemplate() {
         };
 
         var browser = append(dialoginner, "div", "", "rte-dialog-browser");
+        // The outer dialog frame supplies the title bar — only render a subtitle here.
         var header = append(browser, "div", "", "rte-dialog-browser-header");
-        var kicker = append(header, "div", "", "rte-dialog-browser-kicker");
-        kicker.innerText = "Content Blocks";
-        var title = append(header, "div", "", "rte-dialog-browser-title");
-        title.innerText = "Insert template";
         var copy = append(header, "div", "", "rte-dialog-browser-copy");
         copy.innerText = "Preview reusable layouts, search by name, and replace the current editor content with a selected template.";
 
