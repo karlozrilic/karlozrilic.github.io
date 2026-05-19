@@ -24,7 +24,6 @@ export default function Dashboard() {
 			const RichTextEditor = (window as any).RichTextEditor;
 
 			if (!RichTextEditor || !editorRef.current) return false;
-			console.log(RichTextEditor)
 
 			new RichTextEditor('#div_editor1', {
 				toolbar: 'default',
