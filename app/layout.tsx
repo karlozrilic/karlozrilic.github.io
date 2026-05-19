@@ -68,7 +68,7 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 		        />
 		
 		        <Script
-		          src'/richtexteditor/plugins/all_plugins.js'
+		          src='/richtexteditor/plugins/all_plugins.js'
 		          strategy='beforeInteractive'
 		        />
 		
