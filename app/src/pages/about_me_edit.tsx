@@ -9,10 +9,11 @@ import { updateAboutMe } from '@/app/src/service/firebase';
 import { Button } from '@/app/src/components/ui/button';
 import { Lock, LockOpen, Save } from 'lucide-react';
 import { Spinner } from '@/app/src/components/ui/spinner';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/app/src/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogOverlay, AlertDialogTitle, AlertDialogTrigger } from '@/app/src/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/src/components/ui/tooltip';
 import moment, { Moment } from 'moment';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 
 export default function AboutMeEdit() {
     const dispatch = useDispatch<AppDispatch>();
@@ -60,9 +61,18 @@ export default function AboutMeEdit() {
 
             editorRefInstance.current = editor;
 
+            editor.setHTMLCode(aboutMeData?.content);
+
             editor.attachEvent('change', onChange);
 
-            editor.setHTMLCode(aboutMeData?.content);
+            // Doesn't clear history if there is no slight timeout
+            setTimeout(() => {
+                // Removes history for undo/redo
+                editor.clearHistory();
+                // editor.revisionHistory.list();
+                // editor.snippets.list();
+                // editor.trackedChanges.list();
+            }, 10);
 
             return true;
         };
@@ -167,6 +177,7 @@ export default function AboutMeEdit() {
                                 {isDirty ? <p>Save text</p> : <p>Edit text to save</p>}
                             </TooltipContent>
                         </Tooltip>
+                        <AlertDialogOverlay className='backdrop-blur-sm' />
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure you want to save it?</AlertDialogTitle>
@@ -186,6 +197,18 @@ export default function AboutMeEdit() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
+
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <Button variant="outline">History</Button>
+                        </SheetTrigger>
+                        <SheetContent>
+                            <SheetHeader>
+                                <SheetTitle>History</SheetTitle>
+                                <SheetDescription>TODO</SheetDescription>
+                            </SheetHeader>
+                        </SheetContent>
+                    </Sheet>
                 </div>
                 
                 <div ref={editorRef} id='text-editor'></div>
