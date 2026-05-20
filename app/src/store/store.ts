@@ -1,15 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
-import aboutMeReducer from '@/app/src/store/slices/aboutMeSlice';
+import { aboutMeReducer, aboutMeHistoryReducer } from '@/app/src/store/slices/aboutMeSlice';
 import technologiesReducer from '@/app/src/store/slices/technologiesSlice';
 import projectsReducer from '@/app/src/store/slices/projectsSlice';
-import experiencesReducer from '@/app/src/store/slices/experienceSlice';
+import { experiencesReducer, experiencesHistoryReducer } from '@/app/src/store/slices/experienceSlice';
 
 export const store = configureStore({
     reducer: {
         aboutMe: aboutMeReducer,
+        aboutMeHistory: aboutMeHistoryReducer,
         technologies: technologiesReducer,
         projects: projectsReducer,
-        experiences: experiencesReducer
+        experiences: experiencesReducer,
+        experiencesHistory: experiencesHistoryReducer
     }
 });
 

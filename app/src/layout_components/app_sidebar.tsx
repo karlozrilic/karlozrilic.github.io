@@ -15,7 +15,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from '@/app/src/components/ui/sidebar'
-import { ChevronDown, ChevronRight, ChevronsUpDown, LogOutIcon, SquareTerminal } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Eye, LogOutIcon, Pencil, SquareTerminal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/app/src/components/ui/dropdown-menu'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/components/ui/collapsible'
 import { useAuth } from '@/hooks/useAuth';
@@ -52,22 +52,16 @@ export function AppSidebar() {
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton>
-                                    Select Workspace
-                                <ChevronDown className='ml-auto' />
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className='w-[--radix-popper-anchor-width]'>
-                                <DropdownMenuItem>
-                                    <span>Acme Inc</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <SidebarMenuButton className='h-auto'>
+                            <Avatar>
+                                <AvatarImage src='/favicon/favicon-512x512.png' />
+                                <AvatarFallback>KZ</AvatarFallback>
+                            </Avatar>
+                            <div className='grid flex-1 text-left text-sm leading-tight'>
+                                <span className='font-medium'>Portfolio</span>
+                                <span className='text-xs'>Edit or preview components of each project</span>
+                            </div>
+                        </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
@@ -93,7 +87,7 @@ export function AppSidebar() {
                     </SidebarMenu>
                 </SidebarGroup>
                 <SidebarGroup>
-                    <SidebarGroupLabel>Portfolio</SidebarGroupLabel>
+                    <SidebarGroupLabel>Content</SidebarGroupLabel>
 
                     <SidebarMenu>
                         <Collapsible className='group/collapsible'>
@@ -101,7 +95,7 @@ export function AppSidebar() {
                                 <CollapsibleTrigger asChild>
                                     <SidebarMenuButton>
                                         <SquareTerminal />
-                                        <span>About me</span>
+                                        <span>Portfolio</span>
                                         <ChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
@@ -114,32 +108,74 @@ export function AppSidebar() {
                                 '
                             >
                                 <SidebarMenuSub>
-                                    <SidebarMenuSubItem>
-                                        <SidebarMenuSubButton
-                                            asChild
-                                            onClick={() => {
-                                                router.push('/admin/portfolio/about-me');
-                                                toggleSidebar();
-                                            }}
-                                            className='cursor-pointer'
-                                        >
-                                            <span>View</span>
-                                        </SidebarMenuSubButton>
-                                    </SidebarMenuSubItem>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <SidebarMenuSubItem>
+                                                <SidebarMenuSubButton asChild className='cursor-pointer'>
+                                                    <span>About me</span>
+                                                </SidebarMenuSubButton>
+                                            </SidebarMenuSubItem>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent side={isMobile ? 'bottom' : 'right'}>
+                                            <DropdownMenuGroup>
+                                                <DropdownMenuItem
+                                                    className='cursor-pointer'
+                                                    onClick={() => {
+                                                        router.push('/admin/portfolio/about-me');
+                                                        toggleSidebar();
+                                                    }}
+                                                >
+                                                    <Eye />
+                                                    Preview
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className='cursor-pointer'
+                                                    onClick={() => {
+                                                        router.push('/admin/portfolio/about-me/edit');
+                                                        toggleSidebar();
+                                                    }}
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                            </DropdownMenuGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </SidebarMenuSub>
                                 <SidebarMenuSub>
-                                    <SidebarMenuSubItem>
-                                        <SidebarMenuSubButton
-                                            asChild
-                                            onClick={() => {
-                                                router.push('/admin/portfolio/about-me/edit');
-                                                toggleSidebar();
-                                            }}
-                                            className='cursor-pointer'
-                                        >
-                                            <span>Edit</span>
-                                        </SidebarMenuSubButton>
-                                    </SidebarMenuSubItem>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <SidebarMenuSubItem>
+                                                <SidebarMenuSubButton asChild className='cursor-pointer'>
+                                                    <span>Experience</span>
+                                                </SidebarMenuSubButton>
+                                            </SidebarMenuSubItem>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent side={isMobile ? 'bottom' : 'right'}>
+                                            <DropdownMenuGroup>
+                                                <DropdownMenuItem
+                                                    className='cursor-pointer'
+                                                    onClick={() => {
+                                                        router.push('/admin/portfolio/experience');
+                                                        toggleSidebar();
+                                                    }}
+                                                >
+                                                    <Eye />
+                                                    Preview
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className='cursor-pointer'
+                                                    onClick={() => {
+                                                        router.push('/admin/portfolio/experience/edit');
+                                                        toggleSidebar();
+                                                    }}
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                            </DropdownMenuGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </SidebarMenuSub>
                             </CollapsibleContent>
                         </Collapsible>

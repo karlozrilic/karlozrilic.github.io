@@ -1,8 +1,10 @@
 import AboutMeEdit from "@/app/src/pages/about_me_edit";
+import ExperienceEdit from "@/app/src/pages/experience_edit";
 
 export function generateStaticParams() {
     return [
         { product: 'portfolio', section: 'about-me' },
+        { product: 'portfolio', section: 'experience' },
         { product: 'banana', section: '' },
         { product: 'imposter', section: '' },
     ];
@@ -15,9 +17,23 @@ export default async function Page({
 }) {
     const { product, section } = await params;
 
-    if (product === 'portfolio' && section === 'about-me') {
-        return <AboutMeEdit />
+    let page = <></>;
+
+    switch (product) {
+        case 'portfolio':
+            switch (section) {
+                case 'about-me': 
+                    page = <AboutMeEdit />;
+                    break;
+                case 'experience': 
+                    page = <ExperienceEdit />;
+                    break;
+                default:
+                    break;
+            }
+        default:
+            break;
     }
 
-    return <></>;
+    return page;
 }

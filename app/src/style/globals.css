@@ -4,6 +4,7 @@
 
 @import "./theme.css";
 
+@import "./components/scrollbar.css";
 @import "./components/marquee.css";
 
 @custom-variant dark (&:is(.dark *));

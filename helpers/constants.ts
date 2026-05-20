@@ -1,0 +1,1 @@
+export const dateTimeFormat = 'D.M.YYYY., HH:mm:ss';

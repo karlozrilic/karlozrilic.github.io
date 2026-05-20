@@ -4,16 +4,29 @@ import LoadingScreen from '@/app/src/sections/loading';
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
-import { fetchAboutMe } from '@/app/src/store/slices/aboutMeSlice';
+import { fetchAboutMe, fetchAboutMeHistory } from '@/app/src/store/slices/aboutMeSlice';
 import { updateAboutMe } from '@/app/src/service/firebase';
 import { Button } from '@/app/src/components/ui/button';
-import { Lock, LockOpen, Save } from 'lucide-react';
+import { ChevronRightIcon, History, Lock, LockOpen, Save } from 'lucide-react';
 import { Spinner } from '@/app/src/components/ui/spinner';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogOverlay, AlertDialogTitle, AlertDialogTrigger } from '@/app/src/components/ui/alert-dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogOverlay,
+    AlertDialogTitle,
+    AlertDialogTrigger
+} from '@/app/src/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/src/components/ui/tooltip';
 import moment, { Moment } from 'moment';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
+import { dateTimeFormat } from '@/helpers/constants';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
 
 export default function AboutMeEdit() {
     const dispatch = useDispatch<AppDispatch>();
@@ -29,6 +42,9 @@ export default function AboutMeEdit() {
 
     const [aboutMeData, setAboutMeData] = useState<AboutMe | null>(null);
     const [updatedAt, setUpdatedAt] = useState<Moment | null>(null);
+
+    const [historyLoading, setHistoryLoading] = useState<boolean>(false);
+    const [aboutMeHistoryData, setAboutMeHistoryData] = useState<AboutMeHistory[]>([]);
 
     // Fetch data once on mount
     useEffect(() => {
@@ -124,6 +140,19 @@ export default function AboutMeEdit() {
           )
     }
 
+    async function historyOpen() {
+        setHistoryLoading(true);
+
+        try {
+            const response = await dispatch(fetchAboutMeHistory());
+            setAboutMeHistoryData(response.payload as AboutMeHistory[]);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setHistoryLoading(false);
+        }
+    }
+
     return <>
         {!wysiwygLoaded || !loaded ? <LoadingScreen /> : null}
         <main className='flex min-h-screen justify-center p-2'>
@@ -133,13 +162,13 @@ export default function AboutMeEdit() {
                         moment().diff(updatedAt, 'hours') < 24 ?
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <span>{updatedAt.fromNow()}</span>
+                                    <span>Updated: {updatedAt.fromNow()}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    {updatedAt.format('D.M.YYYY., HH:mm:ss')}
+                                    {updatedAt.format(dateTimeFormat)}
                                 </TooltipContent>
                             </Tooltip>
-                            : <span>{updatedAt.format('D.M.YYYY., HH:mm:ss')}</span>
+                            : <span>Updated at: {updatedAt.format(dateTimeFormat)}</span>
                         :
                         null
                     }
@@ -199,14 +228,59 @@ export default function AboutMeEdit() {
                     </AlertDialog>
 
                     <Sheet>
-                        <SheetTrigger asChild>
-                            <Button variant="outline">History</Button>
+                        <SheetTrigger
+                            asChild
+                            onClick={historyOpen}
+                        >
+                            <Button variant='outline'>History</Button>
                         </SheetTrigger>
-                        <SheetContent>
+                        <SheetContent className='gap-0 lg:max-w-lg' showCloseButton={false}>
                             <SheetHeader>
                                 <SheetTitle>History</SheetTitle>
-                                <SheetDescription>TODO</SheetDescription>
+                                <SheetDescription>Check history here</SheetDescription>
                             </SheetHeader>
+                            {historyLoading ? 
+                                <div className='flex w-full h-full justify-center items-center'>
+                                    <Spinner className='size-8' />
+                                </div>
+                                :
+                                <div className='grid flex-1 auto-rows-min gap-1 px-4 overflow-auto'>
+                                    { aboutMeHistoryData.map((data, index) => {
+                                        return (
+                                            <Collapsible key={index}>
+                                                <CollapsibleTrigger asChild>
+                                                    <Button
+                                                        variant='ghost'
+                                                        size='sm'
+                                                        className='group w-full justify-start transition-none hover:bg-accent hover:text-accent-foreground'
+                                                    >
+                                                        <ChevronRightIcon className='transition-transform group-data-[state=open]:rotate-90' />
+                                                        <History />
+                                                        {moment(data.archivedAt).format(dateTimeFormat)}
+                                                    </Button>
+                                                </CollapsibleTrigger>
+                                                <CollapsibleContent
+                                                    className='
+                                                        overflow-hidden
+                                                        data-[state=closed]:animate-collapsible-up
+                                                        data-[state=open]:animate-collapsible-down
+                                                        mt-1 ml-5 style-lyra:ml-4
+                                                    '
+                                                >
+                                                    <div className='flex flex-col gap-1'>
+                                                        <div dangerouslySetInnerHTML={{ __html: data.content }}></div>
+                                                    </div>
+                                                </CollapsibleContent>
+                                            </Collapsible>
+                                        );
+                                    }) }
+                                </div>
+                            }
+                            <SheetFooter>
+                                <SheetClose asChild>
+                                    <Button variant='outline'>Close</Button>
+                                </SheetClose>
+                            </SheetFooter>
                         </SheetContent>
                     </Sheet>
                 </div>

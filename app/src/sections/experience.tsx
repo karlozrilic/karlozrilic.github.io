@@ -39,9 +39,10 @@ export default function Experience() {
 
     return (
         <>
+            { experiences.loaded ? null : <LoadingComponent /> }
             <span id='experience'></span>
             <section className='relative py-10 md:py-20 bg-secondary text-secondary-foreground fade-in px-1' id='experience'>
-                { experiences.loaded ? null : <LoadingComponent /> }
+                
                 <h2 className='text-4xl font-bold text-center mb-10'>Experience</h2>
                 <div className='container mx-auto space-y-8'>
                     {experiences.data.map((experience, index) => {

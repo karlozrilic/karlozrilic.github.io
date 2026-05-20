@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 
 interface AboutMeState {
@@ -11,7 +11,22 @@ interface AboutMeState {
     error: string | null;
 };
 
+interface AboutMeHistoryState {
+    data: AboutMeHistory[];
+    loading: boolean;
+    loaded: boolean;
+    error: string | null;
+};
+
+
 const initialState: AboutMeState = {
+    data: [],
+    loading: false,
+    loaded: false,
+    error: null,
+};
+
+const initialHistoryState: AboutMeHistoryState = {
     data: [],
     loading: false,
     loaded: false,
@@ -56,8 +71,52 @@ export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () =>
     return aboutMeData;
 });
 
+export const fetchAboutMeHistory = createAsyncThunk('aboutMe/fetchAboutMeHistory', async () => {
+    let aboutMeData: AboutMeHistory[] = [];
+
+    try {
+        const aboutMeSnapshot = await getDocs(
+            query(
+                collection(db, 'about_me', 'main', 'history'),
+                orderBy("archivedAt", "desc")
+            )
+        );
+        aboutMeData = aboutMeSnapshot.docs.map((doc) => {
+            const data = doc.data() as
+                Omit<AboutMeHistory, 'archivedAt'> &
+                Omit<AboutMeHistory, 'updated'> &
+                {
+                    archivedAt: Timestamp;
+                    updated: Timestamp;
+                };
+
+            return {
+                ...data,
+                archivedAt: data.archivedAt?.toDate?.().toISOString(),
+                updated: data.updated?.toDate?.().toISOString(),
+            };
+        });
+    } catch (error: unknown) {
+        if (error instanceof FirebaseError) {
+            console.error("FIRESTORE QUERY FAILED");
+            console.error("code:", error.code);
+            console.error("message:", error.message);
+            console.error("customData:", error.customData);
+        } else if (error instanceof Error) {
+            console.error("UNKNOWN ERROR");
+            console.error("name:", error.name);
+            console.error("message:", error.message);
+        } else {
+            console.error("NON-ERROR THROWN:", error);
+        }
+        throw error;
+    }
+    
+    return aboutMeData;
+});
+
 const aboutMeSlice = createSlice({
-    name: 'skill_groups',
+    name: 'about_me',
     initialState,
     reducers: {},
     extraReducers: (builder) => {
@@ -78,4 +137,27 @@ const aboutMeSlice = createSlice({
     },
 });
 
-export default aboutMeSlice.reducer;
+const aboutMeHistorySlice = createSlice({
+    name: 'about_me_history',
+    initialState: initialHistoryState,
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+        .addCase(fetchAboutMeHistory.pending, (state) => {
+            state.loading = true;
+            state.error = null;
+        })
+        .addCase(fetchAboutMeHistory.fulfilled, (state, action: PayloadAction<AboutMeHistory[]>) => {
+            state.loading = false;
+            state.loaded = true;
+            state.data = action.payload;
+        })
+        .addCase(fetchAboutMeHistory.rejected, (state, action) => {
+            state.loading = false;
+            state.error = action.error.message || 'Failed to fetch experience';
+        });
+    },
+});
+
+export const aboutMeReducer = aboutMeSlice.reducer;
+export const aboutMeHistoryReducer = aboutMeHistorySlice.reducer;

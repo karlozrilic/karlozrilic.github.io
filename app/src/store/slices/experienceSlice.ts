@@ -20,6 +20,20 @@ const initialState: ExperienceState = {
     error: null,
 };
 
+interface ExperienceHistoryState {
+    data: Experience[];
+    loading: boolean;
+    loaded: boolean;
+    error: string | null;
+};
+
+const initialHistoryState: ExperienceHistoryState = {
+    data: [],
+    loading: false,
+    loaded: false,
+    error: null,
+};
+
 export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', async () => {
     let mergedData: Experience[] = [];
 
@@ -33,11 +47,60 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
             )
         );
         const experiencesData: ExperienceWithId[] = experiencesSnapshot.docs.map(doc => {
-            const { ...rest } = doc.data() as ExperienceFromFirestore;
+            const data = doc.data() as ExperienceFromFirestore;
             return {
-                ...rest,
-                start_date: rest.start_date.toDate().toISOString(),
-                end_date: rest.end_date ? rest.end_date.toDate().toISOString() : null,
+                ...data,
+                start_date: data.start_date.toDate().toISOString(),
+                end_date: data.end_date?.toDate().toISOString() ?? null,
+                experience_id: doc.ref.id
+            } as Experience;
+        });
+        const descriptionSnapshot = await getDocs(collectionGroup(db, 'description'));
+        const descriptionData: DescriptionWithParent[] = descriptionSnapshot.docs.map(doc => ({experience_id: doc.ref.parent.parent?.id, ...doc.data() as Description}) );
+
+        mergedData = experiencesData.map(experience => ({
+            ...experience,
+            description: descriptionData
+                .filter(skill => skill.experience_id === experience.experience_id)
+                .map(({ experience_id, ...skill }) => skill),
+        }));
+    } catch (error: unknown) {
+        if (error instanceof FirebaseError) {
+            console.error("FIRESTORE QUERY FAILED");
+            console.error("code:", error.code);
+            console.error("message:", error.message);
+            console.error("customData:", error.customData);
+        } else if (error instanceof Error) {
+            console.error("UNKNOWN ERROR");
+            console.error("name:", error.name);
+            console.error("message:", error.message);
+        } else {
+            console.error("NON-ERROR THROWN:", error);
+        }
+        throw error;
+    }
+    
+    return mergedData;
+});
+
+export const fetchExperiencesHistory = createAsyncThunk('experience/fetchExperiencesHistory', async () => {
+    let mergedData: Experience[] = [];
+
+    try {
+        const experiencesSnapshot = await getDocs(
+            query(
+                collection(db, 'experience'),
+                where('show', '!=', false),
+                orderBy('show'),
+                orderBy('start_date', 'desc')
+            )
+        );
+        const experiencesData: ExperienceWithId[] = experiencesSnapshot.docs.map(doc => {
+            const data = doc.data() as ExperienceFromFirestore;
+            return {
+                ...data,
+                start_date: data.start_date.toDate().toISOString(),
+                end_date: data.end_date?.toDate().toISOString() ?? null,
                 experience_id: doc.ref.id
             } as Experience;
         });
@@ -70,7 +133,7 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
 });
 
 const experienceSlice = createSlice({
-    name: 'skill_groups',
+    name: 'experience',
     initialState,
     reducers: {},
     extraReducers: (builder) => {
@@ -91,4 +154,27 @@ const experienceSlice = createSlice({
     },
 });
 
-export default experienceSlice.reducer;
+const experienceHistorySlice = createSlice({
+    name: 'experience_history',
+    initialState: initialHistoryState,
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+        .addCase(fetchExperiencesHistory.pending, (state) => {
+            state.loading = true;
+            state.error = null;
+        })
+        .addCase(fetchExperiencesHistory.fulfilled, (state, action: PayloadAction<Experience[]>) => {
+            state.loading = false;
+            state.loaded = true;
+            state.data = action.payload;
+        })
+        .addCase(fetchExperiencesHistory.rejected, (state, action) => {
+            state.loading = false;
+            state.error = action.error.message || 'Failed to fetch experience';
+        });
+    },
+});
+
+export const experiencesReducer = experienceSlice.reducer;
+export const experiencesHistoryReducer = experienceHistorySlice.reducer;
