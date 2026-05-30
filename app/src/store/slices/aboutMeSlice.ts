@@ -52,6 +52,7 @@ export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () =>
             return {
                 ...data,
                 updated: data.updated?.toDate?.().toISOString(),
+                id: doc.ref.id
             };
         })[0] || null; // Return the first (and likely only) document, or null if none exist
     } catch (error: unknown) {
@@ -96,6 +97,7 @@ export const fetchAboutMeHistory = createAsyncThunk('aboutMe/fetchAboutMeHistory
                 ...data,
                 archived_at: data.archived_at?.toDate?.().toISOString(),
                 updated: data.updated?.toDate?.().toISOString(),
+                id: doc.ref.id
             };
         });
     } catch (error: unknown) {

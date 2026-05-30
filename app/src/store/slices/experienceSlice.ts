@@ -81,7 +81,7 @@ export const fetchExperiences = createAsyncThunk<
                 start_date: data.start_date.toDate().toISOString(),
                 end_date: data.end_date?.toDate().toISOString() ?? null,
                 updated: data.updated.toDate().toISOString(),
-                experience_id: doc.ref.id
+                id: doc.ref.id
             } as Experience;
         });
     } catch (error: unknown) {
@@ -137,7 +137,7 @@ export const fetchExperiencesHistory = createAsyncThunk<
                 end_date: data.end_date?.toDate().toISOString() ?? null,
                 updated: data.updated.toDate().toISOString(),
                 archived_at: data.archived_at.toDate().toISOString(),
-                experience_id: doc.ref.id
+                id: doc.ref.id
             } as ExperienceHistory;
         });
     } catch (error: unknown) {
