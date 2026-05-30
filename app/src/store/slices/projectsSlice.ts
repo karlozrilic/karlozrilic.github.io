@@ -29,7 +29,7 @@ export type ProjectHistoryFetchParams = {
 
 export const fetchProjects = createAsyncThunk<
     Project[],
-    ProjectFetchParams
+    ProjectFetchParams | void
 >('project/fetchProjects', async (params) => {
     const { all = false } = params ?? {};
     let projectsData: Project[] = [];

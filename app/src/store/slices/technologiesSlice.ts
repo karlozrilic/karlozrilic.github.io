@@ -28,7 +28,7 @@ export type TechnologiesHistoryFetchParams = {
 
 export const fetchTechnologies = createAsyncThunk<
     Technologies[],
-    TechnologiesFetchParams
+    TechnologiesFetchParams | void
 >('technologies/fetchTechnologies', async (params) => {
     const { all = false } = params ?? {};
     let technologiesData: Technologies[] = [];
