@@ -1,6 +1,7 @@
 import { PartialBlock } from '@blocknote/core/blocks';
 
 export type Experience = {
+    id: string;
     job_title: string,
     company_name: string,
     location: string,
@@ -10,5 +11,4 @@ export type Experience = {
     content: string;
     markdown: string;
     updated: string;
-    experience_id: string;
 }

@@ -1,1 +1,0 @@
-type DescriptionWithParent = Description & { experience_id?: string };

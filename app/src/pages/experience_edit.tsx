@@ -29,7 +29,7 @@ export default function ExperienceEdit() {
                         {experience.company_name}
                         <EditorWrapper
                             firebaseCollection={'experience'}
-                            id={experience.experience_id}
+                            id={experience.id}
                             initialContent={experience.jsonBlocks}
                             updatedAt={moment(experience.updated)}
                             fetchFunction={fetchExperiences}
