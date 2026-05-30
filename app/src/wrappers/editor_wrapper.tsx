@@ -17,10 +17,11 @@ import Editor from '../components/editor/Editor';
 import { AsyncThunk, AsyncThunkConfig } from '@reduxjs/toolkit';
 import { dateTimeFormat } from '@/helpers/constants';
 
-type ExcludeHistoryTypeKeys = Extract<keyof RootState, `${string}History`>;
-type ExcludeHistoryType = RootState[ExcludeHistoryTypeKeys]['data'][number];
+type ExcludeHistoryTypeKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
+type ExcludeHistoryType = RootState[ExcludeHistoryTypeKeys];
 
 type HistoryKeys = Extract<keyof RootState, `${string}History`>;
+type FetchHistoryType = RootState[HistoryKeys];
 type HistoryType = RootState[HistoryKeys]['data'][number];
 
 type StateKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
@@ -28,23 +29,23 @@ type StateTypes = RootState[StateKeys];
 
 type UpdateFunction = (jsonBlocks: PartialBlock[], content: string, markdown: string) => Promise<void>;
 
-type FetchFunction = AsyncThunk<
-    Exclude<ExcludeHistoryType, 'technologies'>,
-    void,
-    AsyncThunkConfig
->;
-type FetchHistoryFunction = AsyncThunk<
-    HistoryType,
-    void,
-    AsyncThunkConfig
->;
+type FetchFunction<T> = AsyncThunk<T, void, AsyncThunkConfig>;
+type FetchHistoryFunction<T> = AsyncThunk<T, void, AsyncThunkConfig>;
 
-export default function EditorWrapper(
+export default function EditorWrapper<
+    TState,
+    THistory
+>({
+    stateName,
+    updateFunction,
+    fetchFunction,
+    fetchHistoryFunction
+}: {
     stateName: StateKeys,
     updateFunction: UpdateFunction,
-    fetchFunction: FetchFunction,
-    fetchHistoryFunction: FetchHistoryFunction
-) {
+    fetchFunction: FetchFunction<TState>,
+    fetchHistoryFunction: FetchHistoryFunction<THistory>
+}) {
     const dispatch = useDispatch<AppDispatch>();
     const rootState = useSelector((state: RootState) => state[stateName]);
 
