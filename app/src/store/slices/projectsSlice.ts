@@ -42,7 +42,6 @@ export const fetchProjects = createAsyncThunk<
                 {
                     updated: Timestamp;
                 };
-            console.log(data);
 
             return {
                 ...data,
