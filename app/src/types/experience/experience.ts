@@ -7,7 +7,7 @@ export type Experience = {
     start_date: string,
     end_date: string | null,
     jsonBlocks: PartialBlock[];
-    content: Description[]; // TODO change to string of html
+    content: string;
     markdown: string;
     updated: string;
     experience_id: string;

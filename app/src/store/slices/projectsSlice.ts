@@ -19,7 +19,19 @@ const initialState: ProjectState = {
     error: null,
 };
 
-export const fetchProjects = createAsyncThunk('project/fetchProjects', async () => {
+export type ProjectFetchParams = {
+    all?: boolean;
+};
+
+export type ProjectHistoryFetchParams = {
+    id?: string;
+};
+
+export const fetchProjects = createAsyncThunk<
+    Project[],
+    ProjectFetchParams
+>('project/fetchProjects', async (params) => {
+    const { all = false } = params ?? {};
     let projectsData: Project[] = [];
 
     try {

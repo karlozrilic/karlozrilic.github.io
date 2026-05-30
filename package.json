@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@blocknote/core": "^0.51.3",
-    "@blocknote/mantine": "^0.51.3",
     "@blocknote/react": "^0.51.3",
     "@blocknote/shadcn": "^0.51.3",
     "@fortawesome/fontawesome-svg-core": "^7.1.0",

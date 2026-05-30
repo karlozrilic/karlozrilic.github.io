@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, collectionGroup, getDocs, orderBy, query, Timestamp, where } from 'firebase/firestore';
+import { collection, collectionGroup, getDocs, orderBy, query, QueryConstraint, Timestamp, where } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { Experience } from '../../types/experience/experience';
 import { ExperienceHistory } from '../../types/experience/experience_history';
 
-interface ExperienceState {
+type ExperienceState = {
     data: Experience[];
     loading: boolean;
     loaded: boolean;
@@ -20,7 +20,7 @@ const initialState: ExperienceState = {
     error: null,
 };
 
-interface ExperienceHistoryState {
+type ExperienceHistoryState = {
     data: ExperienceHistory[];
     loading: boolean;
     loaded: boolean;
@@ -34,26 +34,47 @@ const initialHistoryState: ExperienceHistoryState = {
     error: null,
 };
 
-export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', async () => {
-    let mergedData: Experience[] = [];
+export type ExperienceFetchParams = {
+    all?: boolean;
+};
+
+export type ExperienceHistoryFetchParams = {
+    id?: string;
+};
+
+export const fetchExperiences = createAsyncThunk<
+    Experience[],
+    ExperienceFetchParams | void
+>('experience/fetchExperiences', async (params) => {
+    const { all = false } = params ?? {};
+    let experiencesData: Experience[] = [];
+    let queryConstraints: QueryConstraint[] = all ? 
+    [
+        orderBy('start_date', 'desc')
+    ]    
+    : 
+    [
+        where('show', '!=', false),
+        orderBy('start_date', 'desc')
+    ];
 
     try {
         const experiencesSnapshot = await getDocs(
             query(
                 collection(db, 'experience'),
-                where('show', '!=', false),
-                orderBy('show'),
-                orderBy('start_date', 'desc')
+                ...queryConstraints
             )
         );
-        const experiencesData: Experience[] = experiencesSnapshot.docs.map(doc => {
+        experiencesData = experiencesSnapshot.docs.map(doc => {
             const data = doc.data() as
                 Omit<Experience, 'start_date'> & 
                 Omit<Experience, 'end_date'> & 
+                Omit<Experience, 'updated'> &
                 Omit<Experience, 'experience_id'> & 
                 {
                     start_date: Timestamp;
                     end_date: Timestamp;
+                    updated: Timestamp;
                     experience_id: string;
                 };
 
@@ -61,18 +82,10 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
                 ...data,
                 start_date: data.start_date.toDate().toISOString(),
                 end_date: data.end_date?.toDate().toISOString() ?? null,
+                updated: data.updated.toDate().toISOString(),
                 experience_id: doc.ref.id
             } as Experience;
         });
-        const descriptionSnapshot = await getDocs(collectionGroup(db, 'content'));
-        const descriptionData: DescriptionWithParent[] = descriptionSnapshot.docs.map(doc => ({experience_id: doc.ref.parent.parent?.id, ...doc.data() as Description}) );
-
-        mergedData = experiencesData.map(experience => ({
-            ...experience,
-            content: descriptionData
-                .filter(skill => skill.experience_id === experience.experience_id)
-                .map(({ experience_id, ...skill }) => skill),
-        }));
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
             console.error('FIRESTORE QUERY FAILED');
@@ -89,29 +102,36 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
         throw error;
     }
     
-    return mergedData;
+    return experiencesData;
 });
 
-export const fetchExperiencesHistory = createAsyncThunk('experience/fetchExperiencesHistory', async () => {
-    let mergedData: ExperienceHistory[] = [];
+export const fetchExperiencesHistory = createAsyncThunk<
+    ExperienceHistory[],
+    ExperienceHistoryFetchParams | void
+>('experience/fetchExperiencesHistory', async (params) => {
+    const { id } = params ?? {};
+    if (!id) return [];
+    let experiencesData: ExperienceHistory[] = [];
 
     try {
         const experiencesSnapshot = await getDocs(
             query(
-                collection(db, 'experience'),
-                where('show', '!=', false),
-                orderBy('show'),
-                orderBy('start_date', 'desc')
+                collection(db, 'experience', id, 'history'),
+                orderBy('archived_at', 'desc')
             )
         );
-        const experiencesData: ExperienceHistory[] = experiencesSnapshot.docs.map(doc => {
+        experiencesData = experiencesSnapshot.docs.map(doc => {
             const data = doc.data() as
                 Omit<ExperienceHistory, 'start_date'> & 
                 Omit<ExperienceHistory, 'end_date'> & 
+                Omit<Experience, 'updated'> &
+                Omit<Experience, 'archived_at'> &
                 Omit<ExperienceHistory, 'experience_id'> & 
                 {
                     start_date: Timestamp;
                     end_date: Timestamp;
+                    updated: Timestamp;
+                    archived_at: Timestamp;
                     experience_id: string;
                 };
 
@@ -119,18 +139,11 @@ export const fetchExperiencesHistory = createAsyncThunk('experience/fetchExperie
                 ...data,
                 start_date: data.start_date.toDate().toISOString(),
                 end_date: data.end_date?.toDate().toISOString() ?? null,
+                updated: data.updated.toDate().toISOString(),
+                archived_at: data.archived_at.toDate().toISOString(),
                 experience_id: doc.ref.id
             } as ExperienceHistory;
         });
-        const descriptionSnapshot = await getDocs(collectionGroup(db, 'content'));
-        const descriptionData: DescriptionWithParent[] = descriptionSnapshot.docs.map(doc => ({experience_id: doc.ref.parent.parent?.id, ...doc.data() as Description}) );
-
-        mergedData = experiencesData.map(experience => ({
-            ...experience,
-            content: descriptionData
-                .filter(skill => skill.experience_id === experience.experience_id)
-                .map(({ experience_id, ...skill }) => skill),
-        }));
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
             console.error('FIRESTORE QUERY FAILED');
@@ -147,7 +160,7 @@ export const fetchExperiencesHistory = createAsyncThunk('experience/fetchExperie
         throw error;
     }
     
-    return mergedData;
+    return experiencesData;
 });
 
 const experienceSlice = createSlice({

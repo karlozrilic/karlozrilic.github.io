@@ -68,21 +68,15 @@ export default function Experience() {
                                             </div>
                                             <Badge variant='secondary'>{moment(new Date(experience.start_date)).format('MMMM YYYY')} - {experience.end_date ? moment(new Date(experience.end_date)).format('MMMM YYYY') : 'Present'}</Badge>
                                         </div>
-                                        <div className='text-muted-foreground marker:text-secondary-foreground text-sm md:text-base'>
-                                            {experience.content.map((section, index) => 
-                                                <div key={index}>
-                                                    {section.text_before != '' && <p>{section.text_before}</p>}
-                                                    {section.points.length > 0 &&
-                                                        <ul className={`list-disc ps-[20px] ${section.text_after === '' && 'mb-2'}`}>
-                                                            {section.points.map((point, index) =>
-                                                                <li key={index}>{point}</li>
-                                                            )}
-                                                        </ul>
-                                                    }
-                                                    {section.text_after != '' && <p>{section.text_after}</p>}
-                                                </div>
-                                            )}
-                                        </div>
+                                        <div
+                                            className='text-muted-foreground marker:text-secondary-foreground text-sm md:text-base'
+                                            dangerouslySetInnerHTML={{ 
+                                                __html: experience.content?.replaceAll(
+                                                    '<ul>',
+                                                    '<ul class="list-disc ps-[20px] mb-2 last:mb-0">'
+                                                )
+                                            }}
+                                        ></div>
                                     </CardContent>
                                 </Card>
                             </div>

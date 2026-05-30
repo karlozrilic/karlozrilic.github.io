@@ -2,18 +2,32 @@ import { db } from '@/lib/firebase';
 import { PartialBlock } from '@blocknote/core';
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
-export const updateAboutMe = async (jsonBlocks: PartialBlock[], content: string, markdown: string) => {
-    const docRef = doc(db, 'about_me', 'main');
+export type UpdateFunctionType = {
+    jsonBlocks: PartialBlock[];
+    content: string;
+    markdown: string;
+};
+
+export type UpdateFunctionTypeWithId = {
+    firebaseCollection: string;
+    id: string;
+    jsonBlocks: PartialBlock[];
+    content: string;
+    markdown: string;
+};
+
+export const updateCollection = async ({ firebaseCollection, id, jsonBlocks, content, markdown }: UpdateFunctionTypeWithId) => {
+    const docRef = doc(db, firebaseCollection, id);
 
     const prevSnap = await getDoc(docRef);
 
     // Save old version (if exists)
     if (prevSnap.exists()) {
-        const historyRef = collection(db, 'about_me', 'main', 'history');
+        const historyRef = collection(db, firebaseCollection, id, 'history');
 
         await addDoc(historyRef, {
             ...prevSnap.data(),
-            archivedAt: serverTimestamp(),
+            archived_at: serverTimestamp(),
         });
     }
 

@@ -18,7 +18,19 @@ const initialState: TechnologiesState = {
     error: null,
 };
 
-export const fetchTechnologies = createAsyncThunk('technologies/fetchTechnologies', async () => {
+export type TechnologiesFetchParams = {
+    all?: boolean;
+};
+
+export type TechnologiesHistoryFetchParams = {
+    id?: string;
+};
+
+export const fetchTechnologies = createAsyncThunk<
+    Technologies[],
+    TechnologiesFetchParams
+>('technologies/fetchTechnologies', async (params) => {
+    const { all = false } = params ?? {};
     let technologiesData: Technologies[] = [];
     
     try {

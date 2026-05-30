@@ -17,8 +17,8 @@ export default function AboutMe() {
     }, [dispatch]);
 
     useEffect(() => {
-        if (aboutMe.data.length) {
-            setAboutMeData(aboutMe.data[0].content);
+        if (aboutMe.data) {
+            setAboutMeData(aboutMe.data.content);
         }
     }, [aboutMe]);
 

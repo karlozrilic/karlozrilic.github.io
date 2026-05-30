@@ -3,8 +3,8 @@
 import { BlockNoteEditor } from '@blocknote/core';
 import { PartialBlock } from '@blocknote/core/blocks';
 import '@blocknote/core/fonts/inter.css';
-import { BlockNoteView } from '@blocknote/mantine';
-import '@blocknote/mantine/style.css';
+import { BlockNoteView } from '@blocknote/shadcn';
+import '@blocknote/shadcn/style.css';
 import {
   BasicTextStyleButton,
   BlockTypeSelect,
@@ -44,13 +44,13 @@ const CustomFormattingToolbar = () => (
 );
 
 interface EditorProps {
-    editor: BlockNoteEditor | undefined,
+    editor: BlockNoteEditor | null,
     onChange?: (jsonBlocks: PartialBlock[]) => void,
     editable?: boolean,
 }
 
 export default function Editor({ editor, onChange, editable }: Readonly<EditorProps>) {
-    if (editor === undefined) {
+    if (!editor) {
         return 'Loading content...';
     }
 

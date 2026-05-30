@@ -1,7 +1,10 @@
+'use client';
+
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { updateCollection } from '@/app/src/service/firebase';
 import moment, { Moment } from 'moment';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import { AppDispatch, RootState } from '../store/store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
@@ -14,11 +17,11 @@ import { Separator } from '../components/ui/separator';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
 import Editor from '../components/editor/Editor';
-import { AsyncThunk, AsyncThunkConfig } from '@reduxjs/toolkit';
 import { dateTimeFormat } from '@/helpers/constants';
 
 type ExcludeHistoryTypeKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
-type ExcludeHistoryType = RootState[ExcludeHistoryTypeKeys];
+type FetchExcludeHistoryType = RootState[ExcludeHistoryTypeKeys];
+type ExcludeHistoryType = RootState[ExcludeHistoryTypeKeys]['data'];
 
 type HistoryKeys = Extract<keyof RootState, `${string}History`>;
 type FetchHistoryType = RootState[HistoryKeys];
@@ -27,56 +30,57 @@ type HistoryType = RootState[HistoryKeys]['data'][number];
 type StateKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
 type StateTypes = RootState[StateKeys];
 
-type UpdateFunction = (jsonBlocks: PartialBlock[], content: string, markdown: string) => Promise<void>;
+type FetchFunction<T, A = void> = (arg?: A) => any;
+type FetchHistoryFunction<T, A = void> = (arg?: A) => any;
 
-type FetchFunction<T> = AsyncThunk<T, void, AsyncThunkConfig>;
-type FetchHistoryFunction<T> = AsyncThunk<T, void, AsyncThunkConfig>;
+//type FetchFunction<T, A = void> = AsyncThunk<T, ExperienceFetchParams, AsyncThunkConfig>;
+//type FetchHistoryFunction<T, A = void> = AsyncThunk<T, ExperienceHistoryFetchParams, AsyncThunkConfig>;
 
 export default function EditorWrapper<
     TState,
-    THistory
+    THistory,
+    TArgs = void,
+    THistoryArgs = void
 >({
-    stateName,
-    updateFunction,
+    firebaseCollection,
+    id,
+    initialContent,
+    updatedAt = null,
     fetchFunction,
     fetchHistoryFunction
 }: {
-    stateName: StateKeys,
-    updateFunction: UpdateFunction,
-    fetchFunction: FetchFunction<TState>,
-    fetchHistoryFunction: FetchHistoryFunction<THistory>
+    firebaseCollection: string;
+    id: string,
+    initialContent: PartialBlock[] | null,
+    updatedAt?: Moment | null;
+    fetchFunction: FetchFunction<TState, TArgs>,
+    fetchHistoryFunction: FetchHistoryFunction<THistory, THistoryArgs>
 }) {
     const dispatch = useDispatch<AppDispatch>();
-    const rootState = useSelector((state: RootState) => state[stateName]);
 
     const isDirtyRef = useRef(false);
 
-    const [initialContent, setInitialContent] = useState<PartialBlock[] | undefined | 'loading'>('loading');
-    const [loaded, setLoaded] = useState(rootState.loaded || false);
+    const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
     const [readOnly, setReadOnly] = useState(true);
     const [isDirty, setIsDirty] = useState(false);
     const [historyState, setHistoryState] = useState<any>(null);
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [updatedAt, setUpdatedAt] = useState<Moment | null>(null);
     const [historyLoading, setHistoryLoading] = useState<boolean>(false);
     const [contentHistoryData, setContentHistoryData] = useState<HistoryType[]>([]);
 
-    // Creates a new editor instance.
-    // We use useMemo + createBlockNoteEditor instead of useCreateBlockNote so we
-    // can delay the creation of the editor until the initial content is loaded.
-    const editor = useMemo(() => {
-        if (initialContent === 'loading') {
-            return undefined;
+    useEffect(() => {
+        if (!initialContent) {
+            setEditor(BlockNoteEditor.create({ trailingBlock: false }));
+            return;
         }
         try {
-            return BlockNoteEditor.create({ initialContent, trailingBlock: false });
+            setEditor(BlockNoteEditor.create({ initialContent: initialContent, trailingBlock: false }));
         } catch (error) {
             console.error('Error creating editor:', error);
             toast.error(`Error creating editor: ${error}`);
-            return BlockNoteEditor.create();
+            setEditor(BlockNoteEditor.create({ trailingBlock: false  }));
         }
-        
     }, [initialContent]);
 
     useEffect(() => {
@@ -87,19 +91,9 @@ export default function EditorWrapper<
         }
     }, []);
 
-    // Fetch data once on mount
     useEffect(() => {
-        dispatch(fetchFunction());
-    }, [dispatch]);
 
-    useEffect(() => {
-        setLoaded(rootState.loaded)
-        if (rootState.data.length) {
-            setInitialContent(rootState.data[0].jsonBlocks);
-            const updated = moment(rootState.data[0].updated);
-            setUpdatedAt(updated);
-        }
-    }, [rootState]);
+    }, []);
 
     useEffect(() => {
         isDirtyRef.current = isDirty;
@@ -142,11 +136,26 @@ export default function EditorWrapper<
     }
 
     async function handleEditorChange(jsonBlocks: PartialBlock[]) {
+        if (!editor) return;
         setHistoryState(getEditorsHistory());
-        if (!editor || !initialContent || initialContent === 'loading') return;
-        const original = await editor.blocksToFullHTML(initialContent).replace(/[\n\r\t]/gm, '');
-        const current = await editor.blocksToFullHTML(jsonBlocks).replace(/[\n\r\t]/gm, '').replace(/[\n\r\t]/gm, '');
-        setIsDirty(!(original === current));
+        if (!initialContent) {
+            if (jsonBlocks.length === 0) {
+                setIsDirty(false);
+            } else if (
+                jsonBlocks.length === 1 &&
+                // @ts-ignore
+                jsonBlocks[0].content?.length === 0 &&
+                jsonBlocks[0].children?.length === 0) {
+                setIsDirty(false);
+            } else {
+                const current = await editor.blocksToHTMLLossy(jsonBlocks).replace(/[\n\r\t]/gm, '');
+                setIsDirty(!!current.length);
+            }
+        } else {
+            const original = await editor.blocksToHTMLLossy(initialContent).replace(/[\n\r\t]/gm, '');
+            const current = await editor.blocksToHTMLLossy(jsonBlocks).replace(/[\n\r\t]/gm, '');
+            setIsDirty(!(original === current));
+        }
     }
 
     async function submitChanges() {
@@ -157,11 +166,23 @@ export default function EditorWrapper<
             () =>
                 new Promise(async (resolve, reject) => {
                 try {
-                    const content = await editor.blocksToFullHTML(editor.document);
+                    const content = await editor.blocksToHTMLLossy(editor.document);
                     const markdown = await editor.blocksToMarkdownLossy(editor.document);
-                    await updateFunction(editor.document, content, markdown);
-                    await dispatch(fetchFunction());
+                    await updateCollection({ firebaseCollection, id, jsonBlocks: editor.document, content, markdown });
+                    const payload = (await dispatch(
+                        fetchFunction({
+                            all: true
+                        } as TArgs)
+                    )).payload as ExcludeHistoryType;
+                    if (payload) {
+                        if (Array.isArray(payload)) {
+                            initialContent = payload[0].jsonBlocks;
+                        } else {
+                            initialContent = payload.jsonBlocks ?? null;
+                        }
+                    }
                     setSubmitting(false);
+                    setIsDirty(false);
                     return resolve({ name: 'Data' });
                 } catch (error) {
                     setSubmitting(false);
@@ -181,7 +202,9 @@ export default function EditorWrapper<
         setHistoryLoading(true);
 
         try {
-            const response = await dispatch(fetchHistoryFunction());
+            const response = await dispatch(
+                fetchHistoryFunction({ id } as THistoryArgs)
+            );
             setContentHistoryData(response.payload as HistoryType[]);
         } catch (error) {
             console.error(error);
@@ -212,10 +235,9 @@ export default function EditorWrapper<
             editor.redo();
         }
     }
-    
 
     return (
-        <div className='relative max-w-5xl w-full flex flex-col items-center gap-4'>
+        <div className='flex flex-col items-center gap-4'>
             <div className='flex self-end items-center gap-2'>
                 { updatedAt ?
                     moment().diff(updatedAt, 'hours') < 24 ?
