@@ -1,0 +1,32 @@
+[data-sonner-toast] {
+    &[data-type="success"] {
+        border: none !important;
+        border-left: 2px solid var(--color-green-600) !important;
+        border-right: 2px solid var(--color-green-600) !important;
+
+        [data-icon] svg {
+            stroke: var(--color-green-600)
+        }
+    }
+
+    &[data-type="warning"] {
+        border: none !important;
+        border-left: 2px solid var(--color-yellow-600) !important;
+        border-right: 2px solid var(--color-yellow-600) !important;
+
+        [data-icon] svg {
+            stroke: var(--color-yellow-600)
+        }
+    }
+
+    &[data-type="error"] {
+        border: none !important;
+        border-left: 2px solid var(--color-red-600) !important;
+        border-right: 2px solid var(--color-red-600) !important;
+
+        [data-icon] svg {
+            stroke: var(--color-red-600)
+        }
+    }
+}
+    

@@ -35,5 +35,5 @@ export default async function View({
             break;
     }
 
-    return <main className='min-h-screen'>{page}</main>;
+    return <main>{page}</main>;
 }

@@ -1,11 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@blocknote/shadcn/style.css";
 
 @import "./theme.css";
 
 @import "./components/scrollbar.css";
 @import "./components/marquee.css";
+
+@import "./components/toaster.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -95,6 +98,7 @@ button {
 	}
 }
 
+/* Example override theme 
 :root {
 	--sidebar: hsl(0 0% 98%);
 	--sidebar-foreground: hsl(240 5.3% 26.1%);
@@ -115,4 +119,4 @@ button {
 	--sidebar-accent-foreground: hsl(240 4.8% 95.9%);
 	--sidebar-border: hsl(240 3.7% 15.9%);
 	--sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
+} */

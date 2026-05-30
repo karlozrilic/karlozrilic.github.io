@@ -18,7 +18,19 @@ const initialState: TechnologiesState = {
     error: null,
 };
 
-export const fetchTechnologies = createAsyncThunk('technologies/fetchTechnologies', async () => {
+export type TechnologiesFetchParams = {
+    all?: boolean;
+};
+
+export type TechnologiesHistoryFetchParams = {
+    id?: string;
+};
+
+export const fetchTechnologies = createAsyncThunk<
+    Technologies[],
+    TechnologiesFetchParams
+>('technologies/fetchTechnologies', async (params) => {
+    const { all = false } = params ?? {};
     let technologiesData: Technologies[] = [];
     
     try {
@@ -26,16 +38,16 @@ export const fetchTechnologies = createAsyncThunk('technologies/fetchTechnologie
         technologiesData = technologiesSnapshot.docs.map((doc) => doc.data() as Technologies);
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }

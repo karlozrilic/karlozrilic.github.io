@@ -3,15 +3,17 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
+import { AboutMe } from '../../types/about_me/about_me';
+import { AboutMeHistory } from '../../types/about_me/about_me_history';
 
-interface AboutMeState {
-    data: AboutMe[];
+type AboutMeState = {
+    data: AboutMe | null;
     loading: boolean;
     loaded: boolean;
     error: string | null;
 };
 
-interface AboutMeHistoryState {
+type AboutMeHistoryState = {
     data: AboutMeHistory[];
     loading: boolean;
     loaded: boolean;
@@ -20,7 +22,7 @@ interface AboutMeHistoryState {
 
 
 const initialState: AboutMeState = {
-    data: [],
+    data: null,
     loading: false,
     loaded: false,
     error: null,
@@ -34,7 +36,7 @@ const initialHistoryState: AboutMeHistoryState = {
 };
 
 export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () => {
-    let aboutMeData: AboutMe[] = [];
+    let aboutMeData: AboutMe | null = null;
 
     try {
         const aboutMeSnapshot = await getDocs(
@@ -51,19 +53,19 @@ export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () =>
                 ...data,
                 updated: data.updated?.toDate?.().toISOString(),
             };
-        });
+        })[0] || null; // Return the first (and likely only) document, or null if none exist
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }
@@ -78,36 +80,36 @@ export const fetchAboutMeHistory = createAsyncThunk('aboutMe/fetchAboutMeHistory
         const aboutMeSnapshot = await getDocs(
             query(
                 collection(db, 'about_me', 'main', 'history'),
-                orderBy("archivedAt", "desc")
+                orderBy('archived_at', 'desc')
             )
         );
         aboutMeData = aboutMeSnapshot.docs.map((doc) => {
             const data = doc.data() as
-                Omit<AboutMeHistory, 'archivedAt'> &
+                Omit<AboutMeHistory, 'archived_at'> &
                 Omit<AboutMeHistory, 'updated'> &
                 {
-                    archivedAt: Timestamp;
+                    archived_at: Timestamp;
                     updated: Timestamp;
                 };
 
             return {
                 ...data,
-                archivedAt: data.archivedAt?.toDate?.().toISOString(),
+                archived_at: data.archived_at?.toDate?.().toISOString(),
                 updated: data.updated?.toDate?.().toISOString(),
             };
         });
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }
@@ -125,7 +127,7 @@ const aboutMeSlice = createSlice({
             state.loading = true;
             state.error = null;
         })
-        .addCase(fetchAboutMe.fulfilled, (state, action: PayloadAction<AboutMe[]>) => {
+        .addCase(fetchAboutMe.fulfilled, (state, action: PayloadAction<AboutMe | null>) => {
             state.loading = false;
             state.loaded = true;
             state.data = action.payload;

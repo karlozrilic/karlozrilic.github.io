@@ -98,7 +98,7 @@ export default function Projects() {
                             <BentoCard
                                 key={index}
                                 name={project.title}
-                                description={project.description}
+                                description={project.content}
                                 background={
                                     <AspectRatio
                                         ratio={16 / 9}
