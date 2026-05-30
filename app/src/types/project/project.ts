@@ -1,6 +1,7 @@
 import { PartialBlock } from '@blocknote/core';
 
 export interface Project {
+    id: string;
     category: string,
     title: string,
     subtitle: string,

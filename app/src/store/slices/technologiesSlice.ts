@@ -35,7 +35,14 @@ export const fetchTechnologies = createAsyncThunk<
     
     try {
         const technologiesSnapshot = await getDocs(query(collection(db, 'technologies')));
-        technologiesData = technologiesSnapshot.docs.map((doc) => doc.data() as Technologies);
+        technologiesData = technologiesSnapshot.docs.map((doc) => {
+            const data = doc.data() as Technologies;
+
+            return {
+                ...data,
+                id: doc.ref.id
+            } as Technologies;
+        });
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
             console.error('FIRESTORE QUERY FAILED');

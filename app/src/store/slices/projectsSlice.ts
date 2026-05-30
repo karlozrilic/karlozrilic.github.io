@@ -46,6 +46,7 @@ export const fetchProjects = createAsyncThunk<
             return {
                 ...data,
                 updated: data.updated.toDate().toISOString(),
+                id: doc.ref.id
             } as Project;
         });
     } catch (error: unknown) {
