@@ -1,1 +1,0 @@
-export type ExperienceWithId = Experience & { experience_id?: string };

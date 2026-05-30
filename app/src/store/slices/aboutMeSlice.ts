@@ -3,6 +3,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
+import { AboutMe } from '../../types/about_me/about_me';
+import { AboutMeHistory } from '../../types/about_me/about_me_history';
 
 interface AboutMeState {
     data: AboutMe[];
@@ -54,16 +56,16 @@ export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () =>
         });
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }
@@ -78,7 +80,7 @@ export const fetchAboutMeHistory = createAsyncThunk('aboutMe/fetchAboutMeHistory
         const aboutMeSnapshot = await getDocs(
             query(
                 collection(db, 'about_me', 'main', 'history'),
-                orderBy("archivedAt", "desc")
+                orderBy('archivedAt', 'desc')
             )
         );
         aboutMeData = aboutMeSnapshot.docs.map((doc) => {
@@ -98,16 +100,16 @@ export const fetchAboutMeHistory = createAsyncThunk('aboutMe/fetchAboutMeHistory
         });
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }

@@ -1,13 +1,13 @@
 'use client'
 
 import LoadingScreen from '@/app/src/sections/loading';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
 import { fetchAboutMe, fetchAboutMeHistory } from '@/app/src/store/slices/aboutMeSlice';
 import { updateAboutMe } from '@/app/src/service/firebase';
 import { Button } from '@/app/src/components/ui/button';
-import { ChevronRightIcon, History, Lock, LockOpen, Save } from 'lucide-react';
+import { ChevronRightIcon, History, HistoryIcon, Lock, LockOpen, Redo, Save, Undo } from 'lucide-react';
 import { Spinner } from '@/app/src/components/ui/spinner';
 import {
     AlertDialog,
@@ -27,24 +27,53 @@ import moment, { Moment } from 'moment';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 import { dateTimeFormat } from '@/helpers/constants';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
+import Editor from '../components/editor/Editor';
+import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { AboutMeHistory } from '../types/about_me/about_me_history';
+import { Kbd, KbdGroup } from '../components/ui/kbd';
+import { Separator } from '../components/ui/separator';
 
-export default function AboutMeEdit() {
+function AboutMeEdit() {
     const dispatch = useDispatch<AppDispatch>();
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
 
-    const editorRef = useRef<any>(null);
-    const editorRefInstance = useRef<any>(null);
-    const [wysiwygLoaded, setWysiwygLoaded] = useState(false);
+    const isDirtyRef = useRef(false);
+
+    const [initialContent, setInitialContent] = useState<PartialBlock[] | undefined | 'loading'>('loading');
     const [loaded, setLoaded] = useState(aboutMe.loaded || false);
     const [readOnly, setReadOnly] = useState(true);
     const [isDirty, setIsDirty] = useState(false);
+    const [historyState, setHistoryState] = useState<any>(null);
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false)
     const [submitting, setSubmitting] = useState(false);
-
-    const [aboutMeData, setAboutMeData] = useState<AboutMe | null>(null);
     const [updatedAt, setUpdatedAt] = useState<Moment | null>(null);
-
     const [historyLoading, setHistoryLoading] = useState<boolean>(false);
     const [aboutMeHistoryData, setAboutMeHistoryData] = useState<AboutMeHistory[]>([]);
+    
+    // Creates a new editor instance.
+    // We use useMemo + createBlockNoteEditor instead of useCreateBlockNote so we
+    // can delay the creation of the editor until the initial content is loaded.
+    const editor = useMemo(() => {
+        if (initialContent === 'loading') {
+            return undefined;
+        }
+        try {
+            return BlockNoteEditor.create({ initialContent, trailingBlock: false });
+        } catch (error) {
+            console.error('Error creating editor:', error);
+            toast.error(`Error creating editor: ${error}`);
+            return BlockNoteEditor.create();
+        }
+        
+    }, [initialContent]);
+
+    useEffect(() => {
+        window.addEventListener('keydown', captureKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', captureKeyDown);
+        }
+    }, []);
 
     // Fetch data once on mount
     useEffect(() => {
@@ -54,74 +83,71 @@ export default function AboutMeEdit() {
     useEffect(() => {
         setLoaded(aboutMe.loaded)
         if (aboutMe.data.length) {
-            setAboutMeData(aboutMe.data[0]);
+            setInitialContent(aboutMe.data[0].jsonBlocks);
             const updated = moment(aboutMe.data[0].updated);
             setUpdatedAt(updated);
         }
     }, [aboutMe]);
 
     useEffect(() => {
-        if (aboutMe.loaded !== true) return;
+        isDirtyRef.current = isDirty;
+    }, [isDirty]);
 
-        const tryInit = () => {
-            const RichTextEditor = (window as any).RichTextEditor;
+    useEffect(() => {
+        if (!editor) return;
 
-            if (!RichTextEditor || !editorRef.current) return false;
+        editor.isEditable = !readOnly;
+        const state = getEditorsHistory();
+        setHistoryState(state);
+    }, [editor, readOnly]);
 
-            const editor = new RichTextEditor('#text-editor', {
-                skin: 'rounded-corner',
-                toolbar: 'default',
-                editorResizeMode: 'none',
-                readOnly: readOnly
-            });
+    function captureKeyDown(event: KeyboardEvent) {
+        let foundOption = false;
 
-            editorRefInstance.current = editor;
-
-            editor.setHTMLCode(aboutMeData?.content);
-
-            editor.attachEvent('change', onChange);
-
-            // Doesn't clear history if there is no slight timeout
-            setTimeout(() => {
-                // Removes history for undo/redo
-                editor.clearHistory();
-                // editor.revisionHistory.list();
-                // editor.snippets.list();
-                // editor.trackedChanges.list();
-            }, 10);
-
-            return true;
-        };
-        
-        const initialized = tryInit();
-		setWysiwygLoaded(initialized);
-
-        return () => {
-            editorRefInstance.current?.detachEvent('change', onChange);
+        switch (event.code) {
+            case 'KeyS':
+                if (event.ctrlKey || event.metaKey) {
+                    if (isDirtyRef.current) {
+                        setSaveDialogOpen(saveDialogOpen => !saveDialogOpen);
+                    } else {
+                        toast.warning('Nothing to save. Please make some changes to enable saving.');
+                    }
+                    foundOption = true;
+                }
+                break;
+            default:
+                break;
         }
-    }, [aboutMeData]);
 
-    function onChange(state: any, cmd: any, value: any) {
-        const original = aboutMeData?.content.replace(/[\n\r\t]/gm, '');
-        const current = editorRefInstance.current?.getHTMLCode().replace(/[\n\r\t]/gm, '');
-        setIsDirty(!(original === current));
+        if (foundOption) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
     }
 
     function toggleLock() {
-        editorRefInstance.current.setReadOnly(!readOnly);
         setReadOnly(!readOnly);
     }
 
+    async function handleEditorChange(jsonBlocks: PartialBlock[]) {
+        setHistoryState(getEditorsHistory());
+        if (!editor || !initialContent || initialContent === 'loading') return;
+        const original = await editor.blocksToFullHTML(initialContent).replace(/[\n\r\t]/gm, '');
+        const current = await editor.blocksToFullHTML(jsonBlocks).replace(/[\n\r\t]/gm, '').replace(/[\n\r\t]/gm, '');
+        setIsDirty(!(original === current));
+    }
+
     async function submitChanges() {
-        if (!editorRefInstance.current) return;
+        if (!editor) return;
         setSubmitting(true);
-        editorRefInstance.current.setReadOnly(true);
         setReadOnly(true);
         toast.promise<{ name: string }>(
             () =>
               new Promise(async (resolve, reject) => {
                 try {
-                    await updateAboutMe(editorRefInstance.current.getHTMLCode())
+                    const content = await editor.blocksToFullHTML(editor.document);
+                    const markdown = await editor.blocksToMarkdownLossy(editor.document);
+                    await updateAboutMe(editor.document, content, markdown);
                     await dispatch(fetchAboutMe());
                     setSubmitting(false);
                     return resolve({ name: 'Data' });
@@ -134,8 +160,7 @@ export default function AboutMeEdit() {
             {
               loading: 'Saving...',
               success: (data) => `${data.name} has been saved`,
-              error: (data) => `Error: ${data.error.message}`,
-              position: 'top-center'
+              error: (data) => `Error: ${data.error.message}`
             }
           )
     }
@@ -153,10 +178,33 @@ export default function AboutMeEdit() {
         }
     }
 
+    function getEditorsHistory() {
+        if (!editor) return;
+        const historyPlugin = editor._tiptapEditor.state.plugins.find((plugin: any) =>
+            plugin.key.includes('history')
+        )
+        const state = historyPlugin?.getState(editor._tiptapEditor.state);
+        return state;
+    }
+
+    function handleUndo() {
+        if (!editor || !historyState) return;
+        if (historyState.done.eventCount) {
+            editor.undo();
+        }
+    }
+
+    function handleRedo() {
+        if (!editor || !historyState) return;
+        if (historyState.undone.eventCount) {
+            editor.redo();
+        }
+    }
+
     return <>
-        {!wysiwygLoaded || !loaded ? <LoadingScreen /> : null}
-        <main className='flex min-h-screen justify-center p-2'>
-            <div className='relative max-w-5xl flex flex-col items-center gap-4'>
+        {!editor && !loaded ? <LoadingScreen /> : null}
+        <main className='flex justify-center p-2'>
+            <div className='relative max-w-5xl w-full flex flex-col items-center gap-4'>
                 <div className='flex self-end items-center gap-2'>
                     { updatedAt ?
                         moment().diff(updatedAt, 'hours') < 24 ?
@@ -177,17 +225,36 @@ export default function AboutMeEdit() {
                             <Button
                                 variant='outline'
                                 size='sm'
-                                onClick={toggleLock}
+                                onClick={handleUndo}
+                                disabled={!historyState || !historyState.done.eventCount}
                             >
-                                {readOnly ? <LockOpen /> : <Lock /> }
+                                <Undo />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {readOnly ? <p>Unlock text editor</p> : <p>Lock text editor</p> }
+                            <p>Undo</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={handleRedo}
+                                disabled={!historyState || !historyState.undone.eventCount}
+                            >
+                                <Redo />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Redo</p>
                         </TooltipContent>
                     </Tooltip>
                     
-                    <AlertDialog>
+                    <AlertDialog
+                        open={saveDialogOpen}
+                        onOpenChange={setSaveDialogOpen}
+                    >
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <span>
@@ -203,7 +270,13 @@ export default function AboutMeEdit() {
                                 </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                                {isDirty ? <p>Save text</p> : <p>Edit text to save</p>}
+                                {isDirty ? 
+                                    <p>
+                                        Save text 
+                                        <KbdGroup>
+                                            <Kbd>Ctrl + S</Kbd>
+                                        </KbdGroup>
+                                    </p> : <p>Edit text to save</p>}
                             </TooltipContent>
                         </Tooltip>
                         <AlertDialogOverlay className='backdrop-blur-sm' />
@@ -220,20 +293,49 @@ export default function AboutMeEdit() {
                                     onClick={submitChanges}
                                     disabled={submitting}
                                 >
-                                    {submitting ? <Spinner data-icon='inline-start' /> : <Save />}
+                                    {submitting ? <Spinner data-icon='inline-start' /> : ''}
                                     Save
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
 
+                    <Separator orientation='vertical' />
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={toggleLock}
+                            >
+                                {readOnly ? <LockOpen /> : <Lock /> }
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {readOnly ? <p>Unlock text editor</p> : <p>Lock text editor</p> }
+                        </TooltipContent>
+                    </Tooltip>
+
                     <Sheet>
-                        <SheetTrigger
-                            asChild
-                            onClick={historyOpen}
-                        >
-                            <Button variant='outline'>History</Button>
-                        </SheetTrigger>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <SheetTrigger
+                                    asChild
+                                    onClick={historyOpen}
+                                >
+                                    <Button
+                                        variant='outline'
+                                        size='sm'
+                                    >
+                                        <HistoryIcon />
+                                    </Button>      
+                                </SheetTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>View History</p>
+                            </TooltipContent>
+                        </Tooltip>
                         <SheetContent className='gap-0 lg:max-w-lg' showCloseButton={false}>
                             <SheetHeader>
                                 <SheetTitle>History</SheetTitle>
@@ -245,7 +347,7 @@ export default function AboutMeEdit() {
                                 </div>
                                 :
                                 <div className='grid flex-1 auto-rows-min gap-1 px-4 overflow-auto'>
-                                    { aboutMeHistoryData.map((data, index) => {
+                                    { aboutMeHistoryData.length ? aboutMeHistoryData.map((data, index) => {
                                         return (
                                             <Collapsible key={index}>
                                                 <CollapsibleTrigger asChild>
@@ -256,7 +358,7 @@ export default function AboutMeEdit() {
                                                     >
                                                         <ChevronRightIcon className='transition-transform group-data-[state=open]:rotate-90' />
                                                         <History />
-                                                        {moment(data.archivedAt).format(dateTimeFormat)}
+                                                        {moment(data.archived_at).format(dateTimeFormat)}
                                                     </Button>
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent
@@ -273,7 +375,7 @@ export default function AboutMeEdit() {
                                                 </CollapsibleContent>
                                             </Collapsible>
                                         );
-                                    }) }
+                                    }) : <p>No history found.</p> }
                                 </div>
                             }
                             <SheetFooter>
@@ -284,9 +386,12 @@ export default function AboutMeEdit() {
                         </SheetContent>
                     </Sheet>
                 </div>
-                
-                <div ref={editorRef} id='text-editor'></div>
+
+                <Editor editor={editor} onChange={handleEditorChange} editable={!readOnly} />
             </div>
         </main>
     </>
 }
+
+export default AboutMeEdit;
+//export default withTextEditor(AboutMeEdit);

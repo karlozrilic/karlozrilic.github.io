@@ -69,7 +69,7 @@ export default function Experience() {
                                             <Badge variant='secondary'>{moment(new Date(experience.start_date)).format('MMMM YYYY')} - {experience.end_date ? moment(new Date(experience.end_date)).format('MMMM YYYY') : 'Present'}</Badge>
                                         </div>
                                         <div className='text-muted-foreground marker:text-secondary-foreground text-sm md:text-base'>
-                                            {experience.description.map((section, index) => 
+                                            {experience.content.map((section, index) => 
                                                 <div key={index}>
                                                     {section.text_before != '' && <p>{section.text_before}</p>}
                                                     {section.points.length > 0 &&

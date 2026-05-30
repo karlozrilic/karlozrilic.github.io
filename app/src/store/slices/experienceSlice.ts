@@ -1,10 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, collectionGroup, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { ExperienceWithId } from '@/app/src/interfaces/experience/experience_with_id';
-import { ExperienceFromFirestore } from '@/app/src/interfaces/experience/experience_from_firestore';
+import { collection, collectionGroup, getDocs, orderBy, query, Timestamp, where } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
+import { Experience } from '../../types/experience/experience';
+import { ExperienceHistory } from '../../types/experience/experience_history';
 
 interface ExperienceState {
     data: Experience[];
@@ -21,7 +21,7 @@ const initialState: ExperienceState = {
 };
 
 interface ExperienceHistoryState {
-    data: Experience[];
+    data: ExperienceHistory[];
     loading: boolean;
     loaded: boolean;
     error: string | null;
@@ -46,8 +46,17 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
                 orderBy('start_date', 'desc')
             )
         );
-        const experiencesData: ExperienceWithId[] = experiencesSnapshot.docs.map(doc => {
-            const data = doc.data() as ExperienceFromFirestore;
+        const experiencesData: Experience[] = experiencesSnapshot.docs.map(doc => {
+            const data = doc.data() as
+                Omit<Experience, 'start_date'> & 
+                Omit<Experience, 'end_date'> & 
+                Omit<Experience, 'experience_id'> & 
+                {
+                    start_date: Timestamp;
+                    end_date: Timestamp;
+                    experience_id: string;
+                };
+
             return {
                 ...data,
                 start_date: data.start_date.toDate().toISOString(),
@@ -55,27 +64,27 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
                 experience_id: doc.ref.id
             } as Experience;
         });
-        const descriptionSnapshot = await getDocs(collectionGroup(db, 'description'));
+        const descriptionSnapshot = await getDocs(collectionGroup(db, 'content'));
         const descriptionData: DescriptionWithParent[] = descriptionSnapshot.docs.map(doc => ({experience_id: doc.ref.parent.parent?.id, ...doc.data() as Description}) );
 
         mergedData = experiencesData.map(experience => ({
             ...experience,
-            description: descriptionData
+            content: descriptionData
                 .filter(skill => skill.experience_id === experience.experience_id)
                 .map(({ experience_id, ...skill }) => skill),
         }));
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }
@@ -84,7 +93,7 @@ export const fetchExperiences = createAsyncThunk('experience/fetchExperiences', 
 });
 
 export const fetchExperiencesHistory = createAsyncThunk('experience/fetchExperiencesHistory', async () => {
-    let mergedData: Experience[] = [];
+    let mergedData: ExperienceHistory[] = [];
 
     try {
         const experiencesSnapshot = await getDocs(
@@ -95,36 +104,45 @@ export const fetchExperiencesHistory = createAsyncThunk('experience/fetchExperie
                 orderBy('start_date', 'desc')
             )
         );
-        const experiencesData: ExperienceWithId[] = experiencesSnapshot.docs.map(doc => {
-            const data = doc.data() as ExperienceFromFirestore;
+        const experiencesData: ExperienceHistory[] = experiencesSnapshot.docs.map(doc => {
+            const data = doc.data() as
+                Omit<ExperienceHistory, 'start_date'> & 
+                Omit<ExperienceHistory, 'end_date'> & 
+                Omit<ExperienceHistory, 'experience_id'> & 
+                {
+                    start_date: Timestamp;
+                    end_date: Timestamp;
+                    experience_id: string;
+                };
+
             return {
                 ...data,
                 start_date: data.start_date.toDate().toISOString(),
                 end_date: data.end_date?.toDate().toISOString() ?? null,
                 experience_id: doc.ref.id
-            } as Experience;
+            } as ExperienceHistory;
         });
-        const descriptionSnapshot = await getDocs(collectionGroup(db, 'description'));
+        const descriptionSnapshot = await getDocs(collectionGroup(db, 'content'));
         const descriptionData: DescriptionWithParent[] = descriptionSnapshot.docs.map(doc => ({experience_id: doc.ref.parent.parent?.id, ...doc.data() as Description}) );
 
         mergedData = experiencesData.map(experience => ({
             ...experience,
-            description: descriptionData
+            content: descriptionData
                 .filter(skill => skill.experience_id === experience.experience_id)
                 .map(({ experience_id, ...skill }) => skill),
         }));
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }
@@ -164,7 +182,7 @@ const experienceHistorySlice = createSlice({
             state.loading = true;
             state.error = null;
         })
-        .addCase(fetchExperiencesHistory.fulfilled, (state, action: PayloadAction<Experience[]>) => {
+        .addCase(fetchExperiencesHistory.fulfilled, (state, action: PayloadAction<ExperienceHistory[]>) => {
             state.loading = false;
             state.loaded = true;
             state.data = action.payload;

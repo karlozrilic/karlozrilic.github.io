@@ -24,7 +24,7 @@ export default function Dashboard() {
 			{
 				!loaded ? <LoadingScreen /> : null
 			}
-			<main className='flex min-h-screen justify-center p-2'>
+			<main className='flex justify-center p-2'>
 				<div className='relative max-w-5xl flex flex-col items-center'>
 					<div>Welcome {user?.displayName}</div>
 

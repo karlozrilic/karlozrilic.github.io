@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import '@/app/src/style/globals.css';
 import Header from '@/app/src/layout_components/header';
-import Footer from '@/app/src/layout_components/footer';
 import { TooltipProvider } from "@/app/src/components/ui/tooltip"
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
@@ -31,22 +30,15 @@ export const metadata: Metadata = {
 	}
 };
 
-export default function RootLayout({children}: Readonly<{children: React.ReactNode}>) {
+export default function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
 	return (
 		<html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
 			<head>
-				<link rel='stylesheet' href='/richtexteditor/plugins/aitoolkit.css' />
-                <link rel='stylesheet' href='/richtexteditor/rte_theme_default.css' />
-				<link rel='stylesheet' href='/styles/richtexteditor_overrides.css' />
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();`,
 					}}
 				/>
-				<script src='/richtexteditor/rte-modified.js' />
-				<script>RTE_DefaultConfig.url_base='/richtexteditor'</script>
-				<script src='/richtexteditor/plugins/all_plugins.js' />
-				<script src="/richtexteditor/patch.js"></script>
 			</head>
 			<body
 				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}
@@ -59,9 +51,8 @@ export default function RootLayout({children}: Readonly<{children: React.ReactNo
 						<TooltipProvider>
 							<Header />
 							{children}
-							<Footer />
 							<AppSidebar />
-							<Toaster />
+							<Toaster position='top-center' />
 						</TooltipProvider>
 					</ReduxProvider>
 				</SidebarProvider>

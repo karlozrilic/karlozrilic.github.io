@@ -9,6 +9,7 @@ import Contact from '@/app/src/sections/contact';
 import Experience from '@/app/src/sections/experience';
 import LoadingScreen from '@/app/src/sections/loading';
 import Technologies from '@/app/src/sections/technologies';
+import Footer from './src/layout_components/footer';
 
 export default function Home() {
     const dispatch = useDispatch<AppDispatch>();
@@ -55,14 +56,17 @@ export default function Home() {
     }, []);
 
     return (
-        <main className='w-full'>
-            {!loaded && <LoadingScreen />}
-            <Hero />
-            <AboutMe />
-            <Experience />
-            <Technologies />
-            <Projects />
-            <Contact />
-        </main>
+        <>
+            <main className='w-full'>
+                {!loaded && <LoadingScreen />}
+                <Hero />
+                <AboutMe />
+                <Experience />
+                <Technologies />
+                <Projects />
+                <Contact />
+            </main>
+            <Footer />
+        </>
     );
 }

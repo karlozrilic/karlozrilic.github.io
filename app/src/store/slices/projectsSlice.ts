@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { ProjectWithTime } from '@/app/src/interfaces/project/project_with_time';
+import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
+import { Project } from '../../types/project/project';
 
 interface ProjectState {
     data: Project[];
@@ -23,23 +23,31 @@ export const fetchProjects = createAsyncThunk('project/fetchProjects', async () 
     let projectsData: Project[] = [];
 
     try {
-        const projectsSnapshot = await getDocs(query(collection(db, 'projects'), orderBy('updated_at', 'asc')));
+        const projectsSnapshot = await getDocs(query(collection(db, 'projects'), orderBy('updated', 'asc')));
         projectsData = projectsSnapshot.docs.map(doc => {
-            const { updated_at, ...rest } = doc.data() as ProjectWithTime;
-            return { ...rest } as Project;
+            const data = doc.data() as
+                Omit<Project, 'updated'> & 
+                {
+                    updated: Timestamp;
+                };
+
+            return {
+                ...data,
+                updated: data.updated.toDate().toISOString(),
+            } as Project;
         });
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
-            console.error("FIRESTORE QUERY FAILED");
-            console.error("code:", error.code);
-            console.error("message:", error.message);
-            console.error("customData:", error.customData);
+            console.error('FIRESTORE QUERY FAILED');
+            console.error('code:', error.code);
+            console.error('message:', error.message);
+            console.error('customData:', error.customData);
         } else if (error instanceof Error) {
-            console.error("UNKNOWN ERROR");
-            console.error("name:", error.name);
-            console.error("message:", error.message);
+            console.error('UNKNOWN ERROR');
+            console.error('name:', error.name);
+            console.error('message:', error.message);
         } else {
-            console.error("NON-ERROR THROWN:", error);
+            console.error('NON-ERROR THROWN:', error);
         }
         throw error;
     }
