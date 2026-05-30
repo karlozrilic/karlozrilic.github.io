@@ -35,13 +35,14 @@ export const fetchProjects = createAsyncThunk<
     let projectsData: Project[] = [];
 
     try {
-        const projectsSnapshot = await getDocs(query(collection(db, 'projects'), orderBy('updated', 'asc')));
+        const projectsSnapshot = await getDocs(query(collection(db, 'projects'), orderBy('order_no', 'asc')));
         projectsData = projectsSnapshot.docs.map(doc => {
             const data = doc.data() as
                 Omit<Project, 'updated'> & 
                 {
                     updated: Timestamp;
                 };
+            console.log(data);
 
             return {
                 ...data,

@@ -73,7 +73,7 @@ export default function Experience() {
                                             dangerouslySetInnerHTML={{ 
                                                 __html: experience.content?.replaceAll(
                                                     '<ul>',
-                                                    '<ul class="list-disc ps-[20px] mb-2 last:mb-0">'
+                                                    '<ul class="list-disc ps-[20px] mb-2 last-of-type:mb-0">'
                                                 )
                                             }}
                                         ></div>

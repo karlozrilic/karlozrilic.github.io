@@ -117,7 +117,7 @@ export default function Projects() {
                                     </AspectRatio>
                                 }
                                 href={project.link}
-                                className='project-item'
+                                className='project-item h-full'
                                 tags={project.tags}
                             />
                         )}
