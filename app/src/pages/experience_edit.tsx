@@ -55,18 +55,5 @@ export default function ExperienceEdit() {
                   )) : null }
             </div>
         </main>
-        {/*
-        { !experiences.loaded ? <LoadingScreen /> : null }
-        <main className='flex min-h-screen justify-center p-2'>
-            <div className='relative max-w-5xl flex flex-col items-center gap-4'>
-                { experiences.data.map((data, index) => {
-                    return (
-                        <div key={index}>
-                            {data.company_name}
-                        </div>
-                    )
-                }) }
-            </div>
-        </main> */}
     </>
 }

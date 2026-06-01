@@ -7,9 +7,11 @@ import { Input } from '@/app/src/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/app/src/components/ui/radio-group';
 import { InputGroup, InputGroupButton, InputGroupInput } from '@/app/src/components/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/src/components/ui/popover';
+import { Label } from '@/app/src/components/ui/label';
+import { Checkbox } from '@/app/src/components/ui/checkbox';
 import { Calendar } from '@/app/src/components/ui/calendar';
 import { Experience } from '@/app/src/types/experience/experience';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function formatDate(date: Date | undefined) {
     if (!date) {
@@ -29,21 +31,27 @@ function isValidDate(date: Date | undefined) {
 }
 
 export default function ExperienceEditComponent({ experience }: { experience: Experience }) {
+    const [currentlyWorking, setCurrentlyWorking] = useState(false);
+
     const [openStart, setOpenStart] = useState(false);
     const [openEnd, setOpenEnd] = useState(false);
 
     const [dateStart, setDateStart] = useState<Date | undefined>(
-        new Date('2025-06-01')
+        new Date()
     );
     const [dateEnd, setDateEnd] = useState<Date | undefined>(
-        new Date('2025-06-01')
+        new Date()
     );
 
     const [monthStart, setMonthStart] = useState<Date | undefined>(dateStart);
     const [monthEnd, setMonthEnd] = useState<Date | undefined>(dateEnd);
-    
+
     const [valueStart, setValueStart] = useState(formatDate(dateStart));
-    const [valueEnd, setValueEnd] = useState(formatDate(dateEnd));
+    const [valueEnd, setValueEnd] = useState(currentlyWorking ? 'Present' : formatDate(dateEnd));
+
+    useEffect(() => {
+        setValueEnd(currentlyWorking ? 'Present' : formatDate(dateEnd))
+    }, [currentlyWorking, dateEnd]);
 
     return (
         <div className='flex justify-between'>
@@ -123,14 +131,23 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                 </RadioGroup>
                             </FieldSet>
 
+                            <Field orientation='horizontal'>
+                                <Checkbox
+                                    id='currently-working'
+                                    name='currently-working'
+                                    checked={currentlyWorking}
+                                    onCheckedChange={(checked) => setCurrentlyWorking(checked === true)}
+                                />
+                                <Label htmlFor='currently-working'>Curently working</Label>
+                            </Field>
+
                             <div className='flex gap-3'>
                                 <Field>
-                                    <FieldLabel htmlFor='date-required'>Subscription Date</FieldLabel>
+                                    <FieldLabel htmlFor='date-required'>Start Date</FieldLabel>
                                     <InputGroup>
                                         <InputGroupInput
                                             id='date-required'
                                             value={valueStart}
-                                            placeholder='June 01, 2025'
                                             onChange={(e) => {
                                                 const date = new Date(e.target.value)
                                                 setValueStart(e.target.value)
@@ -176,6 +193,11 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                                             setDateStart(date)
                                                             setValueStart(formatDate(date))
                                                             setOpenStart(false)
+
+                                                            if (dateEnd && date && date > dateEnd) {
+                                                                setDateEnd(date)
+                                                                setValueEnd(formatDate(date))
+                                                            }
                                                         }}
                                                     />
                                                 </PopoverContent>
@@ -185,12 +207,12 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                 </Field>
 
                                 <Field>
-                                    <FieldLabel htmlFor='date-required'>Subscription Date</FieldLabel>
+                                    <FieldLabel htmlFor='date-required'>End Date</FieldLabel>
                                     <InputGroup>
                                         <InputGroupInput
                                             id='date-required'
                                             value={valueEnd}
-                                            placeholder='June 01, 2025'
+                                            disabled={currentlyWorking}
                                             onChange={(e) => {
                                                 const date = new Date(e.target.value)
                                                 setValueEnd(e.target.value)
@@ -215,6 +237,7 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                                         size='icon-xs'
                                                         aria-label='Select date'
                                                         className='mr-1'
+                                                        disabled={currentlyWorking}
                                                     >
                                                         <CalendarIcon />
                                                         <span className='sr-only'>Select date</span>
@@ -229,6 +252,9 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                                     <Calendar
                                                         mode='single'
                                                         captionLayout='dropdown'
+                                                        disabled={dateStart ? {
+                                                            before: dateStart,
+                                                        } : undefined}
                                                         selected={dateEnd}
                                                         month={monthEnd}
                                                         onMonthChange={setMonthEnd}
