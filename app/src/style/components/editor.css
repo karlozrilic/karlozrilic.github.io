@@ -1,0 +1,9 @@
+.bn-editor {
+    padding-right: 12px !important;
+}
+
+@media (min-width: 48rem) {
+    .bn-editor {
+        padding-right: 24px !important;
+    }
+}

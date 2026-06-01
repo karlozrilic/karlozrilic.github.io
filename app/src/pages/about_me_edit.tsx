@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../store/store';
 import LoadingScreen from '../sections/loading';
 import moment from 'moment';
+import { AboutMe } from '../types/about_me/about_me';
+import { AboutMeHistory } from '../types/about_me/about_me_history';
 
 export default function AboutMeEdit() {
     const dispatch = useDispatch<AppDispatch>();
@@ -16,6 +18,16 @@ export default function AboutMeEdit() {
     useEffect(() => {
         dispatch(fetchAboutMe());
     }, [dispatch]);
+
+    async function fetchData(): Promise<AboutMe> {
+        const response = await dispatch(fetchAboutMe());
+        return response.payload as AboutMe;
+    }
+
+    async function fetchHistoryData(): Promise<AboutMeHistory[]> {
+        const response = await dispatch(fetchAboutMeHistory());
+        return response.payload as AboutMeHistory[];
+    }
     
     return <>
         <main className='flex justify-center p-2'>
@@ -26,8 +38,8 @@ export default function AboutMeEdit() {
                     id={'main'}
                     initialContent={aboutMe.data?.jsonBlocks || null}
                     updatedAt={moment(aboutMe.data?.updated)}
-                    fetchFunction={fetchAboutMe}
-                    fetchHistoryFunction={fetchAboutMeHistory}
+                    fetchFunction={fetchData}
+                    fetchHistoryFunction={fetchHistoryData}
                 />
             </div>
         </main>

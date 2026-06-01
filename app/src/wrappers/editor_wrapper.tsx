@@ -3,10 +3,9 @@
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { updateCollection } from '@/app/src/service/firebase';
 import moment, { Moment } from 'moment';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { AppDispatch, RootState } from '../store/store';
+import { RootState } from '../store/store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 import { Button } from '../components/ui/button';
 import { ChevronRightIcon, History, HistoryIcon, Lock, LockOpen, Redo, Save, Undo } from 'lucide-react';
@@ -30,18 +29,7 @@ type HistoryType = RootState[HistoryKeys]['data'][number];
 type StateKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
 type StateTypes = RootState[StateKeys];
 
-type FetchFunction<T, A = void> = (arg?: A) => any;
-type FetchHistoryFunction<T, A = void> = (arg?: A) => any;
-
-//type FetchFunction<T, A = void> = AsyncThunk<T, ExperienceFetchParams, AsyncThunkConfig>;
-//type FetchHistoryFunction<T, A = void> = AsyncThunk<T, ExperienceHistoryFetchParams, AsyncThunkConfig>;
-
-export default function EditorWrapper<
-    TState,
-    THistory,
-    TArgs = void,
-    THistoryArgs = void
->({
+export default function EditorWrapper({
     firebaseCollection,
     id,
     initialContent,
@@ -53,11 +41,9 @@ export default function EditorWrapper<
     id: string,
     initialContent: PartialBlock[] | null,
     updatedAt?: Moment | null;
-    fetchFunction: FetchFunction<TState, TArgs>,
-    fetchHistoryFunction: FetchHistoryFunction<THistory, THistoryArgs>
+    fetchFunction: () => Promise<ExcludeHistoryType>,
+    fetchHistoryFunction: (id?: string) => Promise<HistoryType[]>
 }) {
-    const dispatch = useDispatch<AppDispatch>();
-
     const isDirtyRef = useRef(false);
 
     const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
@@ -169,11 +155,7 @@ export default function EditorWrapper<
                     const content = await editor.blocksToHTMLLossy(editor.document);
                     const markdown = await editor.blocksToMarkdownLossy(editor.document);
                     await updateCollection({ firebaseCollection, id, jsonBlocks: editor.document, content, markdown });
-                    const payload = (await dispatch(
-                        fetchFunction({
-                            all: true
-                        } as TArgs)
-                    )).payload as ExcludeHistoryType;
+                    const payload = await fetchFunction() as ExcludeHistoryType;
                     if (payload) {
                         if (Array.isArray(payload)) {
                             initialContent = payload[0].jsonBlocks;
@@ -202,10 +184,8 @@ export default function EditorWrapper<
         setHistoryLoading(true);
 
         try {
-            const response = await dispatch(
-                fetchHistoryFunction({ id } as THistoryArgs)
-            );
-            setContentHistoryData(response.payload as HistoryType[]);
+            const payload = await fetchHistoryFunction(id);
+            setContentHistoryData(payload);
         } catch (error) {
             console.error(error);
         } finally {
@@ -245,7 +225,7 @@ export default function EditorWrapper<
                             <TooltipTrigger asChild>
                                 <span>Updated: {updatedAt.fromNow()}</span>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent side={'bottom'}>
                                 {updatedAt.format(dateTimeFormat)}
                             </TooltipContent>
                         </Tooltip>
@@ -264,7 +244,7 @@ export default function EditorWrapper<
                             <Undo />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side={'bottom'}>
                         <p>Undo</p>
                     </TooltipContent>
                 </Tooltip>
@@ -279,7 +259,7 @@ export default function EditorWrapper<
                             <Redo />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side={'bottom'}>
                         <p>Redo</p>
                     </TooltipContent>
                 </Tooltip>
@@ -302,7 +282,7 @@ export default function EditorWrapper<
                                 </AlertDialogTrigger>
                             </span>
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent side={'bottom'}>
                             {isDirty ? 
                                 <p>
                                     Save text 
@@ -345,7 +325,7 @@ export default function EditorWrapper<
                             {readOnly ? <LockOpen /> : <Lock /> }
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side={'bottom'}>
                         {readOnly ? <p>Unlock text editor</p> : <p>Lock text editor</p> }
                     </TooltipContent>
                 </Tooltip>
@@ -365,7 +345,7 @@ export default function EditorWrapper<
                                 </Button>      
                             </SheetTrigger>
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent side={'bottom'}>
                             <p>View History</p>
                         </TooltipContent>
                     </Tooltip>

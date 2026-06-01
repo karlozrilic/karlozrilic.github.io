@@ -9,6 +9,7 @@
 @import "./components/marquee.css";
 
 @import "./components/toaster.css";
+@import "./components/editor.css";
 
 @custom-variant dark (&:is(.dark *));
 
