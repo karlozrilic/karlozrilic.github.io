@@ -1,14 +1,14 @@
 'use client'
 
 import { fetchAboutMe, fetchAboutMeHistory } from '@/app/src/store/slices/aboutMeSlice';
-import EditorWrapper from '../wrappers/editor_wrapper';
+import EditorWrapper from '@/app/src/wrappers/editor_wrapper';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../store/store';
-import LoadingScreen from '../sections/loading';
+import { AppDispatch, RootState } from '@/app/src/store/store';
+import LoadingScreen from '@/app/src/sections/loading';
 import moment from 'moment';
-import { AboutMe } from '../types/about_me/about_me';
-import { AboutMeHistory } from '../types/about_me/about_me_history';
+import { AboutMe } from '@/app/src/types/about_me/about_me';
+import { AboutMeHistory } from '@/app/src/types/about_me/about_me_history';
 
 export default function AboutMeEdit() {
     const dispatch = useDispatch<AppDispatch>();
@@ -36,7 +36,7 @@ export default function AboutMeEdit() {
                 <EditorWrapper
                     firebaseCollection={'about_me'}
                     id={'main'}
-                    initialContent={aboutMe.data?.jsonBlocks || null}
+                    initContent={aboutMe.data?.jsonBlocks || null}
                     updatedAt={moment(aboutMe.data?.updated)}
                     fetchFunction={fetchData}
                     fetchHistoryFunction={fetchHistoryData}

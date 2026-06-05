@@ -21,6 +21,10 @@ body {
 	overflow-x: hidden;
 }
 
+@view-transition {
+	navigation: auto;
+}
+
 @keyframes pulse {
 	0%, 100%{
 		transform: scale(1);

@@ -1,19 +1,19 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, QueryConstraint, Timestamp, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, orderBy, query, QueryConstraint, Timestamp, where } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
-import { Experience } from '../../types/experience/experience';
-import { ExperienceHistory } from '../../types/experience/experience_history';
+import { Experience } from '@/app/src/types/experience/experience';
+import { ExperienceHistory } from '@/app/src/types/experience/experience_history';
 
-type ExperienceState = {
+type ExperiencesState = {
     data: Experience[];
     loading: boolean;
     loaded: boolean;
     error: string | null;
 };
 
-const initialState: ExperienceState = {
+const initialState: ExperiencesState = {
     data: [],
     loading: false,
     loaded: false,
@@ -34,8 +34,12 @@ const initialHistoryState: ExperienceHistoryState = {
     error: null,
 };
 
-export type ExperienceFetchParams = {
+export type ExperiencesFetchParams = {
     all?: boolean;
+};
+
+export type ExperienceFetchParams = {
+    id: string;
 };
 
 export type ExperienceHistoryFetchParams = {
@@ -44,7 +48,7 @@ export type ExperienceHistoryFetchParams = {
 
 export const fetchExperiences = createAsyncThunk<
     Experience[],
-    ExperienceFetchParams | void
+    ExperiencesFetchParams | void
 >('experience/fetchExperiences', async (params) => {
     const { all = false } = params ?? {};
     let experiencesData: Experience[] = [];
@@ -159,8 +163,8 @@ export const fetchExperiencesHistory = createAsyncThunk<
     return experiencesData;
 });
 
-const experienceSlice = createSlice({
-    name: 'experience',
+const experiencesSlice = createSlice({
+    name: 'experiences',
     initialState,
     reducers: {},
     extraReducers: (builder) => {
@@ -203,5 +207,5 @@ const experienceHistorySlice = createSlice({
     },
 });
 
-export const experiencesReducer = experienceSlice.reducer;
+export const experiencesReducer = experiencesSlice.reducer;
 export const experiencesHistoryReducer = experienceHistorySlice.reducer;

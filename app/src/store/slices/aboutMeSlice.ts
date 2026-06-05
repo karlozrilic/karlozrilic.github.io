@@ -3,8 +3,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
-import { AboutMe } from '../../types/about_me/about_me';
-import { AboutMeHistory } from '../../types/about_me/about_me_history';
+import { AboutMe } from '@/app/src/types/about_me/about_me';
+import { AboutMeHistory } from '@/app/src/types/about_me/about_me_history';
 
 type AboutMeState = {
     data: AboutMe | null;

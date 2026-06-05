@@ -1,6 +1,7 @@
 import { db } from '@/lib/firebase';
 import { PartialBlock } from '@blocknote/core';
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
+import { Experience } from '@/app/src/types/experience/experience';
 
 export type UpdateFunctionType = {
     jsonBlocks: PartialBlock[];
@@ -41,4 +42,30 @@ export const updateCollection = async ({ firebaseCollection, id, jsonBlocks, con
         },
         { merge: true }
     );
+}
+
+export const getExperience = async (id: string) => {
+    const experienceSnapshot = await getDoc(
+        doc(db, 'experience', id)
+    );
+    if (!experienceSnapshot.exists()) {
+        return null;
+    }
+     const data = experienceSnapshot.data() as
+        Omit<Experience, 'start_date'> & 
+        Omit<Experience, 'end_date'> & 
+        Omit<Experience, 'updated'> & 
+        {
+            start_date: Timestamp;
+            end_date: Timestamp;
+            updated: Timestamp;
+        };
+
+    return {
+        ...data,
+        start_date: data.start_date.toDate().toISOString(),
+        end_date: data.end_date?.toDate().toISOString() ?? null,
+        updated: data.updated.toDate().toISOString(),
+        id: experienceSnapshot.id
+    } as Experience;
 }

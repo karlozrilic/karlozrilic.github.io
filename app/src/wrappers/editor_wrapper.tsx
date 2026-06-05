@@ -3,19 +3,39 @@
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { updateCollection } from '@/app/src/service/firebase';
 import moment, { Moment } from 'moment';
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { RootState } from '../store/store';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
-import { Button } from '../components/ui/button';
+import { RootState } from '@/app/src/store/store';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/src/components/ui/tooltip';
+import { Button } from '@/app/src/components/ui/button';
 import { ChevronRightIcon, History, HistoryIcon, Lock, LockOpen, Redo, Save, Undo } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogOverlay, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
-import { Kbd, KbdGroup } from '../components/ui/kbd';
-import { Spinner } from '../components/ui/spinner';
-import { Separator } from '../components/ui/separator';
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
-import Editor from '../components/editor/Editor';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogOverlay,
+    AlertDialogTitle,
+    AlertDialogTrigger
+} from '@/app/src/components/ui/alert-dialog';
+import { Kbd, KbdGroup } from '@/app/src/components/ui/kbd';
+import { Spinner } from '@/app/src/components/ui/spinner';
+import { Separator } from '@/app/src/components/ui/separator';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger
+} from '@/app/src/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/components/ui/collapsible';
+import Editor from '@/app/src/components/editor/Editor';
 import { dateTimeFormat } from '@/helpers/constants';
 
 type ExcludeHistoryTypeKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
@@ -29,31 +49,44 @@ type HistoryType = RootState[HistoryKeys]['data'][number];
 type StateKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
 type StateTypes = RootState[StateKeys];
 
-export default function EditorWrapper({
+export type EditorWrapperRef = {
+  submitChanges: (external?: boolean) => Promise<void>;
+  isDirty: boolean;
+};
+
+const EditorWrapper = forwardRef(function EditorWrapper({
     firebaseCollection,
     id,
-    initialContent,
+    initContent,
     updatedAt = null,
     fetchFunction,
-    fetchHistoryFunction
+    fetchHistoryFunction,
+    captureKeys = true,
 }: {
     firebaseCollection: string;
     id: string,
-    initialContent: PartialBlock[] | null,
+    initContent: PartialBlock[] | null,
     updatedAt?: Moment | null;
-    fetchFunction: () => Promise<ExcludeHistoryType>,
-    fetchHistoryFunction: (id?: string) => Promise<HistoryType[]>
-}) {
+    fetchFunction: (id: string) => Promise<ExcludeHistoryType>,
+    fetchHistoryFunction: (id?: string) => Promise<HistoryType[]>,
+    captureKeys?: boolean
+}, ref) {
     const isDirtyRef = useRef(false);
 
     const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
     const [readOnly, setReadOnly] = useState(true);
+    const [initialContent, setInitialContent] = useState<PartialBlock[] | null>(initContent);
     const [isDirty, setIsDirty] = useState(false);
     const [historyState, setHistoryState] = useState<any>(null);
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [historyLoading, setHistoryLoading] = useState<boolean>(false);
     const [contentHistoryData, setContentHistoryData] = useState<HistoryType[]>([]);
+
+    useImperativeHandle(ref, () => ({
+        submitChanges,
+        isDirty,
+    }));
 
     useEffect(() => {
         if (!initialContent) {
@@ -70,6 +103,7 @@ export default function EditorWrapper({
     }, [initialContent]);
 
     useEffect(() => {
+        if (!captureKeys) return;
         window.addEventListener('keydown', captureKeyDown);
 
         return () => {
@@ -144,40 +178,58 @@ export default function EditorWrapper({
         }
     }
 
-    async function submitChanges() {
+    async function submitChanges(external?: boolean) {
         if (!editor) return;
         setSubmitting(true);
         setReadOnly(true);
-        toast.promise<{ name: string }>(
-            () =>
-                new Promise(async (resolve, reject) => {
-                try {
-                    const content = await editor.blocksToHTMLLossy(editor.document);
-                    const markdown = await editor.blocksToMarkdownLossy(editor.document);
-                    await updateCollection({ firebaseCollection, id, jsonBlocks: editor.document, content, markdown });
-                    const payload = await fetchFunction() as ExcludeHistoryType;
-                    if (payload) {
-                        if (Array.isArray(payload)) {
-                            initialContent = payload[0].jsonBlocks;
-                        } else {
-                            initialContent = payload.jsonBlocks ?? null;
-                        }
+        try {
+            if (!external) {
+                const result = await toast.promise<{ name: string }>(
+                    () =>
+                        new Promise(async (resolve, reject) => {
+                            try {
+                                const content = await editor.blocksToHTMLLossy(editor.document);
+                                const markdown = await editor.blocksToMarkdownLossy(editor.document);
+                                await updateCollection({ firebaseCollection, id, jsonBlocks: editor.document, content, markdown });
+                                const payload = await fetchFunction(id) as ExcludeHistoryType;
+                                if (payload) {
+                                    setInitialContent(Array.isArray(payload)
+                                        ? payload.find(payload => payload.id === id)?.jsonBlocks || null
+                                        : payload.jsonBlocks ?? null);
+                                }
+                                setIsDirty(false);
+                                return resolve({ name: 'Data' });
+                            } catch (error) {
+                                console.error(error);
+                                return reject({ error });
+                            }
+                        }),
+                    {
+                        loading: 'Saving...',
+                        success: (data) => `${data.name} has been saved`,
+                        error: (data) => `Error: ${data.error.message}`
                     }
-                    setSubmitting(false);
-                    setIsDirty(false);
-                    return resolve({ name: 'Data' });
-                } catch (error) {
-                    setSubmitting(false);
-                    console.error(error);
-                    return reject({ error });
-                }
-                }),
-            {
-                loading: 'Saving...',
-                success: (data) => `${data.name} has been saved`,
-                error: (data) => `Error: ${data.error.message}`
+                );
+
+                return result;
+            } else {
+                const content = await editor.blocksToHTMLLossy(editor.document);
+                const markdown = await editor.blocksToMarkdownLossy(editor.document);
+                await updateCollection({
+                    firebaseCollection,
+                    id,
+                    jsonBlocks: editor.document,
+                    content,
+                    markdown
+                });
+                setIsDirty(false);
             }
-            )
+        } catch (error) {
+            console.error('Error submitting changes:', error);
+            throw error;
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     async function historyOpen() {
@@ -303,7 +355,7 @@ export default function EditorWrapper({
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                                onClick={submitChanges}
+                                onClick={submitChanges.bind(null, false)}
                                 disabled={submitting}
                             >
                                 {submitting ? <Spinner data-icon='inline-start' /> : ''}
@@ -403,4 +455,6 @@ export default function EditorWrapper({
             <Editor editor={editor} onChange={handleEditorChange} editable={!readOnly} />
         </div>
     );
-}
+});
+
+export default EditorWrapper;

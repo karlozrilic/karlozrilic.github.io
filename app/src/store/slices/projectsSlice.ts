@@ -3,7 +3,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
-import { Project } from '../../types/project/project';
+import { Project } from '@/app/src/types/project/project';
 
 interface ProjectState {
     data: Project[];
