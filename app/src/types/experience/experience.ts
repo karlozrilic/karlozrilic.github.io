@@ -4,7 +4,6 @@ export type Experience = {
     id: string;
     job_title: string,
     company_name: string,
-    location: string,
     city: string;
     country: string;
     work_model: string;
