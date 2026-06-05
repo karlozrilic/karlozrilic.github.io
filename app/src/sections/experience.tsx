@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/app/src/components/ui/card';
 import { Badge } from '@/app/src/components/ui/badge';
 import { fetchExperiences } from '@/app/src/store/slices/experienceSlice';
 import LoadingComponent from '@/app/src/layout_components/loading';
+import { capitalizeFirstLetter } from '@/helpers/string';
 
 export default function Experience() {
     const dispatch = useDispatch<AppDispatch>();
@@ -64,7 +65,7 @@ export default function Experience() {
                                         <div className='flex flex-col md:gap-0 gap-2 justify-between md:flex-row md:items-center mb-2'>
                                             <div className='flex flex-col'>
                                                 <h3 className='text-2xl font-semibold text-chart-5 dark:text-chart-3'>{experience.job_title}</h3>
-                                                <h5>{experience.company_name} - {experience.location}</h5>
+                                                <h5>{experience.company_name} - {experience.city}, {experience.country}{experience.work_model !== 'on-site' ? ` (${capitalizeFirstLetter(experience.work_model)})` : ''}</h5>
                                             </div>
                                             <Badge variant='secondary'>{moment(new Date(experience.start_date)).format('MMMM YYYY')} - {experience.end_date ? moment(new Date(experience.end_date)).format('MMMM YYYY') : 'Present'}</Badge>
                                         </div>

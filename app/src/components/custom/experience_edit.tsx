@@ -30,17 +30,17 @@ function isValidDate(date: Date | undefined) {
     return !isNaN(date.getTime())
 }
 
-export default function ExperienceEditComponent({ experience }: { experience: Experience }) {
-    const [currentlyWorking, setCurrentlyWorking] = useState(false);
+export default function ExperienceEditComponent({ experience }: { experience?: Experience }) {
+    const [currentlyWorking, setCurrentlyWorking] = useState(experience?.end_date ? false : true);
 
     const [openStart, setOpenStart] = useState(false);
     const [openEnd, setOpenEnd] = useState(false);
 
     const [dateStart, setDateStart] = useState<Date | undefined>(
-        new Date()
+        experience?.start_date ? new Date(experience.start_date) : new Date()
     );
     const [dateEnd, setDateEnd] = useState<Date | undefined>(
-        new Date()
+        experience?.end_date ? new Date(experience.end_date) : new Date()
     );
 
     const [monthStart, setMonthStart] = useState<Date | undefined>(dateStart);
@@ -55,7 +55,7 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
 
     return (
         <div className='flex justify-between'>
-            <span>{experience.company_name}</span>
+            <span>{experience?.company_name}</span>
             <Dialog>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -74,7 +74,7 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                 </Tooltip>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{experience.company_name}</DialogTitle>
+                        <DialogTitle>{experience?.company_name}</DialogTitle>
                         <DialogDescription>Edit data</DialogDescription>
                     </DialogHeader>
                     <div className='-mx-4 no-scrollbar max-h-[50vh] overflow-y-auto px-4'>
@@ -84,7 +84,7 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                 <Input
                                     id='company_name'
                                     placeholder='Company d.o.o.'
-                                    defaultValue={experience.company_name}
+                                    defaultValue={experience?.company_name}
                                 />
                             </Field>
                             <Field>
@@ -92,7 +92,7 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                 <Input
                                     id='city'
                                     placeholder='City'
-                                    defaultValue={experience.location}
+                                    defaultValue={experience?.city}
                                 />
                             </Field>
                             <Field>
@@ -100,7 +100,7 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                 <Input
                                     id='country'
                                     placeholder='Country'
-                                    defaultValue={experience.location}
+                                    defaultValue={experience?.country}
                                 />
                             </Field>
                             
@@ -109,21 +109,21 @@ export default function ExperienceEditComponent({ experience }: { experience: Ex
                                 <FieldDescription>
                                     Select work model
                                 </FieldDescription>
-                                <RadioGroup defaultValue='monthly'>
+                                <RadioGroup defaultValue={experience?.work_model || 'on-site'}>
                                     <Field orientation='horizontal'>
-                                        <RadioGroupItem value='monthly' id='in-office' />
-                                        <FieldLabel htmlFor='in-office' className='font-normal'>
-                                            In office
+                                        <RadioGroupItem value='on-site' id='on-site' />
+                                        <FieldLabel htmlFor='on-site' className='font-normal'>
+                                            On site
                                         </FieldLabel>
                                     </Field>
                                     <Field orientation='horizontal'>
-                                        <RadioGroupItem value='yearly' id='hybrid' />
+                                        <RadioGroupItem value='hybrid' id='hybrid' />
                                         <FieldLabel htmlFor='hybrid' className='font-normal'>
                                             Hybrid
                                         </FieldLabel>
                                     </Field>
                                     <Field orientation='horizontal'>
-                                        <RadioGroupItem value='lifetime' id='remote' />
+                                        <RadioGroupItem value='remote' id='remote' />
                                         <FieldLabel htmlFor='remote' className='font-normal'>
                                             Remote
                                         </FieldLabel>

@@ -5,6 +5,9 @@ export type Experience = {
     job_title: string,
     company_name: string,
     location: string,
+    city: string;
+    country: string;
+    work_model: string;
     start_date: string,
     end_date: string | null,
     jsonBlocks: PartialBlock[];
