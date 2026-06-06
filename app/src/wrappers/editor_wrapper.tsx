@@ -1,14 +1,14 @@
 'use client';
 
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import { updateCollection } from '@/app/src/service/firebase';
+import { addOrUpdateCollection, deleteHistory } from '@/app/src/service/firebase';
 import moment, { Moment } from 'moment';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { RootState } from '@/app/src/store/store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/src/components/ui/tooltip';
 import { Button } from '@/app/src/components/ui/button';
-import { ChevronRightIcon, History, HistoryIcon, Lock, LockOpen, Redo, Save, Undo } from 'lucide-react';
+import { ChevronRightIcon, History, HistoryIcon, Lock, LockOpen, Redo, Save, Trash, Undo } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -36,7 +36,8 @@ import {
 } from '@/app/src/components/ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/components/ui/collapsible';
 import Editor from '@/app/src/components/editor/Editor';
-import { dateTimeFormat } from '@/helpers/constants';
+import { formatDate } from '@/helpers/constants';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/app/src/components/ui/empty';
 
 type ExcludeHistoryTypeKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
 type FetchExcludeHistoryType = RootState[ExcludeHistoryTypeKeys];
@@ -57,7 +58,7 @@ export type EditorWrapperRef = {
 const EditorWrapper = forwardRef(function EditorWrapper({
     firebaseCollection,
     id,
-    initContent,
+    initialContent,
     updatedAt = null,
     fetchFunction,
     fetchHistoryFunction,
@@ -65,18 +66,19 @@ const EditorWrapper = forwardRef(function EditorWrapper({
 }: {
     firebaseCollection: string;
     id: string,
-    initContent: PartialBlock[] | null,
+    initialContent: PartialBlock[] | null,
     updatedAt?: Moment | null;
     fetchFunction: (id: string) => Promise<ExcludeHistoryType>,
     fetchHistoryFunction: (id?: string) => Promise<HistoryType[]>,
     captureKeys?: boolean
 }, ref) {
+    const initialContentRef = useRef<PartialBlock[] | null>(initialContent);
     const isDirtyRef = useRef(false);
 
     const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
     const [readOnly, setReadOnly] = useState(true);
-    const [initialContent, setInitialContent] = useState<PartialBlock[] | null>(initContent);
     const [isDirty, setIsDirty] = useState(false);
+    const [historyOpen, setHistoryOpen] = useState(false);
     const [historyState, setHistoryState] = useState<any>(null);
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -94,13 +96,15 @@ const EditorWrapper = forwardRef(function EditorWrapper({
             return;
         }
         try {
-            setEditor(BlockNoteEditor.create({ initialContent: initialContent, trailingBlock: false }));
+            setEditor(BlockNoteEditor.create({ initialContent, trailingBlock: false }));
         } catch (error) {
             console.error('Error creating editor:', error);
             toast.error(`Error creating editor: ${error}`);
             setEditor(BlockNoteEditor.create({ trailingBlock: false  }));
         }
-    }, [initialContent]);
+
+        getHistory();
+    }, []);
 
     useEffect(() => {
         if (!captureKeys) return;
@@ -111,10 +115,7 @@ const EditorWrapper = forwardRef(function EditorWrapper({
         }
     }, []);
 
-    useEffect(() => {
-
-    }, []);
-
+    // Keep the ref in sync whenever state changes
     useEffect(() => {
         isDirtyRef.current = isDirty;
     }, [isDirty]);
@@ -126,6 +127,15 @@ const EditorWrapper = forwardRef(function EditorWrapper({
         const state = getEditorsHistory();
         setHistoryState(state);
     }, [editor, readOnly]);
+
+    async function getHistory() {
+        try {
+            const payload = await fetchHistoryFunction(id);
+            setContentHistoryData(payload);
+        } catch (error) {
+            console.error(error);
+        }
+    }
 
     function captureKeyDown(event: KeyboardEvent) {
         let foundOption = false;
@@ -158,7 +168,10 @@ const EditorWrapper = forwardRef(function EditorWrapper({
     async function handleEditorChange(jsonBlocks: PartialBlock[]) {
         if (!editor) return;
         setHistoryState(getEditorsHistory());
-        if (!initialContent) {
+
+        const currentInitial = initialContentRef.current;
+
+        if (!currentInitial) {
             if (jsonBlocks.length === 0) {
                 setIsDirty(false);
             } else if (
@@ -172,7 +185,7 @@ const EditorWrapper = forwardRef(function EditorWrapper({
                 setIsDirty(!!current.length);
             }
         } else {
-            const original = await editor.blocksToHTMLLossy(initialContent).replace(/[\n\r\t]/gm, '');
+            const original = await editor.blocksToHTMLLossy(currentInitial).replace(/[\n\r\t]/gm, '');
             const current = await editor.blocksToHTMLLossy(jsonBlocks).replace(/[\n\r\t]/gm, '');
             setIsDirty(!(original === current));
         }
@@ -188,16 +201,7 @@ const EditorWrapper = forwardRef(function EditorWrapper({
                     () =>
                         new Promise(async (resolve, reject) => {
                             try {
-                                const content = await editor.blocksToHTMLLossy(editor.document);
-                                const markdown = await editor.blocksToMarkdownLossy(editor.document);
-                                await updateCollection({ firebaseCollection, id, jsonBlocks: editor.document, content, markdown });
-                                const payload = await fetchFunction(id) as ExcludeHistoryType;
-                                if (payload) {
-                                    setInitialContent(Array.isArray(payload)
-                                        ? payload.find(payload => payload.id === id)?.jsonBlocks || null
-                                        : payload.jsonBlocks ?? null);
-                                }
-                                setIsDirty(false);
+                                await updateData();
                                 return resolve({ name: 'Data' });
                             } catch (error) {
                                 console.error(error);
@@ -213,16 +217,7 @@ const EditorWrapper = forwardRef(function EditorWrapper({
 
                 return result;
             } else {
-                const content = await editor.blocksToHTMLLossy(editor.document);
-                const markdown = await editor.blocksToMarkdownLossy(editor.document);
-                await updateCollection({
-                    firebaseCollection,
-                    id,
-                    jsonBlocks: editor.document,
-                    content,
-                    markdown
-                });
-                setIsDirty(false);
+                await updateData();
             }
         } catch (error) {
             console.error('Error submitting changes:', error);
@@ -232,14 +227,57 @@ const EditorWrapper = forwardRef(function EditorWrapper({
         }
     }
 
-    async function historyOpen() {
-        setHistoryLoading(true);
+    async function updateData() {
+        if (!editor) return;
+        const content = await editor.blocksToHTMLLossy(editor.document);
+        const markdown = await editor.blocksToMarkdownLossy(editor.document);
+        await addOrUpdateCollection({
+            firebaseCollection,
+            id,
+            data: {
+                jsonBlocks: editor.document,
+                content,
+                markdown
+            }
+        });
+        const payload = await fetchFunction(id) as ExcludeHistoryType;
+        if (payload) {
+            const newBlocks = Array.isArray(payload)
+                ? payload.find(p => p.id === id)?.jsonBlocks || null
+                : payload.jsonBlocks ?? null;
 
+            initialContentRef.current = newBlocks;
+        }
+        await getHistory();
+        setIsDirty(false);
+    }
+
+    async function deleteHistoryById(history_id: string) {
+        return;
         try {
-            const payload = await fetchHistoryFunction(id);
-            setContentHistoryData(payload);
+            await deleteHistory({
+                firebaseCollection,
+                id,
+                history_id
+            });
         } catch (error) {
-            console.error(error);
+            console.error(error);   
+        } finally {
+            
+        }
+    }
+
+    async function clearHistory() {
+        setHistoryLoading(true);
+        // TODO add toast maybe
+        try {
+            await deleteHistory({
+                firebaseCollection,
+                id
+            });
+            await getHistory();
+        } catch (error) {
+            console.error(error);   
         } finally {
             setHistoryLoading(false);
         }
@@ -270,7 +308,7 @@ const EditorWrapper = forwardRef(function EditorWrapper({
 
     return (
         <div className='flex flex-col items-center gap-4'>
-            <div className='flex self-end items-center gap-2'>
+            <div className='flex self-end items-center gap-2 h-9'>
                 { updatedAt ?
                     moment().diff(updatedAt, 'hours') < 24 ?
                         <Tooltip>
@@ -278,10 +316,10 @@ const EditorWrapper = forwardRef(function EditorWrapper({
                                 <span>Updated: {updatedAt.fromNow()}</span>
                             </TooltipTrigger>
                             <TooltipContent side={'bottom'}>
-                                {updatedAt.format(dateTimeFormat)}
+                                {formatDate(updatedAt.toDate(), { time: true })}
                             </TooltipContent>
                         </Tooltip>
-                        : <span>Updated at: {updatedAt.format(dateTimeFormat)}</span>
+                        : <span>Updated at: {formatDate(updatedAt.toDate(), { time: true })}</span>
                     :
                     null
                 }
@@ -382,13 +420,13 @@ const EditorWrapper = forwardRef(function EditorWrapper({
                     </TooltipContent>
                 </Tooltip>
 
-                <Sheet>
+                <Sheet
+                    open={historyOpen}
+                    onOpenChange={setHistoryOpen}
+                >
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <SheetTrigger
-                                asChild
-                                onClick={historyOpen}
-                            >
+                            <SheetTrigger asChild>
                                 <Button
                                     variant='outline'
                                     size='sm'
@@ -423,7 +461,12 @@ const EditorWrapper = forwardRef(function EditorWrapper({
                                                 >
                                                     <ChevronRightIcon className='transition-transform group-data-[state=open]:rotate-90' />
                                                     <History />
-                                                    {moment(data.archived_at).format(dateTimeFormat)}
+                                                    {formatDate(new Date(data.archived_at), { time: true })}
+
+                                                    <span className='ml-auto' onClick={(event) => {
+                                                        event.preventDefault();
+                                                        deleteHistoryById(data.id);
+                                                    }}><Trash className='stroke-(--destructive)' /></span>
                                                 </Button>
                                             </CollapsibleTrigger>
                                             <CollapsibleContent
@@ -440,13 +483,31 @@ const EditorWrapper = forwardRef(function EditorWrapper({
                                             </CollapsibleContent>
                                         </Collapsible>
                                     );
-                                }) : <p>No history found.</p> }
+                                }) :
+                                    <Empty>
+                                        <EmptyHeader>
+                                            <EmptyMedia variant='icon'>
+                                                <HistoryIcon />
+                                            </EmptyMedia>
+                                            <EmptyTitle>No history yet</EmptyTitle>
+                                            <EmptyDescription>
+                                                You haven't edited anything yet.<br/>
+                                                History will show here when you edit and save something.
+                                            </EmptyDescription>
+                                        </EmptyHeader>
+                                    </Empty>
+                                }
                             </div>
                         }
                         <SheetFooter>
                             <SheetClose asChild>
                                 <Button variant='outline'>Close</Button>
                             </SheetClose>
+                            {
+                                contentHistoryData.length ?
+                                    <Button onClick={clearHistory}>{historyLoading ? <Spinner />  : 'Clear history'}</Button>
+                                    : null
+                            }
                         </SheetFooter>
                     </SheetContent>
                 </Sheet>

@@ -1,7 +1,7 @@
 import { db } from '@/lib/firebase';
 import { PartialBlock } from '@blocknote/core';
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
-import { Experience } from '@/app/src/types/experience/experience';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
+import { Experience, ExperienceUpdate } from '@/app/src/types/experience/experience';
 
 export type UpdateFunctionType = {
     jsonBlocks: PartialBlock[];
@@ -9,15 +9,19 @@ export type UpdateFunctionType = {
     markdown: string;
 };
 
-export type UpdateFunctionTypeWithId = {
+export type AddOrUpdate = {
     firebaseCollection: string;
     id: string;
-    jsonBlocks: PartialBlock[];
-    content: string;
-    markdown: string;
+    data: ExperienceUpdate
 };
 
-export const updateCollection = async ({ firebaseCollection, id, jsonBlocks, content, markdown }: UpdateFunctionTypeWithId) => {
+export type DeleteHistory = {
+    firebaseCollection: string;
+    id: string;
+    history_id?: string
+};
+
+export const addOrUpdateCollection = async ({ firebaseCollection, id, data }: AddOrUpdate) => {
     const docRef = doc(db, firebaseCollection, id);
 
     const prevSnap = await getDoc(docRef);
@@ -35,14 +39,29 @@ export const updateCollection = async ({ firebaseCollection, id, jsonBlocks, con
     await setDoc(
         docRef,
         {
-            jsonBlocks,
-            content,
-            markdown,
+            ...data,
             updated: serverTimestamp()
         },
         { merge: true }
     );
-}
+};
+
+export const deleteHistory = async ({ firebaseCollection, id, history_id }: DeleteHistory) => {
+    const docRef = doc(db, firebaseCollection, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) throw 'Couldn\'t find document in collection';
+
+    if (history_id) {
+        const historyDoc = doc(db, firebaseCollection, id, 'history', history_id);
+        await deleteDoc(historyDoc);
+    } else {
+        const historyCollection = collection(db, firebaseCollection, id, 'history');
+        const snapshot = await getDocs(historyCollection);
+        const deletions = snapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletions);
+    }
+};
 
 export const getExperience = async (id: string) => {
     const experienceSnapshot = await getDoc(
@@ -68,4 +87,4 @@ export const getExperience = async (id: string) => {
         updated: data.updated.toDate().toISOString(),
         id: experienceSnapshot.id
     } as Experience;
-}
+};

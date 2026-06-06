@@ -14,3 +14,18 @@ export type Experience = {
     markdown: string;
     updated: string;
 }
+
+export type ExperienceUpdate = {
+    id?: string;
+    job_title?: string,
+    company_name?: string,
+    city?: string;
+    country?: string;
+    work_model?: string;
+    start_date?: string,
+    end_date?: string | null,
+    jsonBlocks?: PartialBlock[];
+    content?: string;
+    markdown?: string;
+    updated?: string;
+}

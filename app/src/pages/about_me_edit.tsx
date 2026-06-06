@@ -31,17 +31,18 @@ export default function AboutMeEdit() {
     
     return <>
         <main className='flex justify-center p-2'>
-            { !aboutMe.loaded ? <LoadingScreen /> : null }
-            <div className='relative max-w-5xl w-full flex flex-col items-center gap-4'>
-                <EditorWrapper
-                    firebaseCollection={'about_me'}
-                    id={'main'}
-                    initContent={aboutMe.data?.jsonBlocks || null}
-                    updatedAt={moment(aboutMe.data?.updated)}
-                    fetchFunction={fetchData}
-                    fetchHistoryFunction={fetchHistoryData}
-                />
-            </div>
+            { !aboutMe.loaded ? <LoadingScreen /> : 
+                <div className='relative max-w-5xl w-full flex flex-col items-center gap-4'>
+                    <EditorWrapper
+                        firebaseCollection={'about_me'}
+                        id={'main'}
+                        initialContent={aboutMe.data?.jsonBlocks || null}
+                        updatedAt={moment(aboutMe.data?.updated)}
+                        fetchFunction={fetchData}
+                        fetchHistoryFunction={fetchHistoryData}
+                    />
+                </div>
+            }
         </main>
     </>
 }
