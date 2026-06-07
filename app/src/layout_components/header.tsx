@@ -101,7 +101,7 @@ export default function Header() {
 
     return (
 		<>
-			<nav className='bg-background text-foreground shadow sticky top-0 w-full z-50 transition-colors duration-500'>
+			<nav className='bg-background text-foreground shadow sticky top-0 w-full z-10 transition-colors duration-500'>
 				<div className='container mx-auto flex justify-between items-center p-5'>
 					<Link href='/' onClick={() => trigger('warning')} className='text-xl font-bold'>{headerTitle}</Link>
 					<div className='hidden space-x-6 md:flex'>

@@ -7,3 +7,7 @@
         padding-right: 24px !important;
     }
 }
+
+[data-text-color] {
+    color: attr(data-text-color type(<color>));
+}
