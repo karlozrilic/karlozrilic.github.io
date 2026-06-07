@@ -61,9 +61,12 @@ const ExperienceEditComponent = forwardRef(function({ experience }: { experience
                     </HoverCardContent>
                 </HoverCard>
                 : null}
+
+            {/* modal=false fixes issues with combobox content not interactable and scrollable */}
             <Dialog
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
+                modal={false}
             >
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -85,6 +88,14 @@ const ExperienceEditComponent = forwardRef(function({ experience }: { experience
                     <ExperienceForm experience={experience} />
                 </DialogContent>
             </Dialog>
+
+            {/* manual backdrop since modal=false removes it */}
+            {dialogOpen && (
+                <div
+                    className='fixed inset-0 z-40 bg-black/50 backdrop-blur-sm'
+                    onClick={() => setDialogOpen(false)}
+                />
+            )}
         </div>
     );
 });
@@ -93,12 +104,29 @@ export default ExperienceEditComponent;
 
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form } from '../ui/form';
+import { Form } from '@/app/src/components/ui/form';
 import { experienceSchema } from '@/helpers/schema';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/app/src/components/ui/hover-card';
 import { formatDate } from '@/helpers/constants';
+import { RootState } from '@/app/src/store/store';
+import { useSelector } from 'react-redux';
+import {
+    Combobox,
+    ComboboxCollection,
+    ComboboxContent,
+    ComboboxEmpty,
+    ComboboxGroup,
+    ComboboxInput,
+    ComboboxItem,
+    ComboboxLabel,
+    ComboboxList,
+    ComboboxSeparator
+} from '@/app/src/components/ui/combobox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/src/components/ui/avatar';
 
 function ExperienceForm({ experience }: { experience?: Experience }) {
+    const groupedCountries = useSelector((state: RootState) => state.countries.data?.groupedCountries);
+
     const form = useForm({
         resolver: zodResolver(experienceSchema),
         defaultValues: {
@@ -141,9 +169,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                         placeholder='Job title'
                                         aria-invalid={fieldState.invalid}
                                     />
-                                    <FieldDescription>
-                                        Provide a concise title for your bug report.
-                                    </FieldDescription>
+                                    <FieldDescription>Type in job title</FieldDescription>
                                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                                 </Field>
                             )}
@@ -163,9 +189,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                         placeholder='Company name'
                                         aria-invalid={fieldState.invalid}
                                     />
-                                    <FieldDescription>
-                                        Provide a concise title for your bug report.
-                                    </FieldDescription>
+                                    <FieldDescription>Type in company name</FieldDescription>
                                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                                 </Field>
                             )}
@@ -185,9 +209,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                         placeholder='City'
                                         aria-invalid={fieldState.invalid}
                                     />
-                                    <FieldDescription>
-                                        Provide a concise title for your bug report.
-                                    </FieldDescription>
+                                    <FieldDescription>Type in city</FieldDescription>
                                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                                 </Field>
                             )}
@@ -197,21 +219,85 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                             name='country'
                             control={form.control}
                             render={({ field, fieldState }) => (
-                                <Field
-                                    data-invalid={fieldState.invalid}
-                                >
+                                <Field data-invalid={fieldState.invalid}>
                                     <FieldLabel htmlFor={field.name}>Country</FieldLabel>
-                                    <Input
-                                        {...field}
-                                        id={field.name}
-                                        placeholder='Country'
-                                        aria-invalid={fieldState.invalid}
-                                    />
-                                    <FieldDescription>
-                                        Provide a concise title for your bug report.
-                                    </FieldDescription>
-                                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                                    <Combobox
+                                        value={field.value}
+                                        onValueChange={(value) => field.onChange(value ?? '')}
+                                        onOpenChange={(open) => {
+                                            if (open && field.value) {
+                                                requestAnimationFrame(() => {
+                                                    const selected = document.querySelector(`[data-slot='combobox-item'][aria-selected='true']`);
+                                                    const list = document.querySelector(`[data-slot='combobox-list']`);
+                                                    if (selected && list) {
+                                                        list.scrollTop = (selected as HTMLElement).offsetTop;
+                                                    }
+                                                });
+                                            }
+                                        }}
+                                        items={groupedCountries}
+                                        modal={true}
+                                        autoHighlight
+                                    >
+                                        <div className='relative'>
+                                            <div className='pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 flex items-center'>
+                                                {field.value && (
+                                                <img
+                                                    src={
+                                                        groupedCountries
+                                                            ?.flatMap(group => group.items)
+                                                            .find(country => country.name === field.value)?.flags.svg
+                                                    }
+                                                    alt={
+                                                        groupedCountries
+                                                            ?.flatMap(group => group.items)
+                                                            .find(country => country.name === field.value)?.name
+                                                    }
+                                                    className='w-5 h-3.5 object-contain'
+                                                />
+                                                )}
+                                            </div>
+                                            <ComboboxInput
+                                                id={field.name}
+                                                placeholder='Select a country'
+                                                showClear
+                                                aria-invalid={fieldState.invalid}
+                                                render={<InputGroupInput className={field.value ? 'pl-9' : ''} />} 
+                                            />
+                                        </div>
+                                        <ComboboxContent>
+                                            <ComboboxEmpty>No countries found.</ComboboxEmpty>
+                                            <ComboboxList>
+                                                {(group, index) => (
+                                                    <ComboboxGroup key={group.value} items={group.items}>
+                                                        <ComboboxLabel>{group.value}</ComboboxLabel>
+                                                        <ComboboxCollection>
+                                                            {(country) => (
+                                                                <ComboboxItem
+                                                                    key={country.name}
+                                                                    value={country.name}
+                                                                    aria-selected={country.name === field.value}
+                                                                    className='cursor-pointer'
+                                                                >
+                                                                    <img
+                                                                        src={country.flags.svg}
+                                                                        alt={country.name}
+                                                                        className='w-6 h-4 object-contain'
+                                                                    />
+                                                                    {country.name}
+                                                                </ComboboxItem>
+                                                            )}
+                                                        </ComboboxCollection>
+                                                        {groupedCountries && index < groupedCountries.length - 1 && <ComboboxSeparator />}
+                                                    </ComboboxGroup>
+                                                )}
+                                            </ComboboxList>
+                                        </ComboboxContent>
+                                        <FieldDescription>Select your country.</FieldDescription>
+                                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                                    </Combobox>
                                 </Field>
+                                
                             )}
                         />
 
@@ -291,7 +377,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                                     }
                                                 }}
                                             />
-                                            <Popover modal={true}>
+                                            <Popover>
                                                 <PopoverTrigger asChild>
                                                     <InputGroupButton
                                                         variant='ghost'
@@ -314,6 +400,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                                         captionLayout='dropdown'
                                                         selected={field.value}
                                                         month={field.value}
+                                                        onMonthChange={field.onChange}
                                                         onSelect={(date) => {
                                                             field.onChange(date);
 
@@ -357,7 +444,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                                         }
                                                     }}
                                                 />
-                                                <Popover modal={true}>
+                                                <Popover>
                                                     <PopoverTrigger asChild>
                                                         <InputGroupButton
                                                             variant='ghost'
@@ -384,6 +471,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                                             } : undefined}
                                                             selected={field.value}
                                                             month={field.value}
+                                                            onMonthChange={field.onChange}
                                                             onSelect={(date) => {
                                                                 field.onChange(date)
                                                             }}

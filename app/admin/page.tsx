@@ -2,12 +2,11 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import LoadingScreen from '@/app/src/sections/loading';
 import Link from 'next/link';
 
 export default function Dashboard() {
-	const editorRef = useRef<HTMLDivElement>(null);
 	const { user, loading } = useAuth();
 	const router = useRouter();
 	const [loaded, setLoaded] = useState(false);

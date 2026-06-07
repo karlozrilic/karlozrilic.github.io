@@ -3,6 +3,7 @@ import { aboutMeReducer, aboutMeHistoryReducer } from '@/app/src/store/slices/ab
 import technologiesReducer from '@/app/src/store/slices/technologiesSlice';
 import projectsReducer from '@/app/src/store/slices/projectsSlice';
 import { experiencesReducer, experiencesHistoryReducer } from '@/app/src/store/slices/experienceSlice';
+import { countriesReducer } from './slices/countriesSlice';
 
 export const store = configureStore({
     reducer: {
@@ -11,7 +12,8 @@ export const store = configureStore({
         technologies: technologiesReducer,
         projects: projectsReducer,
         experiences: experiencesReducer,
-        experiencesHistory: experiencesHistoryReducer
+        experiencesHistory: experiencesHistoryReducer,
+        countries: countriesReducer,
     }
 });
 

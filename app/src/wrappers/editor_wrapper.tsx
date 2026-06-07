@@ -39,7 +39,7 @@ import Editor from '@/app/src/components/editor/Editor';
 import { formatDate } from '@/helpers/constants';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/app/src/components/ui/empty';
 
-type ExcludeHistoryTypeKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
+type ExcludeHistoryTypeKeys = Exclude<keyof RootState, 'technologies' | 'countries' | `${string}History`>;
 type FetchExcludeHistoryType = RootState[ExcludeHistoryTypeKeys];
 type ExcludeHistoryType = RootState[ExcludeHistoryTypeKeys]['data'];
 

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '@/app/src/store/store';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/src/store/store';
 import Hero from '@/app/src/sections/hero';
 import AboutMe from '@/app/src/sections/about_me';
 import Projects from '@/app/src/sections/projects';
@@ -9,10 +9,9 @@ import Contact from '@/app/src/sections/contact';
 import Experience from '@/app/src/sections/experience';
 import LoadingScreen from '@/app/src/sections/loading';
 import Technologies from '@/app/src/sections/technologies';
-import Footer from './src/layout_components/footer';
+import Footer from '@/app/src/layout_components/footer';
 
 export default function Home() {
-    const dispatch = useDispatch<AppDispatch>();
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
     const technologies = useSelector((state: RootState) => state.technologies);
     const projects = useSelector((state: RootState) => state.projects);

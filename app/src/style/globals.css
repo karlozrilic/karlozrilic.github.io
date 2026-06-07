@@ -11,6 +11,9 @@
 @import "./components/toaster.css";
 @import "./components/editor.css";
 
+/* Fixes */
+@import "./fixes/combobox_fix.css";
+
 @custom-variant dark (&:is(.dark *));
 
 html {

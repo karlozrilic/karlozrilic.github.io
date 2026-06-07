@@ -8,6 +8,7 @@ import ReduxProvider from '@/app/reduxProvider';
 import { SidebarProvider } from '@/app/src/components/ui/sidebar';
 import { AppSidebar } from '@/app/src/layout_components/app_sidebar';
 import { Toaster } from '@/app/src/components/ui/sonner';
+import GlobalDataLoader from '@/app/global_data_loader';
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: Readonly<{children: React.React
 					className='flex-col'
 				>
 					<ReduxProvider>
+						<GlobalDataLoader />
 						<TooltipProvider>
 							<Header />
 							{children}

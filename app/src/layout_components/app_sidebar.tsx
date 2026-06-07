@@ -15,7 +15,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from '@/app/src/components/ui/sidebar'
-import { ChevronDown, ChevronRight, ChevronsUpDown, Eye, LogOutIcon, Pencil, SquareTerminal } from 'lucide-react'
+import { ChevronRight, ChevronsUpDown, Eye, LogOutIcon, Pencil, SquareTerminal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/app/src/components/ui/dropdown-menu'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/components/ui/collapsible'
 import { useAuth } from '@/hooks/useAuth';
