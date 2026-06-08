@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, getDocs, orderBy, query, QueryConstraint, Timestamp, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, QueryConstraint, Timestamp, where } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { Experience } from '@/app/src/types/experience/experience';
 import { ExperienceHistory } from '@/app/src/types/experience/experience_history';

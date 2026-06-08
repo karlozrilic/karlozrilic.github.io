@@ -38,17 +38,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/c
 import Editor from '@/app/src/components/editor/Editor';
 import { formatDate } from '@/helpers/constants';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/app/src/components/ui/empty';
+import { AboutMe } from '@/app/src/types/about_me/about_me';
+import { Project } from '@/app/src/types/project/project';
+import { Experience } from '@/app/src/types/experience/experience';
+import { AboutMeHistory } from '@/app/src/types/about_me/about_me_history';
+import { ExperienceHistory } from '@/app/src/types/experience/experience_history';
 
-type ExcludeHistoryTypeKeys = Exclude<keyof RootState, 'technologies' | 'countries' | `${string}History`>;
-type FetchExcludeHistoryType = RootState[ExcludeHistoryTypeKeys];
-type ExcludeHistoryType = RootState[ExcludeHistoryTypeKeys]['data'];
-
-type HistoryKeys = Extract<keyof RootState, `${string}History`>;
-type FetchHistoryType = RootState[HistoryKeys];
-type HistoryType = RootState[HistoryKeys]['data'][number];
-
-type StateKeys = Exclude<keyof RootState, 'technologies' | `${string}History`>;
-type StateTypes = RootState[StateKeys];
+type ExcludeHistoryType = AboutMe | Project[] | Experience[] | null;
+type HistoryType = AboutMeHistory | ExperienceHistory;
 
 export type EditorWrapperRef = {
   submitChanges: (external?: boolean) => Promise<void>;

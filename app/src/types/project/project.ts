@@ -1,6 +1,6 @@
 import { PartialBlock } from '@blocknote/core';
 
-export interface Project {
+export type Project = {
     id: string;
     category: string,
     title: string,

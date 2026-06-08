@@ -3,6 +3,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
+import { Technologies } from '@/app/src/types/technologies/technologies';
 
 interface TechnologiesState {
     data: Technologies[];

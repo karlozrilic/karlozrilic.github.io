@@ -8,22 +8,34 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
-} from '@/app/src/components/ui/sidebar'
-import { ChevronRight, ChevronsUpDown, Eye, LogOutIcon, Pencil, SquareTerminal } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/app/src/components/ui/dropdown-menu'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/components/ui/collapsible'
+} from '@/app/src/components/ui/sidebar';
+import { ChevronRight, ChevronsUpDown, ExternalLink, Eye, FolderGit2, LogOutIcon, MoreHorizontal, Pencil, SquareTerminal } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/app/src/components/ui/dropdown-menu';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/components/ui/collapsible';
 import { useAuth } from '@/hooks/useAuth';
-import { Avatar, AvatarFallback, AvatarImage } from '@/app/src/components/ui/avatar'
-import { useEffect, useState } from 'react'
-import { useIsMobile } from '@/hooks/use-mobile'
-import { logout } from '@/helpers/firebase'
-import { useRouter } from 'next/navigation'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/src/components/ui/avatar';
+import { useEffect, useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { logout } from '@/helpers/firebase';
+import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/src/store/store';
+import { capitalizeFirstLetter } from '@/helpers/string';
  
 export function AppSidebar() {
     const router = useRouter();
@@ -31,6 +43,8 @@ export function AppSidebar() {
     const { user, loading } = useAuth();
     const [acronym, setAcronym] = useState('');
     const isMobile = useIsMobile()
+
+    const vercelProjects = useSelector((state: RootState) => state.vercelProjects.data);
 
     useEffect(() => {
         if (!loading && user && user.displayName) {
@@ -52,13 +66,19 @@ export function AppSidebar() {
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton className='h-auto'>
+                        <SidebarMenuButton
+                            className='h-auto'
+                            onClick={() => {
+                                router.push('/admin');
+                                toggleSidebar();
+                            }}
+                        >
                             <Avatar>
                                 <AvatarImage src='/favicon/favicon-512x512.png' />
                                 <AvatarFallback>KZ</AvatarFallback>
                             </Avatar>
                             <div className='grid flex-1 text-left text-sm leading-tight'>
-                                <span className='font-medium'>Portfolio</span>
+                                <span className='font-medium'>Portfolio Admin</span>
                                 <span className='text-xs'>Edit or preview components of each project</span>
                             </div>
                         </SidebarMenuButton>
@@ -66,26 +86,6 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                <SidebarGroup>
-                    <SidebarGroupLabel>
-                        Admin dashboard
-                    </SidebarGroupLabel>
-
-                    <SidebarMenu>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                onClick={() => {
-                                    router.push('/admin');
-                                    toggleSidebar();
-                                }}
-                            >
-                                <SquareTerminal />
-                                <span>Admin</span>
-                                <ChevronRight className='ml-auto' />
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroup>
                 <SidebarGroup>
                     <SidebarGroupLabel>Content</SidebarGroupLabel>
 
@@ -181,6 +181,58 @@ export function AppSidebar() {
                         </Collapsible>
                     </SidebarMenu>
                 </SidebarGroup>
+
+                {vercelProjects.length ?
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Additional links</SidebarGroupLabel>
+
+                        <SidebarMenu>
+                            {vercelProjects.map((project, index) => {
+                                const projectProductionData = project.targets.production;
+                                const projectLink = `https://${projectProductionData.alias[0]}`;
+                                const gitLink = `https://${projectProductionData.meta.githubHost}/${projectProductionData.meta.githubOrg}/${projectProductionData.meta.githubRepo}`;
+                                return (
+                                    <SidebarMenuItem key={index} className='cursor-pointer'>
+                                        <SidebarMenuButton asChild>
+                                            <span>{capitalizeFirstLetter(project.name.replaceAll('-', ' '))}</span>
+                                        </SidebarMenuButton>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <SidebarMenuAction showOnHover={true}>
+                                                    <MoreHorizontal />
+                                                    <span className="sr-only">More</span>
+                                                </SidebarMenuAction>
+                                            </DropdownMenuTrigger>
+
+                                            <DropdownMenuContent align='start' side='right'>
+                                                <DropdownMenuItem
+                                                    className='cursor-pointer'
+                                                    onClick={() => {
+                                                        (window as any).open(projectLink, '_blank').focus();
+                                                    }}
+                                                >
+                                                    <ExternalLink />Project page
+                                                </DropdownMenuItem>
+                                                {projectProductionData.private ?
+                                                    <DropdownMenuItem
+                                                        className='cursor-pointer'
+                                                        onClick={() => {
+                                                            (window as any).open(gitLink, '_blank').focus();
+                                                        }}
+                                                    >
+                                                        <FolderGit2 />Github page
+                                                    </DropdownMenuItem>
+                                                : null
+                                                }
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </SidebarMenuItem>
+                                )
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroup>
+                : null}
+                
             </SidebarContent>
             <SidebarFooter>
                 <SidebarMenu>
@@ -203,9 +255,10 @@ export function AppSidebar() {
                         <DropdownMenuContent side={isMobile ? 'top' : 'right'}>
                             <DropdownMenuGroup>
                                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                                <DropdownMenuItem>Profile</DropdownMenuItem>
+                                <DropdownMenuItem className='cursor-pointer'>Profile</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
+                                    className='cursor-pointer'
                                     variant='destructive'
                                     onClick={adminLogout}
                                 >

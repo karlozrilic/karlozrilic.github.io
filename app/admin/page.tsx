@@ -26,8 +26,6 @@ export default function Dashboard() {
 			<main className='flex justify-center p-2'>
 				<div className='relative max-w-5xl flex flex-col items-center'>
 					<div>Welcome {user?.displayName}</div>
-
-					<Link href='/admin/portfolio'>Portfolio</Link>
 				</div>
 			</main>
 		</>
