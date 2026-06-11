@@ -23,10 +23,10 @@ export default async function Page({
         case 'portfolio':
             switch (section) {
                 case 'about-me': 
-                    page = <AboutMeEdit />;
+                    page = <AboutMeEdit adminOnly={true} />;
                     break;
                 case 'experience': 
-                    page = <ExperienceEdit />;
+                    page = <ExperienceEdit adminOnly={true} />;
                     break;
                 default:
                     break;

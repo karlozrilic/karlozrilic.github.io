@@ -6,16 +6,25 @@ import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
 import { useWebHaptics } from 'web-haptics/react';
 import { useAuth } from '@/hooks/useAuth';
-import { SidebarTrigger } from '@/app/src/components/ui/sidebar';
+import { useSidebar } from '@/app/src/components/ui/sidebar';
+import { useLongPress } from '../hooks/long_press';
+import { loginGoogle } from '@/helpers/firebase';
 
 export default function Header() {
 	const { user, loading } = useAuth();
 	const { trigger } = useWebHaptics();
+	const { toggleSidebar } = useSidebar();
 
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const drawerBackdropRef = useRef<HTMLDivElement>(null);
 	const drawerRef = useRef<HTMLDivElement>(null);
 	const closeDrawerButtonRef = useRef<HTMLButtonElement>(null);
+
+	const longPressHandlers = useLongPress(() => {
+		if (!user && !loading) {
+			handleLogin();
+		}
+	}, 2000);
 
 	const headerTitle = 'Karlo Zrilić';
 
@@ -75,6 +84,20 @@ export default function Header() {
         };
     }, []);
 
+	async function handleLogin() {
+		try {
+		  await loginGoogle();
+		} catch (error) {
+		  console.error(error);
+		}
+	}
+
+	function headerClick() {
+		if (loading || longPressHandlers.isLongPress()) return;
+		trigger('warning');
+		toggleSidebar();
+	}
+
 	function closeDrawerHandler() {
 		trigger('success');
 		if (drawerRef.current == null || drawerBackdropRef.current == null) return;
@@ -103,26 +126,23 @@ export default function Header() {
 		<>
 			<nav className='bg-background text-foreground shadow sticky top-0 w-full z-10 transition-colors duration-500'>
 				<div className='container mx-auto flex justify-between items-center p-5'>
-					<Link href='/' onClick={() => trigger('warning')} className='text-xl font-bold'>{headerTitle}</Link>
+					<span
+						onClick={headerClick}
+						onPointerDown={longPressHandlers.onPointerDown}
+						onPointerUp={longPressHandlers.onPointerUp}
+						onPointerLeave={longPressHandlers.onPointerLeave}
+						onPointerCancel={longPressHandlers.onPointerCancel}
+						className='text-xl font-bold cursor-pointer'
+					>{headerTitle}</span>
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
 					</div>
 
 					<div className='hidden md:flex gap-2'>
-						{user && !loading && (
-							<>
-								<SidebarTrigger onClick={closeDrawerHandler} />
-							</>
-						)}
 						<AnimatedThemeToggler onClickCapture={themeToggle} />
 					</div>
 
 					<div className='flex items-center ml-4 md:hidden'>
-						{user && !loading && (
-							<>
-								<SidebarTrigger className='p-2 w-auto h-auto' onClick={closeDrawerHandler} />
-							</>
-						)}
 						<button
 							ref={menuButtonRef}
 							className='p-2 rounded'

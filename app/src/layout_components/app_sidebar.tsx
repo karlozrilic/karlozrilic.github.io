@@ -69,7 +69,7 @@ export function AppSidebar() {
                         <SidebarMenuButton
                             className='h-auto'
                             onClick={() => {
-                                router.push('/admin');
+                                router.push('/');
                                 toggleSidebar();
                             }}
                         >
@@ -234,49 +234,54 @@ export function AppSidebar() {
                 : null}
                 
             </SidebarContent>
-            <SidebarFooter>
-                <SidebarMenu>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton size={'lg'}>
-                                    <Avatar>
-                                        <AvatarImage src={user?.photoURL ??  'https://github.com/shadcn.png'} />
-                                        <AvatarFallback>{acronym}</AvatarFallback>
-                                    </Avatar>
-                                    <div className='grid flex-1 text-left text-sm leading-tight'>
-                                        <span className='font-medium'>{user?.displayName}</span>
-                                        <span className='text-xs'>{user?.email}</span>
-                                    </div>
-                                    <ChevronsUpDown />
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side={isMobile ? 'top' : 'right'}>
-                            <DropdownMenuGroup>
-                                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                                <DropdownMenuItem className='cursor-pointer'>Profile</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    className='cursor-pointer'
-                                    variant='destructive'
-                                    onClick={adminLogout}
-                                >
-                                    <LogOutIcon />
-                                    Logout
-                                </DropdownMenuItem>
-                            </DropdownMenuGroup>
-                            {/**
-                                <DropdownMenuSeparator />
+            {user ?
+                <SidebarFooter>
+                    <SidebarMenu>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton size={'lg'}>
+                                        <Avatar>
+                                            <AvatarImage src={user?.photoURL ??  'https://github.com/shadcn.png'} />
+                                            <AvatarFallback>{acronym}</AvatarFallback>
+                                        </Avatar>
+                                        <div className='grid flex-1 text-left text-sm leading-tight'>
+                                            <span className='font-medium'>{user?.displayName}</span>
+                                            <span className='text-xs'>{user?.email}</span>
+                                        </div>
+                                        <ChevronsUpDown />
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side={isMobile ? 'top' : 'right'}>
                                 <DropdownMenuGroup>
-                                    <DropdownMenuItem>Team</DropdownMenuItem>
-                                    <DropdownMenuItem>Subscription</DropdownMenuItem>
+                                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                                    <DropdownMenuItem className='cursor-pointer'>Profile</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className='cursor-pointer'
+                                        variant='destructive'
+                                        onClick={adminLogout}
+                                    >
+                                        <LogOutIcon />
+                                        Logout
+                                    </DropdownMenuItem>
                                 </DropdownMenuGroup>
-                             */}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </SidebarMenu>
-            </SidebarFooter>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </SidebarMenu>
+                </SidebarFooter>
+            :
+                <SidebarFooter>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton size={'lg'}>
+                                <span className='font-medium'>Login</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarFooter>
+            }
         </Sidebar>
     )
 }

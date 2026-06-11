@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
 import { useEffect, useRef, useState } from 'react';
@@ -33,7 +35,22 @@ import { getExperience } from '@/app/src/service/firebase';
 import { Progress } from '@/app/src/components/ui/progress';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/app/src/components/ui/empty';
 
-export default function ExperienceEdit() {
+export default function ExperienceEdit({ adminOnly }: { adminOnly?: boolean }) {
+    const [loading, setLoading] = useState<boolean>(true);
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (authLoading) return;
+
+        if (adminOnly && !user) {
+            router.replace('/');
+            return;
+        }
+
+        setLoading(false);
+    }, [user, authLoading, adminOnly, router]);
+
     const editRef = useRef<ExperienceEditComponentRef | null>(null);
     const editorRefs = useRef<EditorWrapperRef[]>([]);
     const [submitting, setSubmitting] = useState(false);
@@ -147,7 +164,7 @@ export default function ExperienceEdit() {
 
     return <>
         <main className='flex justify-center p-2'>
-            { !experiences.loaded ? <LoadingScreen /> : null }
+            { !experiences.loaded || loading ? <LoadingScreen /> : null }
             <div className='relative max-w-5xl w-full'>
                 <div className='flex justify-end gap-2'>
                     <AlertDialog
