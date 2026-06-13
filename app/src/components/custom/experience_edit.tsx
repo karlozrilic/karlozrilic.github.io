@@ -123,12 +123,16 @@ import {
     ComboboxList,
     ComboboxSeparator
 } from '@/app/src/components/ui/combobox';
+import { addOrUpdateCollection } from '@/app/src/service/firebase';
+import { Timestamp } from 'firebase/firestore';
+import { Spinner } from '../ui/spinner';
 
 type ExperienceFormValues = z.infer<typeof experienceSchema>;
 
 function ExperienceForm({ experience }: { experience?: Experience }) {
     const groupedCountries = useSelector((state: RootState) => state.countries.data?.groupedCountries);
     const [lastEndDate, setLastEndDate] = useState<Date | undefined>(undefined);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const form = useForm({
         resolver: zodResolver(experienceSchema),
@@ -145,8 +149,32 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
     });
 
     async function onSubmit(values: ExperienceFormValues) {
-        console.log(values);
-        // const result = await loginAction(values); // regular async call, not useActionState
+        // TODO prevent save if nothing changed
+        if (!experience) return;
+        if (!form.formState.isDirty) return;
+        setLoading(true);
+
+        const result = await addOrUpdateCollection({
+            firebaseCollection: 'experience',
+            id: experience.id,
+            data: {
+                ...values,
+                start_date: Timestamp.fromDate(values.start_date),
+                end_date: values.end_date ? Timestamp.fromDate(values.end_date): null,
+            },
+            saveHistory: false
+        });
+        form.reset(form.getValues());
+        console.log(result);
+        setLoading(false);
+        //const payload = await fetchFunction(id) as ExcludeHistoryType;
+        //if (payload) {
+        //    const newBlocks = Array.isArray(payload)
+        //        ? payload.find(p => p.id === id)?.jsonBlocks || null
+        //        : payload.jsonBlocks ?? null;
+
+        //    initialContentRef.current = newBlocks;
+        //}
     }
 
     const companyName = form.watch('company_name');
@@ -154,6 +182,11 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
 
     return (
         <Form {...form}>
+            {loading ? 
+                <div className='absolute w-full h-full flex justify-center items-center backdrop-blur-xs z-5'>
+                    <Spinner className='size-8' />
+                </div> 
+            : null}
             <form onSubmit={form.handleSubmit(onSubmit)}>
                 <DialogHeader className='pb-2'>
                     <DialogTitle>{jobTitle ? jobTitle : 'Edit data'}</DialogTitle>
@@ -516,7 +549,18 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                     <DialogClose asChild>
                         <Button variant='outline'>Close</Button>
                     </DialogClose>
-                    <Button type='submit'>Save</Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span>
+                                <DialogTrigger asChild>
+                                    <Button type='submit' disabled={!form.formState.isDirty}>Save</Button>
+                                </DialogTrigger>
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent side={'bottom'} hidden={form.formState.isDirty}>
+                            <p>Edit data to save it</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </DialogFooter>
             </form>
         </Form>

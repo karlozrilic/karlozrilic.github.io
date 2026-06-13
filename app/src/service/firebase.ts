@@ -12,22 +12,23 @@ export type UpdateFunctionType = {
 export type AddOrUpdate = {
     firebaseCollection: string;
     id: string;
-    data: ExperienceUpdate
+    data: ExperienceUpdate;
+    saveHistory?: boolean;
 };
 
 export type DeleteHistory = {
     firebaseCollection: string;
     id: string;
-    history_id?: string
+    history_id?: string;
 };
 
-export const addOrUpdateCollection = async ({ firebaseCollection, id, data }: AddOrUpdate) => {
+export const addOrUpdateCollection = async ({ firebaseCollection, id, data, saveHistory = true }: AddOrUpdate) => {
     const docRef = doc(db, firebaseCollection, id);
 
     const prevSnap = await getDoc(docRef);
 
     // Save old version (if exists)
-    if (prevSnap.exists()) {
+    if (prevSnap.exists() && saveHistory) {
         const historyRef = collection(db, firebaseCollection, id, 'history');
 
         await addDoc(historyRef, {

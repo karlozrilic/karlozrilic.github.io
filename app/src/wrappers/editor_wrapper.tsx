@@ -5,7 +5,6 @@ import { addOrUpdateCollection, deleteHistory } from '@/app/src/service/firebase
 import moment, { Moment } from 'moment';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { RootState } from '@/app/src/store/store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/src/components/ui/tooltip';
 import { Button } from '@/app/src/components/ui/button';
 import { ChevronRightIcon, History, HistoryIcon, Lock, LockOpen, Redo, Save, Trash, Undo } from 'lucide-react';

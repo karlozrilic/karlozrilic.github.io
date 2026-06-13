@@ -1,4 +1,5 @@
 import { PartialBlock } from '@blocknote/core/blocks';
+import { Timestamp } from 'firebase/firestore';
 
 export type Experience = {
     id: string;
@@ -22,10 +23,10 @@ export type ExperienceUpdate = {
     city?: string;
     country?: string;
     work_model?: string;
-    start_date?: string,
-    end_date?: string | null,
+    start_date?: Timestamp,
+    end_date?: Timestamp | null,
     jsonBlocks?: PartialBlock[];
     content?: string;
     markdown?: string;
-    updated?: string;
+    updated?: Timestamp;
 }
