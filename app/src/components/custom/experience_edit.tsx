@@ -47,7 +47,7 @@ const ExperienceEditComponent = forwardRef(function({ experience }: { experience
             {experience ?
                 <HoverCard openDelay={10} closeDelay={100}>
                     <HoverCardTrigger asChild>
-                        <Button variant='link'>{experience?.company_name} - {experience?.job_title}</Button>
+                        <Button variant='link'>{experience?.job_title} - {experience?.company_name}</Button>
                     </HoverCardTrigger>
                     <HoverCardContent className='flex w-64 flex-col gap-0.5'>
                         <div className='font-semibold'>{experience?.job_title}</div>
@@ -103,6 +103,7 @@ const ExperienceEditComponent = forwardRef(function({ experience }: { experience
 export default ExperienceEditComponent;
 
 import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form } from '@/app/src/components/ui/form';
 import { experienceSchema } from '@/helpers/schema';
@@ -122,10 +123,12 @@ import {
     ComboboxList,
     ComboboxSeparator
 } from '@/app/src/components/ui/combobox';
-import { Avatar, AvatarFallback, AvatarImage } from '@/app/src/components/ui/avatar';
+
+type ExperienceFormValues = z.infer<typeof experienceSchema>;
 
 function ExperienceForm({ experience }: { experience?: Experience }) {
     const groupedCountries = useSelector((state: RootState) => state.countries.data?.groupedCountries);
+    const [lastEndDate, setLastEndDate] = useState<Date | undefined>(undefined);
 
     const form = useForm({
         resolver: zodResolver(experienceSchema),
@@ -137,21 +140,24 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
             work_model: experience?.work_model ?? 'on-site',
             currently_working: experience ? experience.end_date ? false : true : false,
             start_date: experience?.start_date ? new Date(experience.start_date) : new Date(),
-            end_date: experience?.end_date ? new Date(experience.end_date) : new Date(),
+            end_date: experience?.end_date ? new Date(experience.end_date) : undefined,
         }
     });
 
-    async function onSubmit(values: any) {
+    async function onSubmit(values: ExperienceFormValues) {
         console.log(values);
         // const result = await loginAction(values); // regular async call, not useActionState
     }
 
+    const companyName = form.watch('company_name');
+    const jobTitle = form.watch('job_title');
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-                <DialogHeader>
-                    <DialogTitle>{experience ? experience.company_name : 'Add experience'}</DialogTitle>
-                    <DialogDescription>{experience ? 'Edit data' : null}</DialogDescription>
+                <DialogHeader className='pb-2'>
+                    <DialogTitle>{jobTitle ? jobTitle : 'Edit data'}</DialogTitle>
+                    <DialogDescription>{companyName ? companyName : 'Add experience'}</DialogDescription>
                 </DialogHeader>
                 <div className='-mx-4 no-scrollbar max-h-[50vh] overflow-y-auto px-4 py-2'>
                     <FieldGroup>
@@ -340,82 +346,99 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                         <Controller
                             name='currently_working'
                             control={form.control}
-                            render={({ field }) => (
-                                <Field orientation='horizontal'>
-                                    <Checkbox
-                                        id={field.name}
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        onBlur={field.onBlur}
-                                        ref={field.ref}
-                                    />
-                                    <Label htmlFor={field.name} className='cursor-pointer'>Currently working</Label>
-                                </Field>
-                            )}
+                            render={({ field }) => {
+                                const startDate = form.watch('start_date');
+                                return(
+                                    <Field orientation='horizontal'>
+                                        <Checkbox
+                                            id={field.name}
+                                            checked={field.value}
+                                            onCheckedChange={(checked) => {
+                                                field.onChange(checked);
+                                                if (checked) {
+                                                    form.setValue('end_date', undefined);
+                                                } else {
+                                                    form.setValue('end_date', lastEndDate ?? startDate);
+                                                }
+                                            }}
+                                            onBlur={field.onBlur}
+                                            ref={field.ref}
+                                        />
+                                        <Label htmlFor={field.name} className='cursor-pointer'>Currently working</Label>
+                                    </Field>
+                                );
+                            }}
                         />
 
                         <div className='flex gap-3'>
                             <Controller
                                 name='start_date'
                                 control={form.control}
-                                render={({ field, fieldState }) => (
-                                    <Field data-invalid={fieldState.invalid}>
-                                        <FieldLabel htmlFor={field.name}>Start Date</FieldLabel>
-                                        <InputGroup>
-                                            <InputGroupInput
-                                                id={field.name}
-                                                value={formatDate(field.value)}
-                                                onChange={(event) => {
-                                                    const date = new Date(event.target.value)
-                                                    if (isValidDate(date)) {
-                                                        field.onChange(date)
-                                                    }
-                                                }}
-                                                onKeyDown={(event) => {
-                                                    if (event.key === 'ArrowDown') {
-                                                        event.preventDefault()
-                                                    }
-                                                }}
-                                            />
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <InputGroupButton
-                                                        variant='ghost'
-                                                        size='icon-xs'
-                                                        aria-label='Select date'
-                                                        className='mr-1'
+                                render={({ field, fieldState }) => {
+                                    const currentlyWorking = form.watch('currently_working');
+                                    return(
+                                        <Field data-invalid={fieldState.invalid}>
+                                            <FieldLabel htmlFor={field.name}>Start Date</FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupInput
+                                                    id={field.name}
+                                                    value={formatDate(field.value)}
+                                                    onChange={(event) => {
+                                                        const date = new Date(event.target.value)
+                                                        if (isValidDate(date)) {
+                                                            field.onChange(date)
+                                                        }
+                                                    }}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === 'ArrowDown') {
+                                                            event.preventDefault()
+                                                        }
+                                                    }}
+                                                />
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <InputGroupButton
+                                                            variant='ghost'
+                                                            size='icon-xs'
+                                                            aria-label='Select date'
+                                                            className='mr-1'
+                                                        >
+                                                            <CalendarIcon />
+                                                            <span className='sr-only'>Select date</span>
+                                                        </InputGroupButton>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent
+                                                        className='w-auto overflow-hidden p-0'
+                                                        align='end'
+                                                        alignOffset={-8}
+                                                        sideOffset={10}
                                                     >
-                                                        <CalendarIcon />
-                                                        <span className='sr-only'>Select date</span>
-                                                    </InputGroupButton>
-                                                </PopoverTrigger>
-                                                <PopoverContent
-                                                    className='w-auto overflow-hidden p-0'
-                                                    align='end'
-                                                    alignOffset={-8}
-                                                    sideOffset={10}
-                                                >
-                                                    <Calendar
-                                                        mode='single'
-                                                        captionLayout='dropdown'
-                                                        selected={field.value}
-                                                        month={field.value}
-                                                        onMonthChange={field.onChange}
-                                                        onSelect={(date) => {
-                                                            field.onChange(date);
+                                                        <Calendar
+                                                            mode='single'
+                                                            captionLayout='dropdown'
+                                                            selected={field.value}
+                                                            month={field.value}
+                                                            onMonthChange={field.onChange}
+                                                            onSelect={(date) => {
+                                                                field.onChange(date);
 
-                                                            const endDate = form.getValues('end_date')
-                                                            if (endDate && date && date > endDate) {
-                                                                form.setValue('end_date', date);
-                                                            }
-                                                        }}
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                        </InputGroup>
-                                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                                    </Field>
-                                )}
+                                                                const endDate = form.getValues('end_date')
+                                                                if (endDate && date && date > endDate && !currentlyWorking) {
+                                                                    form.setValue('end_date', date);
+                                                                }
+
+                                                                if (lastEndDate && date && date > lastEndDate) {
+                                                                    setLastEndDate(date);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </InputGroup>
+                                            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                                        </Field>
+                                    );
+                                }}
                             />
 
                             <Controller
@@ -474,6 +497,7 @@ function ExperienceForm({ experience }: { experience?: Experience }) {
                                                             onMonthChange={field.onChange}
                                                             onSelect={(date) => {
                                                                 field.onChange(date)
+                                                                setLastEndDate(date);
                                                             }}
                                                         />
                                                     </PopoverContent>

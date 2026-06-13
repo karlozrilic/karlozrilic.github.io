@@ -162,9 +162,11 @@ export default function ExperienceEdit({ adminOnly }: { adminOnly?: boolean }) {
         }
     }
 
+    if (loading) return (<LoadingScreen />);
+
     return <>
         <main className='flex justify-center p-2'>
-            { !experiences.loaded || loading ? <LoadingScreen /> : null }
+            { !experiences.loaded ? <LoadingScreen /> : null }
             <div className='relative max-w-5xl w-full'>
                 <div className='flex justify-end gap-2'>
                     <AlertDialog

@@ -45,10 +45,12 @@ export default function AboutMeEdit({ adminOnly }: { adminOnly?: boolean }) {
         const response = await dispatch(fetchAboutMeHistory());
         return response.payload as AboutMeHistory[];
     }
+
+    if (loading) return (<LoadingScreen />);
     
     return <>
         <main className='flex justify-center p-2'>
-            { !aboutMe.loaded || loading ? <LoadingScreen /> : 
+            { !aboutMe.loaded ? <LoadingScreen /> : 
                 <div className='relative max-w-5xl w-full flex flex-col items-center gap-4'>
                     <EditorWrapper
                         firebaseCollection={'about_me'}
