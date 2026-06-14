@@ -4,10 +4,11 @@ import { PDFViewer, Page, Text, View, Document, StyleSheet } from '@react-pdf/re
 import Html from 'react-pdf-html';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
+import { formatDatePrecise } from '@/helpers/constants';
 
 const styles = StyleSheet.create({
     page: {
-        padding: 34, // ~12mm
+        padding: 34,
         fontSize: 11,
         fontFamily: "Helvetica",
         color: "#222",
@@ -97,8 +98,9 @@ const styles = StyleSheet.create({
 
 export default function PDFCV() {
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
+    const experiences = useSelector((state: RootState) => state.experiences);
 
-    if (aboutMe.loading) return null;
+    if (aboutMe.loading || experiences.loading) return null;
 
     return (
         <PDFViewer className='w-full h-full' showToolbar={false}>
@@ -128,33 +130,51 @@ export default function PDFCV() {
                     {/* EXPERIENCE */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Experience</Text>
-
-                        <View style={styles.item}>
-                            <View style={styles.itemHeader}>
-                                <Text style={styles.title}>
-                                    Senior Software Engineer — Company Name
-                                </Text>
-                                <Text style={styles.date}>2022–Present</Text>
-                            </View>
-                            <View style={styles.ul}>
-                                <Text style={styles.li}>• Built and maintained scalable web applications.</Text>
-                                <Text style={styles.li}>• Improved performance and deployment workflows.</Text>
-                                <Text style={styles.li}>• Mentored junior developers.</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.item}>
-                            <View style={styles.itemHeader}>
-                                <Text style={styles.title}>
-                                    Software Engineer — Previous Company
-                                </Text>
-                                <Text style={styles.date}>2019–2022</Text>
-                            </View>
-                            <View style={styles.ul}>
-                                <Text style={styles.li}>• Developed REST APIs and frontend features.</Text>
-                                <Text style={styles.li}>• Collaborated with product and design teams.</Text>
-                            </View>
-                        </View>
+                        
+                        {
+                            experiences.data.map((experience, index) => {
+                                return (
+                                    <View key={index} style={styles.item}>
+                                        <View style={styles.itemHeader}>
+                                            <Text style={styles.title}>
+                                                {experience.job_title} — {experience.company_name}
+                                            </Text>
+                                            <Text style={styles.date}>
+                                                {
+                                                    formatDatePrecise(
+                                                        new Date(experience.start_date),
+                                                        undefined,
+                                                        {
+                                                            year: 'numeric',
+                                                            month: undefined,
+                                                            day: undefined
+                                                        }
+                                                    )
+                                                } - {
+                                                    experience.end_date ?
+                                                        formatDatePrecise(
+                                                            new Date(experience.end_date),
+                                                            undefined,
+                                                            {
+                                                                year: 'numeric',
+                                                                month: undefined,
+                                                                day: undefined
+                                                            }
+                                                        )
+                                                    :
+                                                    'Present'
+                                                }
+                                            </Text>
+                                        </View>
+                                        <View style={styles.ul}>
+                                            <Text style={styles.li}>• Built and maintained scalable web applications.</Text>
+                                            <Text style={styles.li}>• Improved performance and deployment workflows.</Text>
+                                            <Text style={styles.li}>• Mentored junior developers.</Text>
+                                        </View>
+                                    </View>
+                                );
+                            })
+                        }
                     </View>
 
                     {/* EDUCATION */}

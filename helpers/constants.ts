@@ -3,6 +3,14 @@ type FormatDateOptions = {
     time?: boolean;
 }
 
+type FormatDateOptionsPrecise = {
+    locale?: string | undefined;
+    time?: boolean;
+    day?: boolean;
+    month?: boolean;
+    year?: boolean;
+}
+
 export const formatDate = (
     date?: Date | undefined,
     options?: FormatDateOptions
@@ -19,4 +27,16 @@ export const formatDate = (
         minute: options?.time ? '2-digit' : undefined,
         second: options?.time ? '2-digit' : undefined
     });
+}
+
+export const formatDatePrecise = (
+    date?: Date | undefined,
+    locale?: string | undefined,
+    options?: Intl.DateTimeFormatOptions
+) => {
+    if (!date) {
+        return '';
+    }
+    // hr-HR
+    return date.toLocaleDateString(locale || 'en-GB', options);
 }
