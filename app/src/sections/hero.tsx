@@ -2,10 +2,13 @@
 import { BorderBeam } from '@/app/src/components/ui/border-beam';
 import { TypingAnimation } from '@/app/src/components/ui/typing-animation';
 import { Button } from '@/app/src/components/ui/button'
-import { faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUpRightFromSquare, faDownload, faFileContract, faPrint } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRef, useEffect, useMemo } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
+import { useAuth } from '@/hooks/useAuth';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogTitle, DialogTrigger } from '@/app/src/components/ui/dialog';
+import PDFCV from '../pages/pdf_cv';
 
 type Particle = {
     x: number;
@@ -17,8 +20,10 @@ type Particle = {
 
 export default function Hero() {
     const { trigger } = useWebHaptics();
+    const { user } = useAuth();
     
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const printIframeRef = useRef<HTMLIFrameElement>(null);
 
     const words = useMemo(() => [
         'I build websites.',
@@ -154,9 +159,9 @@ export default function Hero() {
             id='hero'
         >
             {/* Parallax layers */}
-            <div className='w-80 h-80 bg-white opacity-10 rounded-full parallax-layer hidden' data-speed='0.3' data-base-top="-20" style={{top: '-20%', left: '-15%' }}></div>
-            <div className='w-60 h-60 bg-white opacity-10 rounded-full parallax-layer hidden' data-speed='0.5' data-base-top="10" style={{top: '10%', right: '-10%' }}></div>
-            <div className='w-96 h-96 bg-white opacity-5 rounded-full parallax-layer hidden' data-speed='0.2' data-base-bottom="-20" style={{bottom: '-20%', left: '25%' }}></div>
+            <div className='w-80 h-80 bg-white opacity-10 rounded-full parallax-layer hidden pointer-events-none' data-speed='0.3' data-base-top='-20' style={{top: '-20%', left: '-15%' }}></div>
+            <div className='w-60 h-60 bg-white opacity-10 rounded-full parallax-layer hidden pointer-events-none' data-speed='0.5' data-base-top='10' style={{top: '10%', right: '-10%' }}></div>
+            <div className='w-96 h-96 bg-white opacity-5 rounded-full parallax-layer hidden pointer-events-none' data-speed='0.2' data-base-bottom='-20' style={{bottom: '-20%', left: '25%' }}></div>
 
             {/* Particles */}
             <canvas ref={canvasRef} className='absolute top-0 left-0 w-full h-full pointer-events-none'></canvas>
@@ -209,7 +214,7 @@ export default function Hero() {
                     window.open('https://drive.google.com/file/d/1k8j3dScW7Juptu2iFUqQzd7BIIdsWLpb/view?usp=sharing', '_blank');
                 }}
             >
-                <span className='pr-2'>Download my CV</span>
+                <span>Download my CV</span>
                 <FontAwesomeIcon icon={faDownload} />
                 <BorderBeam
                     duration={6}
@@ -226,6 +231,73 @@ export default function Hero() {
                 />
             </Button>
 
+            {user &&
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button
+                            className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold mt-2'
+                            size='lg'
+                            variant='secondary'
+                        >
+                            <span>Preview CV</span>
+                            <FontAwesomeIcon icon={faFileContract} />
+                            <BorderBeam
+                                duration={6}
+                                size={70}
+                                className='from-transparent via-white to-transparent'
+                                reverse
+                            />
+                            <BorderBeam
+                                duration={6}
+                                delay={3}
+                                size={70}
+                                className='from-transparent via-orange-500 to-transparent'
+                                reverse
+                            />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogOverlay className='backdrop-blur-sm' />
+                    <DialogContent className='w-[95dvw] md:w-[60dvw] h-[95dvh] !max-w-none p-2 md:p-6'>
+                        <div className='flex flex-col'>
+                            <DialogHeader>
+                                <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                <DialogDescription>
+                                    This action cannot be undone.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className='-mx-4 no-scrollbar flex-1 overflow-y-auto px-4 py-2'>
+                                <PDFCV />
+                                <iframe src='/preview' className='w-full h-full' ref={printIframeRef}></iframe>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type='button'
+                                    onClick={() => {
+                                        window.open('/preview', '_blank');
+                                    }}
+                                >
+                                    <span>Open in window</span>
+                                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                                </Button>
+                                <Button
+                                    type='button'
+                                    onClick={() => {
+                                        if (!printIframeRef.current) return;
+                                        const message = {
+                                            method: 'print'
+                                        };
+                                        printIframeRef.current.contentWindow?.postMessage(JSON.stringify(message), window.origin);
+                                    }}
+                                >
+                                    <span>Print</span>
+                                    <FontAwesomeIcon icon={faPrint} />
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            }
+    
         </section>
     );
 }

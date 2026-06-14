@@ -1,0 +1,104 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+.print-preview,
+.print-preview * {
+    /*all: revert;*/
+    box-sizing: border-box;
+}
+
+.print-preview {
+    isolation: isolate;
+}
+
+@page {
+    size: A4;
+    margin: 12mm;
+}
+
+.print-preview {
+    color: #222;
+    background: white;
+    width: 100%;
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11pt;
+    line-height: 1.4;
+
+    header {
+        margin-bottom: 18px;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: 24pt;
+        font-weight: 600;
+    }
+
+    .subtitle {
+        margin-top: 4px;
+        color: #555;
+    }
+
+    .contact {
+        margin-top: 8px;
+        font-size: 10pt;
+    }
+
+    section {
+        margin-bottom: 16px;
+    }
+
+    h2 {
+        font-size: 11pt;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0 0 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .item {
+        margin-bottom: 10px;
+    }
+
+    .item-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .title {
+        font-weight: 600;
+    }
+
+    .date {
+        color: #666;
+        white-space: nowrap;
+    }
+
+    ul {
+        margin: 4px 0 0 18px;
+        padding: 0;
+    }
+
+    li {
+        margin-bottom: 2px;
+    }
+
+    .skills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+    }
+
+    .skill {
+        white-space: nowrap;
+    }
+
+    @media print {
+        body {
+            print-color-adjust: exact;
+        }
+    }
+}

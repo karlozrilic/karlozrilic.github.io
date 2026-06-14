@@ -1,14 +1,12 @@
 import type { Metadata } from 'next';
 import '@/app/src/style/globals.css';
-import Header from '@/app/src/layout_components/header';
 import { TooltipProvider } from "@/app/src/components/ui/tooltip"
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import ReduxProvider from '@/app/reduxProvider';
 import { SidebarProvider } from '@/app/src/components/ui/sidebar';
-import { AppSidebar } from '@/app/src/layout_components/app_sidebar';
-import { Toaster } from '@/app/src/components/ui/sonner';
 import GlobalDataLoader from '@/app/global_data_loader';
+import LayoutContent from '@/app/layout_content';
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
@@ -51,10 +49,9 @@ export default function RootLayout({ children }: Readonly<{children: React.React
 					<ReduxProvider>
 						<GlobalDataLoader />
 						<TooltipProvider>
-							<Header />
-							{children}
-							<AppSidebar />
-							<Toaster position='top-center' />
+							<LayoutContent>
+								{children}
+							</LayoutContent>
 						</TooltipProvider>
 					</ReduxProvider>
 				</SidebarProvider>
