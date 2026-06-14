@@ -7,6 +7,7 @@
 
 @import "./components/scrollbar.css";
 @import "./components/marquee.css";
+@import "./components/hero.css";
 
 @import "./components/toaster.css";
 @import "./components/editor.css";

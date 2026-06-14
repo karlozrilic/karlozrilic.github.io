@@ -19,6 +19,8 @@
     "@fortawesome/react-fontawesome": "^3.1.0",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-icons": "^1.3.2",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@reduxjs/toolkit": "^2.9.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -41,6 +43,7 @@
     "redux": "^5.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.1",
+    "three": "^0.184.0",
     "web-haptics": "^0.0.6",
     "zod": "^4.4.3"
   },
