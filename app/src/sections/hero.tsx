@@ -26,6 +26,7 @@ export default function Hero() {
     const { user } = useAuth();
     
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [CVMessage, setCVMessage] = useState<string>('Download my CV');
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const [iframeLoading, setIframeLoading] = useState<boolean>(true);
 
@@ -169,7 +170,8 @@ export default function Hero() {
         setIframeLoading(false);
     }
 
-    async function printPDF() {
+    async function generatePDF() {
+        setCVMessage('Generating PDF');
         try {
             const response = await fetch(`${VERCEL_API}/html-to-pdf?url=${test ?? window.location.origin}/preview&format=A4&responseFormat=base64`, {
                 headers: {
@@ -186,6 +188,8 @@ export default function Hero() {
             a.remove();
         } catch {
             // silent fail
+        } finally {
+            setCVMessage('Download my CV');
         }
     }
 
@@ -247,10 +251,11 @@ export default function Hero() {
                 size='lg'
                 variant='secondary'
                 onClick={() => {
+                    // generatePDF();
                     window.open('https://drive.google.com/file/d/1k8j3dScW7Juptu2iFUqQzd7BIIdsWLpb/view?usp=sharing', '_blank');
                 }}
             >
-                <span>Download my CV</span>
+                <span>{CVMessage}</span>
                 <FontAwesomeIcon icon={faDownload} />
                 <BorderBeam
                     duration={6}
@@ -327,7 +332,7 @@ export default function Hero() {
                                 </Button>
                                 <Button
                                     type='button'
-                                    onClick={printPDF}
+                                    onClick={generatePDF}
                                 >
                                     <span>Print</span>
                                     <FontAwesomeIcon icon={faPrint} />
