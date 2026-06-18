@@ -1,19 +1,12 @@
 import { useEffect } from 'react';
 import { Marquee } from '@/app/src/components/ui/marquee'; 
 import Technology from '@/app/src/components/custom/technology';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '@/app/src/store/store';
-import { fetchTechnologies } from '@/app/src/store/slices/technologiesSlice';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/src/store/store';
 import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function Technologies() {
-    const dispatch = useDispatch<AppDispatch>();
     const technologies = useSelector((state: RootState) => state.technologies);
-
-    // Fetch data once on mount
-    useEffect(() => {
-        dispatch(fetchTechnologies());
-    }, [dispatch]);
 
     useEffect(() => {
         const faders = document.querySelectorAll('.fade-in');

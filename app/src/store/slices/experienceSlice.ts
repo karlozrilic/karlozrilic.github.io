@@ -10,6 +10,7 @@ type ExperiencesState = {
     data: Experience[];
     loading: boolean;
     loaded: boolean;
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
     error: string | null;
 };
 
@@ -17,6 +18,7 @@ const initialState: ExperiencesState = {
     data: [],
     loading: false,
     loaded: false,
+    status: 'idle',
     error: null,
 };
 
@@ -24,6 +26,7 @@ type ExperienceHistoryState = {
     data: ExperienceHistory[];
     loading: boolean;
     loaded: boolean;
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
     error: string | null;
 };
 
@@ -31,6 +34,7 @@ const initialHistoryState: ExperienceHistoryState = {
     data: [],
     loading: false,
     loaded: false,
+    status: 'idle',
     error: null,
 };
 
@@ -52,21 +56,12 @@ export const fetchExperiences = createAsyncThunk<
 >('experience/fetchExperiences', async (params) => {
     const { all = false } = params ?? {};
     let experiencesData: Experience[] = [];
-    let queryConstraints: QueryConstraint[] = all ? 
-    [
-        orderBy('start_date', 'desc')
-    ]    
-    : 
-    [
-        where('show', '!=', false),
-        orderBy('start_date', 'desc')
-    ];
 
     try {
         const experiencesSnapshot = await getDocs(
             query(
                 collection(db, 'experience'),
-                ...queryConstraints
+                orderBy('start_date', 'desc')
             )
         );
         experiencesData = experiencesSnapshot.docs.map(doc => {
@@ -172,14 +167,17 @@ const experiencesSlice = createSlice({
         .addCase(fetchExperiences.pending, (state) => {
             state.loading = true;
             state.error = null;
+            state.status = 'loading';
         })
         .addCase(fetchExperiences.fulfilled, (state, action: PayloadAction<Experience[]>) => {
             state.loading = false;
             state.loaded = true;
+            state.status = 'succeeded';
             state.data = action.payload;
         })
         .addCase(fetchExperiences.rejected, (state, action) => {
             state.loading = false;
+            state.status = 'failed';
             state.error = action.error.message || 'Failed to fetch experience';
         });
     },
@@ -194,14 +192,17 @@ const experienceHistorySlice = createSlice({
         .addCase(fetchExperiencesHistory.pending, (state) => {
             state.loading = true;
             state.error = null;
+            state.status = 'loading';
         })
         .addCase(fetchExperiencesHistory.fulfilled, (state, action: PayloadAction<ExperienceHistory[]>) => {
             state.loading = false;
             state.loaded = true;
+            state.status = 'succeeded';
             state.data = action.payload;
         })
         .addCase(fetchExperiencesHistory.rejected, (state, action) => {
             state.loading = false;
+            state.status = 'failed';
             state.error = action.error.message || 'Failed to fetch experience';
         });
     },

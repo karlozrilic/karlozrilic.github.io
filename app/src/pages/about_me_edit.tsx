@@ -31,11 +31,6 @@ export default function AboutMeEdit({ adminOnly }: { adminOnly?: boolean }) {
     const dispatch = useDispatch<AppDispatch>();
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
 
-    // Fetch data once on mount
-    useEffect(() => {
-        dispatch(fetchAboutMe());
-    }, [dispatch]);
-
     async function fetchData(): Promise<AboutMe> {
         const response = await dispatch(fetchAboutMe());
         return response.payload as AboutMe;

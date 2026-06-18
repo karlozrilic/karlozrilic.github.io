@@ -1,22 +1,15 @@
 'use client'
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '@/app/src/store/store';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/src/store/store';
 import { useEffect } from 'react';
 import moment from 'moment';
 import { Card, CardContent } from '@/app/src/components/ui/card';
 import { Badge } from '@/app/src/components/ui/badge';
-import { fetchExperiences } from '@/app/src/store/slices/experienceSlice';
 import LoadingComponent from '@/app/src/layout_components/loading';
 import { capitalizeFirstLetter } from '@/helpers/string';
 
 export default function Experience() {
-    const dispatch = useDispatch<AppDispatch>();
     const experiences = useSelector((state: RootState) => state.experiences);
-
-    // Fetch data once on mount
-    useEffect(() => {
-        dispatch(fetchExperiences());
-    }, [dispatch]);
 
     useEffect(() => {
         const faders = document.querySelectorAll('.fade-in');
@@ -46,7 +39,7 @@ export default function Experience() {
                 
                 <h2 className='text-4xl font-bold text-center mb-10'>Experience</h2>
                 <div className='container mx-auto space-y-8'>
-                    {experiences.data.map((experience, index) => {
+                    {experiences.data.filter((experience) => experience.show).map((experience, index) => {
                         const isLast = index === experiences.data.length - 1
 
                         return (

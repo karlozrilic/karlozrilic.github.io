@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
 import { useEffect, useRef, useState } from 'react';
-import { fetchExperiences, fetchExperiencesHistory } from '@/app/src/store/slices/experienceSlice';
+import { fetchExperiencesHistory } from '@/app/src/store/slices/experienceSlice';
 import LoadingScreen from '@/app/src/sections/loading';
 import EditorWrapper, { EditorWrapperRef } from '@/app/src/wrappers/editor_wrapper';
 import { Separator } from '@/app/src/components/ui/separator';
@@ -57,13 +57,6 @@ export default function ExperienceEdit({ adminOnly }: { adminOnly?: boolean }) {
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const dispatch = useDispatch<AppDispatch>();
     const experiences = useSelector((state: RootState) => state.experiences);
-
-    // Fetch data once on mount
-    useEffect(() => {
-        dispatch(fetchExperiences({
-            all: true
-        }));
-    }, [dispatch]);
 
     useEffect(() => {
         window.addEventListener('keydown', captureKeyDown);

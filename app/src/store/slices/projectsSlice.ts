@@ -9,6 +9,7 @@ interface ProjectState {
     data: Project[];
     loading: boolean;
     loaded: boolean;
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
     error: string | null;
 };
 
@@ -16,6 +17,7 @@ const initialState: ProjectState = {
     data: [],
     loading: false,
     loaded: false,
+    status: 'idle',
     error: null,
 };
 
@@ -77,14 +79,17 @@ const projectsSlice = createSlice({
         .addCase(fetchProjects.pending, (state) => {
             state.loading = true;
             state.error = null;
+            state.status = 'loading';
         })
         .addCase(fetchProjects.fulfilled, (state, action: PayloadAction<Project[]>) => {
             state.loading = false;
             state.loaded = true;
+            state.status = 'succeeded';
             state.data = action.payload;
         })
         .addCase(fetchProjects.rejected, (state, action) => {
             state.loading = false;
+            state.status = 'failed';
             state.error = action.error.message || 'Failed to fetch projects';
         });
     },

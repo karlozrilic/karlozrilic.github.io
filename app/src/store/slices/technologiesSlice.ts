@@ -9,6 +9,7 @@ interface TechnologiesState {
     data: Technologies[];
     loading: boolean;
     loaded: boolean;
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
     error: string | null;
 };
 
@@ -16,6 +17,7 @@ const initialState: TechnologiesState = {
     data: [],
     loading: false,
     loaded: false,
+    status: 'idle',
     error: null,
 };
 
@@ -72,14 +74,17 @@ const technologiesSlice = createSlice({
         .addCase(fetchTechnologies.pending, (state) => {
             state.loading = true;
             state.error = null;
+            state.status = 'loading';
         })
         .addCase(fetchTechnologies.fulfilled, (state, action: PayloadAction<Technologies[]>) => {
             state.loading = false;
             state.loaded = true;
+            state.status = 'succeeded';
             state.data = action.payload;
         })
         .addCase(fetchTechnologies.rejected, (state, action) => {
             state.loading = false;
+            state.status = 'failed';
             state.error = action.error.message || 'Failed to fetch technologies';
         });
     },

@@ -1,27 +1,20 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { AppDispatch, RootState } from '@/app/src/store/store';
-import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/app/src/store/store';
+import { useSelector } from 'react-redux';
 import { BentoCard, BentoGrid } from '@/app/src/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';
 import { AspectRatio } from '@/app/src/components/ui/aspect-ratio';
 import Image from 'next/image';
-import { fetchProjects } from '@/app/src/store/slices/projectsSlice';
 import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function Projects() {
-    const dispatch = useDispatch<AppDispatch>();
     const projects = useSelector((state: RootState) => state.projects);
     
     const { trigger } = useWebHaptics();
 
     const [activeFilter, setActiveFilter] = useState('all');
     const [tags, setTags] = useState<string[]>([]);
-
-    // Fetch data once on mount
-    useEffect(() => {
-        dispatch(fetchProjects());
-    }, [dispatch]);
 
     useEffect(() => {
         setTags(Array.from(

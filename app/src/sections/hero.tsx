@@ -4,11 +4,11 @@ import { TypingAnimation } from '@/app/src/components/ui/typing-animation';
 import { Button } from '@/app/src/components/ui/button'
 import { faArrowUpRightFromSquare, faDownload, faFileContract, faPrint } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { useAuth } from '@/hooks/useAuth';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogTitle, DialogTrigger } from '@/app/src/components/ui/dialog';
-import PDFCV from '../pages/pdf_cv';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogTitle, DialogTrigger } from '@/app/src/components/ui/dialog';
+import { Spinner } from '../components/ui/spinner';
 
 type Particle = {
     x: number;
@@ -18,12 +18,16 @@ type Particle = {
     opacity: number;
 };
 
+const VERCEL_API = 'https://html-to-pdf-api-tawny.vercel.app/api';
+const test = 'https://karlozrilic.github.io';
+
 export default function Hero() {
     const { trigger } = useWebHaptics();
     const { user } = useAuth();
     
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const printIframeRef = useRef<HTMLIFrameElement>(null);
+    const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+    const [iframeLoading, setIframeLoading] = useState<boolean>(true);
 
     const words = useMemo(() => [
         'I build websites.',
@@ -153,6 +157,38 @@ export default function Hero() {
         }
     }, []);
 
+    useEffect(() => {
+        if (dialogOpen === false) {
+            setTimeout(() => {
+                setIframeLoading(true);
+            }, 150)
+        }
+    }, [dialogOpen]);
+
+    function onIframeLoad(event: React.SyntheticEvent<HTMLIFrameElement>) {
+        setIframeLoading(false);
+    }
+
+    async function printPDF() {
+        try {
+            const response = await fetch(`${VERCEL_API}/html-to-pdf?url=${test ?? window.location.origin}/preview&format=A4&responseFormat=base64`, {
+                headers: {
+                    'x-proxy-secret': `${process.env.NEXT_PUBLIC_PROXY_SECRET}`,
+                },
+            });
+            const { pdf } = await response.json();
+            
+            const a = document.createElement('a');
+            a.href = pdf;
+            a.download = 'document.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch {
+            // silent fail
+        }
+    }
+
     return (
         <section
             className='h-[calc(100vh-5rem)] md:h-[calc(100vh-4.25rem)] flex flex-col justify-center items-center text-center bg-gradient-to-b from-primary to-secondary relative overflow-hidden'
@@ -232,7 +268,10 @@ export default function Hero() {
             </Button>
 
             {user &&
-                <Dialog>
+                <Dialog
+                    open={dialogOpen}
+                    onOpenChange={setDialogOpen}
+                >
                     <DialogTrigger asChild>
                         <Button
                             className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold mt-2'
@@ -265,9 +304,16 @@ export default function Hero() {
                                     This action cannot be undone.
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className='-mx-4 no-scrollbar flex-1 overflow-y-auto px-4 py-2'>
-                                <PDFCV />
-                                <iframe src='/preview' className='w-full h-full' ref={printIframeRef}></iframe>
+                            <div className='relative -mx-4 no-scrollbar flex-1 overflow-y-auto px-4 py-2'>
+                                {
+                                    iframeLoading ? 
+                                        <div className='absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center px-4 py-2 bg-background'>
+                                            <Spinner className='size-8' />
+                                        </div>
+                                    :
+                                    null
+                                }
+                                <iframe src='/preview' className='w-full h-full' onLoad={onIframeLoad}></iframe>
                             </div>
                             <DialogFooter>
                                 <Button
@@ -281,13 +327,7 @@ export default function Hero() {
                                 </Button>
                                 <Button
                                     type='button'
-                                    onClick={() => {
-                                        if (!printIframeRef.current) return;
-                                        const message = {
-                                            method: 'print'
-                                        };
-                                        printIframeRef.current.contentWindow?.postMessage(JSON.stringify(message), window.origin);
-                                    }}
+                                    onClick={printPDF}
                                 >
                                     <span>Print</span>
                                     <FontAwesomeIcon icon={faPrint} />

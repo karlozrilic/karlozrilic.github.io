@@ -10,6 +10,7 @@ type AboutMeState = {
     data: AboutMe | null;
     loading: boolean;
     loaded: boolean;
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
     error: string | null;
 };
 
@@ -17,6 +18,7 @@ type AboutMeHistoryState = {
     data: AboutMeHistory[];
     loading: boolean;
     loaded: boolean;
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
     error: string | null;
 };
 
@@ -25,6 +27,7 @@ const initialState: AboutMeState = {
     data: null,
     loading: false,
     loaded: false,
+    status: 'idle',
     error: null,
 };
 
@@ -32,6 +35,7 @@ const initialHistoryState: AboutMeHistoryState = {
     data: [],
     loading: false,
     loaded: false,
+    status: 'idle',
     error: null,
 };
 
@@ -128,14 +132,17 @@ const aboutMeSlice = createSlice({
         .addCase(fetchAboutMe.pending, (state) => {
             state.loading = true;
             state.error = null;
+            state.status = 'loading';
         })
         .addCase(fetchAboutMe.fulfilled, (state, action: PayloadAction<AboutMe | null>) => {
             state.loading = false;
             state.loaded = true;
+            state.status = 'succeeded';
             state.data = action.payload;
         })
         .addCase(fetchAboutMe.rejected, (state, action) => {
             state.loading = false;
+            state.status = 'failed';
             state.error = action.error.message || 'Failed to fetch experience';
         });
     },
@@ -150,14 +157,17 @@ const aboutMeHistorySlice = createSlice({
         .addCase(fetchAboutMeHistory.pending, (state) => {
             state.loading = true;
             state.error = null;
+            state.status = 'loading';
         })
         .addCase(fetchAboutMeHistory.fulfilled, (state, action: PayloadAction<AboutMeHistory[]>) => {
             state.loading = false;
             state.loaded = true;
+            state.status = 'succeeded';
             state.data = action.payload;
         })
         .addCase(fetchAboutMeHistory.rejected, (state, action) => {
             state.loading = false;
+            state.status = 'failed';
             state.error = action.error.message || 'Failed to fetch experience';
         });
     },

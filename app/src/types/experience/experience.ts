@@ -14,6 +14,7 @@ export type Experience = {
     content: string;
     markdown: string;
     updated: string;
+    show: boolean;
 }
 
 export type ExperienceUpdate = {
@@ -29,4 +30,5 @@ export type ExperienceUpdate = {
     content?: string;
     markdown?: string;
     updated?: Timestamp;
+    show?: boolean;
 }

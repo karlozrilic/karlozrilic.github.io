@@ -44,6 +44,9 @@ import { AboutMeHistory } from '@/app/src/types/about_me/about_me_history';
 import { ExperienceHistory } from '@/app/src/types/experience/experience_history';
 
 type ExcludeHistoryType = AboutMe | Project[] | Experience[] | null;
+type FetchFunctionResponse = {
+    jsonBlocks: PartialBlock[];
+};
 type HistoryType = AboutMeHistory | ExperienceHistory;
 
 export type EditorWrapperRef = {
@@ -64,7 +67,7 @@ const EditorWrapper = forwardRef(function EditorWrapper({
     id: string,
     initialContent: PartialBlock[] | null,
     updatedAt?: Moment | null;
-    fetchFunction: (id: string) => Promise<ExcludeHistoryType>,
+    fetchFunction: (id: string) => Promise<FetchFunctionResponse>,
     fetchHistoryFunction: (id?: string) => Promise<HistoryType[]>,
     captureKeys?: boolean
 }, ref) {
@@ -236,7 +239,7 @@ const EditorWrapper = forwardRef(function EditorWrapper({
                 markdown
             }
         });
-        const payload = await fetchFunction(id) as ExcludeHistoryType;
+        const payload = await fetchFunction(id) as FetchFunctionResponse;
         if (payload) {
             const newBlocks = Array.isArray(payload)
                 ? payload.find(p => p.id === id)?.jsonBlocks || null
