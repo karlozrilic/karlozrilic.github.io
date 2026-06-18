@@ -21,6 +21,8 @@
     background: white;
     width: 100%;
     margin: 0;
+    padding: 10px;
+    print-color-adjust: exact;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 11pt;
     line-height: 1.4;
@@ -77,6 +79,10 @@
         white-space: nowrap;
     }
 
+    ol, ul {
+        list-style-type: initial;
+    }
+
     ul {
         margin: 4px 0 0 18px;
         padding: 0;
@@ -96,10 +102,5 @@
         white-space: nowrap;
     }
 
-    @media print {
-        body {
-            print-color-adjust: exact;
-            margin: 12mm;
-        }
-    }
+    @media print {}
 }

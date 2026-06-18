@@ -6,8 +6,17 @@ export type AboutMe = {
     last_name: string;
     job_title: string;
     email: string;
+    phone: string;
+    socials: {
+        linkedIn: Social;
+    };
     jsonBlocks: PartialBlock[];
     content: string;
     markdown: string;
     updated: string;
+}
+
+type Social = {
+    text: string;
+    link: string;
 }

@@ -22,7 +22,7 @@ export default function PreviewCV() {
                 <h1>{aboutMe.data.first_name} {aboutMe.data.last_name}</h1>
                 <div className='subtitle'>{aboutMe.data.job_title}</div>
                 <div className='contact'>
-                    {aboutMe.data.email} • +1 555 123 4567 • City, Country • linkedin.com/in/johndoe
+                    {aboutMe.data.email} • {aboutMe.data.phone} • <a href={aboutMe.data.socials.linkedIn.link}>{aboutMe.data.socials.linkedIn.text} (linkedIn)</a>
                 </div>
             </header>
 
@@ -67,11 +67,7 @@ export default function PreviewCV() {
                                         }
                                     </div>
                                 </div>
-                                <ul>
-                                    <li>Built and maintained scalable web applications.</li>
-                                    <li>Improved performance and deployment workflows.</li>
-                                    <li>Mentored junior developers.</li>
-                                </ul>
+                                <div dangerouslySetInnerHTML={{ __html: experience.content }} />
                             </div>
                         );
                     })
