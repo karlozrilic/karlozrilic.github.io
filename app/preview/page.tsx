@@ -2,7 +2,10 @@
 
 import '@/app/src/style/print.css';
 import { useEffect, useRef } from 'react';
-//import { useReactToPrint } from 'react-to-print';
+// import { useReactToPrint } from 'react-to-print';
+
+const VERCEL_API = 'https://html-to-pdf-api-tawny.vercel.app/api';
+const test = 'https://karlozrilic.github.io';
 
 export default function PreviewCV() {
     const contentRef = useRef<HTMLDivElement>(null);
@@ -12,11 +15,25 @@ export default function PreviewCV() {
     //});
     
     useEffect(() => {
-        window.onmessage = (event: MessageEvent) => {
+        window.onmessage = async (event: MessageEvent) => {
             try {
                 const parsedMessage = JSON.parse(event.data);
                 const method = parsedMessage.method;
                 if (method === 'print') {
+                    const response = await fetch(`${VERCEL_API}/html-to-pdf?url=${test}/preview&format=A4&responseFormat=base64`, {
+                        headers: {
+                            'x-proxy-secret': `${process.env.NEXT_PUBLIC_PROXY_SECRET}`,
+                        },
+                    });
+                    const { pdf } = await response.json();
+                    
+                    const a = document.createElement('a');
+                    a.href = pdf;
+                    a.download = 'document.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    // window.print();
                     // reactToPrintFn();
                 }
             } catch {
