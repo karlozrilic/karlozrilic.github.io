@@ -3,14 +3,6 @@ type FormatDateOptions = {
     time?: boolean;
 }
 
-type FormatDateOptionsPrecise = {
-    locale?: string | undefined;
-    time?: boolean;
-    day?: boolean;
-    month?: boolean;
-    year?: boolean;
-}
-
 export const formatDate = (
     date?: Date | undefined,
     options?: FormatDateOptions

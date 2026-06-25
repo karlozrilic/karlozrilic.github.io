@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const experienceSchema = z.object({
     job_title: z.string().min(1, 'Job title is required'),

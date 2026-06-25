@@ -30,7 +30,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/src/c
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/src/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use_mobile';
 import { logout } from '@/helpers/firebase';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';

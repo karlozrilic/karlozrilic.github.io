@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useWebHaptics } from 'web-haptics/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/app/src/components/ui/sidebar';
-import { useLongPress } from '../hooks/long_press';
+import { useLongPress } from '@/hooks/long_press';
 import { loginGoogle } from '@/helpers/firebase';
 
 export default function Header() {
