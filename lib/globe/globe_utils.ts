@@ -429,11 +429,13 @@ export function inverseProjectGlobe(
 // edge-skip heuristics unreliable.
 //
 // This implementation works entirely in 3D unit-vector space:
-//   • Cast a "ray" from the click point P toward the south pole S = [0,−1,0].
+//   • Cast an arc from click point P toward the north pole S = [0,1,0].
+//     (South pole would land inside Antarctica and corrupt its crossing count.)
 //   • For each polygon edge A→B (as a great-circle arc), count a crossing when
 //     the arc P→S intersects the arc A→B.
 //   • Crossing condition: A and B must straddle the plane(P,S), AND P and S
 //     must straddle the plane(A,B).
+//   • Latitude bounding-box pre-filter rejects features before trig work.
 //
 // There is no antimeridian in 3D — the algorithm is correct for any polygon.
 // "Best match" = smallest lat/lng bounding-box area (prefers Iceland over Russia
@@ -451,68 +453,84 @@ export function hitTestCountry(lat: number, lng: number, features: GeoFeature[])
     // Convert click to 3D unit vector (same convention as the renderer)
     const phi = (90 - lat) * DEG_TO_RAD;
     const theta = (lng + 180) * DEG_TO_RAD;
-    const px = -Math.sin(phi) * Math.cos(theta);
-    const py =  Math.cos(phi);
-    const pz =  Math.sin(phi) * Math.sin(theta);
+    const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+    const sinTheta = Math.sin(theta), cosTheta = Math.cos(theta);
+    const px = -sinPhi * cosTheta;
+    const py =  cosPhi;
+    const pz =  sinPhi * sinTheta;
 
-    // S = north pole [0, 1, 0] — guaranteed outside every country polygon (Arctic Ocean).
-    // The south pole sits inside Antarctica, making Antarctica's crossing count odd for
-    // every click anywhere on the globe (the ray always ends inside Antarctica).
-    // n1 = P × S  where S = [0, 1, 0]
-    // = [py·0 − pz·1,  pz·0 − px·0,  px·1 − py·0]  =  [−pz, 0, px]
-    const n1x = -pz, n1z = px; // n1y = 0 always
+    // Reference point S = (0°N, 90°E) = [0, 0, −1] in 3D — open Indian Ocean.
+    // Requirements: S must be (a) outside every country polygon and (b) non-meridional
+    // relative to typical click points.
+    //
+    // Why not the poles?
+    //   South pole → inside Antarctica → every click gives 1 spurious Antarctica crossing.
+    //   North pole → arc P→S travels along P's exact meridian. For Pacific clicks near
+    //   180°E the arc coincides with Russia's antimeridian polygon split, producing an
+    //   odd crossing count (1 entry, no matching exit in the same sub-polygon) → false hit.
+    //
+    // (0°N, 90°E) is deep ocean (~3500 km from any land). The arc P→S travels diagonally
+    // across the globe so it never coincides with any country's antimeridian boundary.
+    //
+    // n1 = P × [0, 0, −1]:
+    //   [py·(−1) − pz·0,  pz·0 − px·(−1),  px·0 − py·0]  =  [−py, px, 0]
+    const n1x = -py, n1y = px; // n1z = 0 always
 
     let bestIdx: number | null = null;
     let bestArea = Infinity;
 
     for (let fi = 0; fi < features.length; fi++) {
-        let crossings = 0;
-        let minLat = Infinity, maxLat = -Infinity;
-        let minLng = Infinity, maxLng = -Infinity;
+        // ── Pass 1: bounding box (no trig) ──────────────────────────────────
+        // A point inside a polygon is always within its bounding box.
+        // Rejecting on latitude alone is antimeridian-safe and eliminates Antarctica
+        // (maxLat ≈ −60°) for any click in the Northern Hemisphere.
+        let fMinLat = Infinity, fMaxLat = -Infinity;
+        let fMinLng = Infinity, fMaxLng = -Infinity;
+        for (const ring of features[fi].rings) {
+            for (const pt of ring) {
+                if (pt[1] < fMinLat) fMinLat = pt[1];
+                if (pt[1] > fMaxLat) fMaxLat = pt[1];
+                if (pt[0] < fMinLng) fMinLng = pt[0];
+                if (pt[0] > fMaxLng) fMaxLng = pt[0];
+            }
+        }
+        if (lat < fMinLat || lat > fMaxLat) continue; // definitively outside
 
+        // ── Pass 2: spherical great-circle crossing count ────────────────────
+        // Cast arc P→S and count how many polygon edges (as great-circle arcs) it crosses.
+        // Entirely antimeridian-safe — no lat/lng arithmetic in the inner loop.
+        let crossings = 0;
         for (const ring of features[fi].rings) {
             const n = ring.length;
             if (n < 3) continue;
             _ensureVecBufs(n);
 
-            // Convert ring vertices to 3D unit vectors
             for (let k = 0; k < n; k++) {
-                const rlng = ring[k][0], rlat = ring[k][1];
-                const p = (90 - rlat) * DEG_TO_RAD;
-                const t = (rlng + 180) * DEG_TO_RAD;
-                const sp = Math.sin(p), cp = Math.cos(p);
-                _vx[k] = -sp * Math.cos(t);
-                _vy[k] =  cp;
-                _vz[k] =  sp * Math.sin(t);
-                if (rlat < minLat) minLat = rlat;
-                if (rlat > maxLat) maxLat = rlat;
-                if (rlng < minLng) minLng = rlng;
-                if (rlng > maxLng) maxLng = rlng;
+                const p2 = (90 - ring[k][1]) * DEG_TO_RAD;
+                const t2 = (ring[k][0] + 180) * DEG_TO_RAD;
+                const sp2 = Math.sin(p2), cp2 = Math.cos(p2);
+                _vx[k] = -sp2 * Math.cos(t2);
+                _vy[k] =  cp2;
+                _vz[k] =  sp2 * Math.sin(t2);
             }
 
-            // Count great-circle arc crossings (edge A→B vs arc P→S)
             for (let i = 0, j = n - 1; i < n; j = i++) {
                 const ax = _vx[j], ay = _vy[j], az = _vz[j];
                 const bx = _vx[i], by = _vy[i], bz = _vz[i];
-
-                // Condition 1: A and B straddle the plane through P and S
-                // n1·A and n1·B must have opposite signs
-                const d1a = n1x * ax + n1z * az; // n1y=0 so middle term vanishes
-                const d1b = n1x * bx + n1z * bz;
+                // Condition 1: A and B straddle the plane(P, S)
+                const d1a = n1x * ax + n1y * ay; // n1 = [−py, px, 0]  (n1z = 0)
+                const d1b = n1x * bx + n1y * by;
                 if (d1a * d1b >= 0) continue;
-
-                // Condition 2: P and S straddle the plane through A and B
-                // n2 = A × B; then check sign(n2·P) ≠ sign(n2·S)
+                // Condition 2: P and S straddle the plane(A, B)
                 const n2x = ay * bz - az * by;
                 const n2y = az * bx - ax * bz;
-                const n2z = ax * by - ay * bx;
-                // n2·S where S=[0,1,0]  =  n2y
-                if ((n2x * px + n2y * py + n2z * pz) * n2y < 0) crossings++;
+                const n2z = ax * by - ay * bx; // n2·S = −n2z  (S = [0,0,−1])
+                if ((n2x * px + n2y * py + n2z * pz) * (-n2z) < 0) crossings++;
             }
         }
 
         if (crossings % 2 !== 1) continue;
-        const area = (maxLat - minLat) * (maxLng - minLng);
+        const area = (fMaxLat - fMinLat) * (fMaxLng - fMinLng);
         if (area < bestArea) { bestArea = area; bestIdx = fi; }
     }
 
