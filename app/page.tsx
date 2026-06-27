@@ -10,7 +10,7 @@ import Experience from '@/app/src/sections/experience';
 import LoadingScreen from '@/app/src/sections/loading';
 import Technologies from '@/app/src/sections/technologies';
 import Footer from '@/app/src/layout_components/footer';
-import ThreeJsHero from './src/sections/threejs_hero';
+import VisitorGlobe from '@/app/src/sections/globe';
 
 export default function Home() {
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
@@ -60,7 +60,7 @@ export default function Home() {
             <main className='w-full'>
                 {!loaded && <LoadingScreen />}
                 <Hero />
-                {false ? <ThreeJsHero /> : null}
+                <VisitorGlobe />
                 <AboutMe />
                 <Experience />
                 <Technologies />
