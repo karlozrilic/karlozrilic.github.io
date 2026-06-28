@@ -1,122 +1,85 @@
 import type { GeoFeature, Visitor, PinPosition } from './globe_utils';
-import { renderGlobeFrame, MASK_RESOLUTION, type PrecomputedFeature } from './globe_renderer';
+import { getSolarPosition, getEarthRotY, SPIN_SPEED_RAD_S } from './globe_utils';
+import {
+    drawVisitorPins,
+    buildLandPaths,
+    buildPrecomputedGrid,
+    buildPrecomputedLights,
+    type PrecomputedFeature,
+    type PrecomputedGrid,
+    type PrecomputedLight,
+} from './globe_renderer';
+import {
+    initWebGL, resizeWebGL,
+    uploadLandTexture, uploadBorderData, uploadGridData, uploadLightData,
+    renderWebGLFrame,
+    type WebGLGlobeState,
+} from './globe_webgl';
+import { MASK_RESOLUTION } from './globe_renderer';
 import { CITY_LIGHTS } from './globe_data';
 
-// Canvas and 2D contexts owned entirely by this worker
+// ─── Main 2D canvas (transferred from main thread) ────────────────────────────
 let mainCanvas: OffscreenCanvas | null = null;
 let mainCtx: OffscreenCanvasRenderingContext2D | null = null;
-let dayCtx: OffscreenCanvasRenderingContext2D | null = null;
-let nightCtx: OffscreenCanvasRenderingContext2D | null = null;
-let nightMaskedCtx: OffscreenCanvasRenderingContext2D | null = null;
-let maskCtx: OffscreenCanvasRenderingContext2D | null = null;
+
+// ─── WebGL canvas (created internally in the worker) ──────────────────────────
+let webglCanvas: OffscreenCanvas | null = null;
+let glState: WebGLGlobeState | null = null;
 
 let geoFeatures: GeoFeature[] = [];
 let precomputedFeatures: PrecomputedFeature[] = [];
 let visitors: Visitor[] = [];
 
-function initLayerCanvases(w: number, h: number): void {
-    // Intermediate canvases are intentionally 1× (CSS-pixel size, no DPR scaling).
-    // The final drawImage onto mainCtx (which carries scale(dpr,dpr)) upscales for free,
-    // making polygon drawing and compositing 4× cheaper on dpr=2 displays.
-    const day = new OffscreenCanvas(w, h);
-    dayCtx = day.getContext('2d')!;
+let precomputedGrid: PrecomputedGrid | null = null;
+let precomputedLights: PrecomputedLight[] = [];
 
-    const night = new OffscreenCanvas(w, h);
-    nightCtx = night.getContext('2d')!;
-
-    const masked = new OffscreenCanvas(w, h);
-    nightMaskedCtx = masked.getContext('2d')!;
-
-    const mask = new OffscreenCanvas(MASK_RESOLUTION, MASK_RESOLUTION);
-    maskCtx = mask.getContext('2d')!;
+function buildPrecomputed(features: GeoFeature[]): PrecomputedFeature[] {
+    const D = Math.PI / 180;
+    return features.map(f => ({
+        rings: f.rings
+            .filter(ring => ring.length >= 3)
+            .map(ring => {
+                const n = ring.length;
+                const vecs = new Float32Array(n * 3);
+                for (let i = 0; i < n; i++) {
+                    const [lng, lat] = ring[i];
+                    const phi = (90 - lat) * D, theta = (lng + 180) * D;
+                    const sp = Math.sin(phi), cp = Math.cos(phi);
+                    vecs[i * 3]     = -sp * Math.cos(theta);
+                    vecs[i * 3 + 1] =  cp;
+                    vecs[i * 3 + 2] =  sp * Math.sin(theta);
+                }
+                let sx = 0, sy = 0, sz = 0;
+                for (let i = 0; i < n; i++) {
+                    sx += vecs[i * 3]; sy += vecs[i * 3 + 1]; sz += vecs[i * 3 + 2];
+                }
+                const len = Math.sqrt(sx * sx + sy * sy + sz * sz);
+                const centroid = len > 0
+                    ? new Float32Array([sx / len, sy / len, sz / len])
+                    : new Float32Array([0, 1, 0]);
+                let minDot = 1;
+                for (let i = 0; i < n; i++) {
+                    const d = centroid[0] * vecs[i * 3] + centroid[1] * vecs[i * 3 + 1] + centroid[2] * vecs[i * 3 + 2];
+                    if (d < minDot) minDot = d;
+                }
+                const coneSin = minDot >= 1 ? 0 : Math.sqrt(1 - minDot * minDot);
+                return { vecs, centroid, coneSin };
+            }),
+    }));
 }
 
-// ─── Fast terminator mask ────────────────────────────────────────────────────
-// Per-pixel sphere-local positions (xS, yS, zS) only depend on pixel position
-// and globe radius — they are constant across frames. Pre-compute them once so
-// the per-frame loop only does rotations + a dot product: no sqrt/asin/atan2.
-//
-// Derivation that eliminates per-pixel trig:
-//   sinLat = yW            (identity: yW is the y component of a unit vector)
-//   cosAngle = sinLat·sinSunLat + cosSunLat·(-xF·cosSunLng + zF·sinSunLng)
-// The last term uses cos(lng−sunLng) expanded via the unit-circle components
-// of xF, zF (valid because xF²+yW²+zF²=1 ⟹ cosLat=sqrt(xF²+zF²) cancels).
-const DEG = Math.PI / 180;
-const TWILIGHT = Math.sin(9.0 * DEG); // = TWILIGHT_COS_OFFSET from globe_utils
-const TWO_TWILIGHT = 2 * TWILIGHT;
+// ─── Animation state ──────────────────────────────────────────────────────────
+const ZOOM_LERP_SPEED = 0.10;
+let workerSpinAngle = 0;
+let workerZoom = 1.0;
+let workerLastNowMs = 0;
+let workerSpinInit = false;
+let lastSolarMs = 0;
 
-let sphereVecs: Float32Array | null = null; // [xS, yS, zS] per pixel, 3×MASK_RES² floats
-let maskDataCache: ImageData | null = null;  // reused every frame — avoids 775 KB alloc/GC
-
-function initMaskPrecompute(): void {
-    const sz = MASK_RESOLUTION;
-    const cx = sz / 2, cy = sz / 2, r = sz / 2;
-    const r2 = r * r;
-    sphereVecs = new Float32Array(sz * sz * 3);
-    maskDataCache = new ImageData(sz, sz); // r/g/b stay 0 permanently; only alpha is updated
-
-    for (let py = 0; py < sz; py++) {
-        for (let px = 0; px < sz; px++) {
-            const dx = px - cx, dy = py - cy;
-            const distSq = dx * dx + dy * dy;
-            const i = (py * sz + px) * 3;
-            if (distSq > r2) {
-                // Outside the disc — project to the nearest limb point (z = 0) so the
-                // terminator value here matches the disc edge; avoids a hard seam.
-                const d = Math.sqrt(distSq);
-                sphereVecs[i] = dx / d;
-                sphereVecs[i + 1] = -dy / d;
-                sphereVecs[i + 2] = 0;
-            } else {
-                const xS = dx / r;
-                const yS = -dy / r;
-                const zSq = 1 - xS * xS - yS * yS;
-                sphereVecs[i] = xS;
-                sphereVecs[i + 1] = yS;
-                sphereVecs[i + 2] = zSq > 0 ? Math.sqrt(zSq) : 0;
-            }
-        }
-    }
-}
-
-function buildMaskFast(rotY: number, rotX: number, sunLat: number, sunLng: number): ImageData {
-    // 4 trig calls once per frame (rotations are in the inner loop as plain mults)
-    const cosRY = Math.cos(rotY), sinRY = Math.sin(rotY);
-    const cosRX = Math.cos(rotX), sinRX = Math.sin(rotX);
-    // Sun-direction constants — expands cos(lng − sunLng) without atan2 or asin
-    const sinSunLat = Math.sin(sunLat * DEG);
-    const cosSunLat = Math.cos(sunLat * DEG);
-    const sunLngR = (sunLng + 180) * DEG;
-    const cosSunLng = Math.cos(sunLngR);
-    const sinSunLng = Math.sin(sunLngR);
-
-    const sp = sphereVecs!;
-    const data = maskDataCache!.data;
-    const n = MASK_RESOLUTION * MASK_RESOLUTION;
-
-    for (let p = 0; p < n; p++) {
-        const si = p * 3;
-        const xS = sp[si], yS = sp[si + 1], zS = sp[si + 2];
-
-        // Inverse X rotation
-        const yW = yS * cosRX + zS * sinRX;
-        const zW = -yS * sinRX + zS * cosRX;
-        // Inverse Y rotation
-        const xF = xS * cosRY - zW * sinRY;
-        const zF = xS * sinRY + zW * cosRY;
-
-        // cosAngle with no per-pixel asin / atan2 / sqrt
-        const cosAngle = yW * sinSunLat + cosSunLat * (zF * sinSunLng - xF * cosSunLng);
-        let alpha = (TWILIGHT - cosAngle) / TWO_TWILIGHT;
-        if (alpha < 0) alpha = 0;
-        else if (alpha > 1) alpha = 1;
-
-        data[p * 4 + 3] = alpha * 255;
-    }
-
-    return maskDataCache!;
-}
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Terminator mask (still used for fallback / unused now but keep for removal safety) ──
+// Not needed with WebGL — day/night computed per-fragment in the shader.
+// Keeping MASK_RESOLUTION import to avoid globe_renderer.ts dead-export warnings.
+void MASK_RESOLUTION;
 
 type WorkerMsg =
     | { type: 'init'; canvas: OffscreenCanvas; dpr: number; width: number; height: number }
@@ -125,9 +88,16 @@ type WorkerMsg =
     | { type: 'resize'; width: number; height: number; dpr: number }
     | {
           type: 'frame';
-          rotY: number; rotX: number; effectiveRadius: number;
-          cx: number; cy: number; width: number; height: number;
-          sunLat: number; sunLng: number; frame: number;
+          nowMs: number;
+          userOffsetY: number;
+          rotX: number;
+          targetZoom: number;
+          rotateEnabled: boolean;
+          frozenEarthBase: number;
+          baseRadius: number;
+          cx: number; cy: number;
+          width: number; height: number;
+          frame: number;
           selectedFeatureIdx: number;
       };
 
@@ -135,39 +105,43 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
     const msg = e.data;
 
     if (msg.type === 'init') {
+        // Main 2D canvas (displayed to user)
         mainCanvas = msg.canvas;
         mainCanvas.width = msg.width * msg.dpr;
         mainCanvas.height = msg.height * msg.dpr;
         mainCtx = mainCanvas.getContext('2d')!;
         mainCtx.scale(msg.dpr, msg.dpr);
-        initLayerCanvases(msg.width, msg.height);
-        initMaskPrecompute();
+
+        // WebGL canvas (rendered in WebGL, then blitted to mainCanvas)
+        webglCanvas = new OffscreenCanvas(msg.width, msg.height);
+        glState = initWebGL(webglCanvas, msg.width, msg.height);
+
+        // Static geometry — precomputed once
+        precomputedGrid = buildPrecomputedGrid();
+        precomputedLights = buildPrecomputedLights(CITY_LIGHTS);
+
+        if (glState) {
+            uploadGridData(glState, precomputedGrid);
+            uploadLightData(glState, precomputedLights);
+            // geofeatures may have arrived before WebGL was ready — upload now if so.
+            if (geoFeatures.length > 0) {
+                uploadLandTexture(glState, geoFeatures);
+                uploadBorderData(glState, precomputedFeatures);
+            }
+        }
         return;
     }
 
     if (msg.type === 'geofeatures') {
         geoFeatures = msg.features;
-        // Pre-compute latLngToVec3 for every polygon point so the per-frame draw
-        // loop only needs rotation math (8 mults+6 adds) — no trig per point.
-        const D = Math.PI / 180;
-        precomputedFeatures = msg.features.map(f => ({
-            rings: f.rings
-                .filter(ring => ring.length >= 3)
-                .map(ring => {
-                    const vecs = new Float32Array(ring.length * 3);
-                    for (let i = 0; i < ring.length; i++) {
-                        const [lng, lat] = ring[i];
-                        const phi = (90 - lat) * D;
-                        const theta = (lng + 180) * D;
-                        const sp = Math.sin(phi), cp = Math.cos(phi);
-                        const st = Math.sin(theta), ct = Math.cos(theta);
-                        vecs[i * 3]     = -sp * ct;
-                        vecs[i * 3 + 1] =  cp;
-                        vecs[i * 3 + 2] =  sp * st;
-                    }
-                    return { vecs };
-                }),
-        }));
+        precomputedFeatures = buildPrecomputed(msg.features);
+
+        if (glState) {
+            // Texture bake: Canvas2D fills all polygons into a 2048×1024 equirectangular map.
+            // This runs once and never again unless the dataset changes.
+            uploadLandTexture(glState, geoFeatures);
+            uploadBorderData(glState, precomputedFeatures);
+        }
         return;
     }
 
@@ -181,35 +155,122 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
         mainCanvas.width = msg.width * msg.dpr;
         mainCanvas.height = msg.height * msg.dpr;
         mainCtx.scale(msg.dpr, msg.dpr);
-        initLayerCanvases(msg.width, msg.height);
+        if (webglCanvas && glState) {
+            webglCanvas.width = msg.width;
+            webglCanvas.height = msg.height;
+            resizeWebGL(glState, msg.width, msg.height);
+        }
         return;
     }
 
     if (msg.type === 'frame') {
-        if (!mainCtx || !dayCtx || !nightCtx || !nightMaskedCtx || !maskCtx) return;
+        if (!mainCtx || !glState || !webglCanvas) return;
 
-        const { rotY, rotX, effectiveRadius, cx, cy, width, height, sunLat, sunLng, frame, selectedFeatureIdx } = msg;
+        const {
+            nowMs, userOffsetY, rotX, targetZoom, rotateEnabled, frozenEarthBase,
+            baseRadius, cx, cy, width, height, frame, selectedFeatureIdx,
+        } = msg;
 
-        const maskImageData = buildMaskFast(rotY, rotX, sunLat, sunLng);
+        // ── Spin angle + zoom ──────────────────────────────────────────────────
+        if (!workerSpinInit) {
+            workerSpinAngle = getEarthRotY(nowMs);
+            workerZoom = targetZoom;
+            workerLastNowMs = nowMs;
+            workerSpinInit = true;
+        } else {
+            const elapsed = (nowMs - workerLastNowMs) / 1000;
+            if (rotateEnabled) {
+                workerSpinAngle += SPIN_SPEED_RAD_S * elapsed;
+            } else {
+                workerSpinAngle = frozenEarthBase;
+            }
+            workerLastNowMs = nowMs;
+        }
+        workerZoom += (targetZoom - workerZoom) * ZOOM_LERP_SPEED;
 
-        const collectedPins: PinPosition[] = [];
+        const rotY = workerSpinAngle + userOffsetY;
+        const effectiveRadius = baseRadius * workerZoom;
 
-        renderGlobeFrame({
-            state: { rotY, rotX, effectiveRadius, canvasCX: cx, canvasCY: cy, canvasWidth: width, canvasHeight: height, sunLat, sunLng, frame },
-            mainCtx: mainCtx as unknown as CanvasRenderingContext2D,
-            dayCtx,
-            nightCtx,
-            nightMaskedCtx,
-            maskCtx,
-            geoFeatures,
-            precomputedFeatures,
-            selectedFeatureIdx,
-            cityLights: CITY_LIGHTS,
-            visitors,
-            onPinRendered: (pin) => collectedPins.push(pin),
-            maskImageData,
+        // ── Solar position ─────────────────────────────────────────────────────
+        const { sunLat, sunLng } = getSolarPosition(nowMs);
+
+        let solarText: string | undefined;
+        if (nowMs - lastSolarMs >= 1000) {
+            lastSolarMs = nowMs;
+            const d = new Date(nowMs);
+            const H = d.getUTCHours().toString().padStart(2, '0');
+            const M = d.getUTCMinutes().toString().padStart(2, '0');
+            const S = d.getUTCSeconds().toString().padStart(2, '0');
+            solarText = `☀ ${sunLat >= 0 ? '+' : ''}${sunLat.toFixed(1)}°  ${sunLng >= 0 ? 'E' : 'W'}${Math.abs(sunLng).toFixed(1)}°  UTC ${H}:${M}:${S}`;
+        }
+
+        // ── WebGL render ───────────────────────────────────────────────────────
+        renderWebGLFrame(glState, {
+            rotY, rotX, sunLat, sunLng,
+            r: effectiveRadius, cx, cy,
+            w: width, h: height, frame,
         });
 
-        postMessage({ type: 'pins', pins: collectedPins });
+        // ── Blit WebGL output to main 2D canvas ────────────────────────────────
+        // mainCtx has scale(dpr, dpr) so the blit maps to full physical resolution.
+        mainCtx.clearRect(0, 0, width, height);
+        mainCtx.drawImage(webglCanvas as unknown as CanvasImageSource, 0, 0, width, height);
+
+        // ── Atmosphere glow (2D overlay) ───────────────────────────────────────
+        const r = effectiveRadius;
+        const atm = mainCtx.createRadialGradient(cx, cy, r * 0.97, cx, cy, r * 1.08);
+        atm.addColorStop(0, 'rgba(80,160,255,0)');
+        atm.addColorStop(0.30, 'rgba(80,160,255,0.18)');
+        atm.addColorStop(1, 'rgba(80,160,255,0)');
+        mainCtx.beginPath();
+        mainCtx.arc(cx, cy, r * 1.08, 0, Math.PI * 2);
+        mainCtx.fillStyle = atm;
+        mainCtx.fill();
+
+        // ── Selected country highlight (2D overlay) ────────────────────────────
+        const selIdx = selectedFeatureIdx;
+        if (selIdx >= 0 && precomputedFeatures.length > selIdx) {
+            const glRenderState = {
+                rotY, rotX, effectiveRadius: r,
+                canvasCX: cx, canvasCY: cy,
+                canvasWidth: width, canvasHeight: height,
+                sunLat, sunLng, frame,
+            };
+            const { selected } = buildLandPaths(precomputedFeatures, glRenderState, selIdx, true);
+            const mc = mainCtx as unknown as CanvasRenderingContext2D;
+            mc.save();
+            mc.beginPath();
+            mc.arc(cx, cy, r, 0, Math.PI * 2);
+            mc.clip();
+            mc.fillStyle = 'rgba(251,191,36,0.88)';
+            mc.strokeStyle = 'rgba(253,224,71,1)';
+            mc.lineWidth = 1.5;
+            mc.fill(selected);
+            mc.stroke(selected);
+            mc.restore();
+        }
+
+        // ── Visitor pins (2D overlay) ──────────────────────────────────────────
+        const collectedPins: PinPosition[] = [];
+        const pinState = {
+            rotY, rotX, effectiveRadius: r,
+            canvasCX: cx, canvasCY: cy,
+            canvasWidth: width, canvasHeight: height,
+            sunLat, sunLng, frame,
+        };
+        drawVisitorPins(
+            mainCtx as unknown as CanvasRenderingContext2D,
+            visitors, pinState,
+            { frame, onPinRendered: (pin) => collectedPins.push(pin) },
+        );
+
+        postMessage({
+            type: 'pins',
+            pins: collectedPins,
+            rotY, rotX, effectiveRadius,
+            zoom: workerZoom,
+            spinAngle: workerSpinAngle,
+            solarText,
+        });
     }
 });

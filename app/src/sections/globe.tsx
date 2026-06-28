@@ -8,7 +8,6 @@ import {
     fetchGeoFeatures,
     getDragSensitivity,
     getEarthRotY,
-    getSolarPosition,
     isInsideGlobe,
     hitTestPins,
     hitTestCountry,
@@ -38,11 +37,8 @@ const DEFAULT_ROT_X = 0.20;
 const DEFAULT_OFFSET_Y = 0;
 const FLY_ZOOM_LEVEL = 2.0;
 const ZOOM_MIN = 0.55;
-const ZOOM_MAX = 4.0;
-const ZOOM_BUTTON_STEP = 0.4;
-const ZOOM_LERP_SPEED = 0.10;
-// Full rotation in ~42 s — visually interesting without being dizzying
-const SPIN_SPEED_RAD_S = -0.15;
+const ZOOM_MAX = 8.0;
+const ZOOM_BUTTON_FACTOR = 1.4; // ×1.4 per button click
 
 export default function VisitorGlobe({
     radiusFraction = 0.435,
@@ -79,7 +75,6 @@ export default function VisitorGlobe({
     const canvasTransferredRef = useRef(false);
     const workerIdleRef = useRef(true);
     const pendingFrameRef = useRef(false);
-    const lastSolarUpdateMsRef = useRef(0);
     // Allows the worker onmessage handler to send the next frame immediately
     // without waiting for the next RAF tick — eliminates the extra ~16ms gap.
     const sendFrameRef = useRef<() => void>(() => {});
@@ -107,13 +102,36 @@ export default function VisitorGlobe({
         if (stored !== null) setRotateEnabled(stored === 'true');
     }, []);
 
+    // Stores the rotation/zoom values from the most recently rendered worker frame.
+    // Used for click inverse-projection so main-thread hit testing matches what the
+    // user actually sees (rather than a potentially-stale animation ref).
+    const initEarthBase = getEarthRotY(Date.now());
+    const lastWorkerFrameRef = useRef({
+        rotY: initEarthBase + DEFAULT_OFFSET_Y,
+        rotX: DEFAULT_ROT_X,
+        effectiveRadius: 300,
+        zoom: initialZoom,
+        spinAngle: initEarthBase,
+    });
+
     // Render worker — owns the OffscreenCanvas after transferControlToOffscreen().
     // All drawing (land, terminator mask, compositing) happens here, off the main thread.
     useEffect(() => {
         const worker = new Worker(new URL('@/lib/globe/render.worker.ts', import.meta.url));
-        worker.onmessage = (e: MessageEvent<{ type: string; pins: PinPosition[] }>) => {
+        worker.onmessage = (e: MessageEvent<{
+            type: string; pins: PinPosition[];
+            rotY: number; rotX: number; effectiveRadius: number;
+            zoom: number; spinAngle: number; solarText?: string;
+        }>) => {
+            if (e.data.type === 'debug') { console.log('[globe worker]', (e.data as unknown as { msg: string }).msg); return; }
             if (e.data.type === 'pins') {
-                pinPositionsRef.current = e.data.pins;
+                const { pins, rotY, rotX, effectiveRadius, zoom, spinAngle, solarText } = e.data;
+                pinPositionsRef.current = pins;
+                // Sync worker-computed animation state so click handlers use the exact
+                // rotation from the frame the user is looking at.
+                lastWorkerFrameRef.current = { rotY, rotX, effectiveRadius, zoom, spinAngle };
+                animRef.current.zoom = zoom;
+                if (solarText) setSolarInfo(solarText);
                 // If a new frame was queued while the worker was busy, dispatch it
                 // immediately instead of waiting for the next RAF tick. This removes
                 // the ~16ms gap and pushes effective frame rate close to 1/worker_render_time.
@@ -130,13 +148,9 @@ export default function VisitorGlobe({
 
     const rotateEnabledRef = useRef(rotateEnabled);
     rotateEnabledRef.current = rotateEnabled;
-    // spinAngleRef accumulates the decorative axis rotation; starts at real GMST so
-    // the globe begins geographically oriented. frozenEarthBaseRef holds the angle
-    // at the moment rotation is paused so we can resume without a jump.
-    const initEarthBase = getEarthRotY(Date.now());
-    const spinAngleRef = useRef(initEarthBase);
+    // frozenEarthBaseRef holds the spin angle at the moment rotation is paused so
+    // the worker can stay locked at that position until rotation resumes.
     const frozenEarthBaseRef = useRef(initEarthBase);
-    const lastTickMsRef = useRef(Date.now());
 
     const pinPositionsRef = useRef<PinPosition[]>([]);
 
@@ -252,31 +266,30 @@ export default function VisitorGlobe({
         }
     }, [canvasWidth, canvasHeight, dpr, ipReady]);
 
-    // Lightweight RAF — pure state math + postMessage, zero canvas work on the main thread.
-    // The render worker does all drawing so the main thread stays free for scroll compositing.
+    // Lightweight RAF — the worker now owns spin angle, zoom lerp, and solar info.
+    // The main thread only steps fly animations and dispatches lightweight frame messages.
     useEffect(() => {
         if (!ipReady) return;
 
         // Extracted so both RAF and the worker onmessage handler can dispatch a frame.
-        // Always reads current ref values, never stale closure state.
+        // Sends input-delta state; the worker derives rotY, effectiveRadius, and sunPos.
         function sendFrame(): void {
             const anim = animRef.current;
-            const nowMs = Date.now();
-            const { sunLat, sunLng } = getSolarPosition(nowMs);
-            const earthBase = rotateEnabledRef.current
-                ? spinAngleRef.current
-                : frozenEarthBaseRef.current;
-            const rotY = earthBase + anim.userOffsetY;
             const w = canvasWidthRef.current;
             const h = canvasHeightRef.current;
             workerIdleRef.current = false;
             pendingFrameRef.current = false;
             renderWorkerRef.current?.postMessage({
                 type: 'frame',
-                rotY, rotX: anim.rotX,
-                effectiveRadius: baseRadiusRef.current * anim.zoom,
+                nowMs: Date.now(),
+                userOffsetY: anim.userOffsetY,
+                rotX: anim.rotX,
+                targetZoom: anim.targetZoom,
+                rotateEnabled: rotateEnabledRef.current,
+                frozenEarthBase: frozenEarthBaseRef.current,
+                baseRadius: baseRadiusRef.current,
                 cx: w / 2, cy: h / 2, width: w, height: h,
-                sunLat, sunLng, frame: anim.frame,
+                frame: anim.frame,
                 selectedFeatureIdx: selectedFeatureIdxRef.current,
             });
         }
@@ -285,8 +298,7 @@ export default function VisitorGlobe({
         function tick(): void {
             const anim = animRef.current;
 
-            anim.zoom += (anim.targetZoom - anim.zoom) * ZOOM_LERP_SPEED;
-
+            // Fly animation — stays on main thread for zero-latency drag-cancel response
             if (anim.flyState?.active) {
                 const result = stepFlyAnimation(anim.flyState);
                 anim.userOffsetY = result.offsetY;
@@ -295,29 +307,9 @@ export default function VisitorGlobe({
                 anim.flyState.t += 0.03;
             }
 
-            const nowMs = Date.now();
-            if (rotateEnabledRef.current) {
-                const elapsed = (nowMs - lastTickMsRef.current) / 1000;
-                spinAngleRef.current += SPIN_SPEED_RAD_S * elapsed;
-            }
-            lastTickMsRef.current = nowMs;
-
-            // Solar info changes imperceptibly fast — update once per second to avoid
-            // triggering 60 React re-renders/second from setSolarInfo.
-            if (nowMs - lastSolarUpdateMsRef.current > 1000) {
-                lastSolarUpdateMsRef.current = nowMs;
-                const { sunLat, sunLng } = getSolarPosition(nowMs);
-                const nowDate = new Date(nowMs);
-                const H = nowDate.getUTCHours().toString().padStart(2, '0');
-                const M = nowDate.getUTCMinutes().toString().padStart(2, '0');
-                const S = nowDate.getUTCSeconds().toString().padStart(2, '0');
-                setSolarInfo(
-                    `☀ ${sunLat >= 0 ? '+' : ''}${sunLat.toFixed(1)}°  ${sunLng >= 0 ? 'E' : 'W'}${Math.abs(sunLng).toFixed(1)}°  UTC ${H}:${M}:${S}`,
-                );
-            }
-
-            // Mark that a fresh frame is ready. If the worker is idle, send now;
-            // otherwise the onmessage handler will send the moment it becomes free.
+            // Spin angle, zoom lerp, and solar info are computed inside the worker.
+            // The worker sends them back via the 'pins' message so handlers always
+            // reference the exact values used in the most recently rendered frame.
             pendingFrameRef.current = true;
             if (workerIdleRef.current) {
                 sendFrame();
@@ -349,11 +341,9 @@ export default function VisitorGlobe({
     }, []);
 
     const handleGlobeClick = useCallback((mx: number, my: number) => {
-        const anim = animRef.current;
-        const earthBase = rotateEnabledRef.current ? spinAngleRef.current : frozenEarthBaseRef.current;
-        const rotY = earthBase + anim.userOffsetY;
-        const rotX = anim.rotX;
-        const r = baseRadiusRef.current * anim.zoom;
+        // Use the exact rotation from the last rendered frame — more accurate than
+        // reading a stale ref that may have advanced past what the user sees.
+        const { rotY, rotX, effectiveRadius: r } = lastWorkerFrameRef.current;
         const hit = inverseProjectGlobe(mx, my, rotY, rotX, r, canvasWidthRef.current / 2, canvasHeightRef.current / 2);
         if (!hit) { setSelectedFeatureIdx(-1); return; }
         const clickedIdx = hitTestCountry(hit.lat, hit.lng, geoFeatures);
@@ -409,7 +399,7 @@ export default function VisitorGlobe({
         if (!checkInsideGlobe(mx, my)) return;
         e.preventDefault();
         e.stopPropagation();
-        const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, animRef.current.targetZoom - e.deltaY * 0.001));
+        const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, animRef.current.targetZoom * Math.exp(-e.deltaY * 0.001)));
         animRef.current.targetZoom = next;
         updateZoomLabel(next);
     }, [clientToCanvas, checkInsideGlobe, updateZoomLabel]);
@@ -477,20 +467,20 @@ export default function VisitorGlobe({
     }, [handleWheel, ipReady]);
 
     const handleZoomIn = useCallback(() => {
-        const next = Math.min(ZOOM_MAX, animRef.current.targetZoom + ZOOM_BUTTON_STEP);
+        const next = Math.min(ZOOM_MAX, animRef.current.targetZoom * ZOOM_BUTTON_FACTOR);
         animRef.current.targetZoom = next;
         updateZoomLabel(next);
     }, [updateZoomLabel]);
 
     const handleZoomOut = useCallback(() => {
-        const next = Math.max(ZOOM_MIN, animRef.current.targetZoom - ZOOM_BUTTON_STEP);
+        const next = Math.max(ZOOM_MIN, animRef.current.targetZoom / ZOOM_BUTTON_FACTOR);
         animRef.current.targetZoom = next;
         updateZoomLabel(next);
     }, [updateZoomLabel]);
 
     const handleReset = useCallback(() => {
         if (userLocation) {
-            frozenEarthBaseRef.current = spinAngleRef.current;
+            frozenEarthBaseRef.current = lastWorkerFrameRef.current.spinAngle;
             setRotateEnabled(false);
             localStorage.setItem('globe-rotate', 'false');
             animRef.current.flyState = buildFlyState(
@@ -523,7 +513,7 @@ export default function VisitorGlobe({
         const center = userLocation ?? initialCenter;
         if (!center) return;
         userSnappedRef.current = true;
-        const earthBase = rotateEnabledRef.current ? spinAngleRef.current : frozenEarthBaseRef.current;
+        const earthBase = lastWorkerFrameRef.current.spinAngle;
         const snap = buildFlyState(center.lat, center.lng, animRef.current.userOffsetY, animRef.current.rotX, earthBase);
         animRef.current.userOffsetY = snap.toOffsetY;
         animRef.current.rotX = snap.toRotX;
@@ -536,7 +526,7 @@ export default function VisitorGlobe({
     }, [userLocation, initialCenter, canvasWidth, updateZoomLabel]);
 
     const flyToCity = useCallback((visitor: Visitor) => {
-        frozenEarthBaseRef.current = spinAngleRef.current;
+        frozenEarthBaseRef.current = lastWorkerFrameRef.current.spinAngle;
         setRotateEnabled(false);
         localStorage.setItem('globe-rotate', 'false');
         animRef.current.flyState = buildFlyState(
@@ -555,13 +545,12 @@ export default function VisitorGlobe({
             const next = !prev;
             localStorage.setItem('globe-rotate', String(next));
             if (!next) {
-                // Pausing: snapshot current spin angle so the globe stays put
-                frozenEarthBaseRef.current = spinAngleRef.current;
-            } else {
-                // Resuming: pick up from the frozen angle — no position jump
-                spinAngleRef.current = frozenEarthBaseRef.current;
-                lastTickMsRef.current = Date.now();
+                // Pausing: snapshot the worker's last-reported spin angle so the
+                // worker locks to exactly the position in the last rendered frame.
+                frozenEarthBaseRef.current = lastWorkerFrameRef.current.spinAngle;
             }
+            // Resuming: the worker picks up from frozenEarthBase automatically
+            // once rotateEnabled flips to true in the next frame message.
             return next;
         });
     }, []);

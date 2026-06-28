@@ -96,6 +96,8 @@ export interface FlyState {
 
 export const DEG_TO_RAD = Math.PI / 180;
 export const RAD_TO_DEG = 180 / Math.PI;
+// Full rotation in ~42 s — visually interesting without being dizzying
+export const SPIN_SPEED_RAD_S = -0.15;
 
 // Civil twilight band on either side of the terminator line
 const TWILIGHT_HALF_BAND_DEG = 9.0;
@@ -289,7 +291,7 @@ function decodeGeometry(
 export async function fetchGeoFeatures(): Promise<GeoFeature[]> {
     try {
         const response = await fetch(
-            "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json",
+            'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-10m.json',
         );
         const topo: TopoJSON = await response.json();
         const { scale, translate } = topo.transform;
