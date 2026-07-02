@@ -75,8 +75,6 @@ export default function VisitorGlobe({
     const canvasTransferredRef = useRef(false);
     const workerIdleRef = useRef(true);
     const pendingFrameRef = useRef(false);
-    // Allows the worker onmessage handler to send the next frame immediately
-    // without waiting for the next RAF tick — eliminates the extra ~16ms gap.
     const sendFrameRef = useRef<() => void>(() => {});
 
     const animRef = useRef<GlobeAnimState>({
@@ -102,9 +100,8 @@ export default function VisitorGlobe({
         if (stored !== null) setRotateEnabled(stored === 'true');
     }, []);
 
-    // Stores the rotation/zoom values from the most recently rendered worker frame.
-    // Used for click inverse-projection so main-thread hit testing matches what the
-    // user actually sees (rather than a potentially-stale animation ref).
+    // Last values reported by the worker — used for click hit-testing so the
+    // inverse projection matches exactly what the user is looking at.
     const initEarthBase = getEarthRotY(Date.now());
     const lastWorkerFrameRef = useRef({
         rotY: initEarthBase + DEFAULT_OFFSET_Y,
@@ -114,9 +111,8 @@ export default function VisitorGlobe({
         spinAngle: initEarthBase,
     });
 
-    // Render worker — owns the OffscreenCanvas after transferControlToOffscreen().
-    // All drawing (land, terminator mask, compositing) happens here, off the main thread.
     useEffect(() => {
+        let firstPaintDone = false;
         const worker = new Worker(new URL('@/lib/globe/render.worker.ts', import.meta.url));
         worker.onmessage = (e: MessageEvent<{
             type: string; pins: PinPosition[];
@@ -125,6 +121,7 @@ export default function VisitorGlobe({
         }>) => {
             if (e.data.type === 'debug') { console.log('[globe worker]', (e.data as unknown as { msg: string }).msg); return; }
             if (e.data.type === 'pins') {
+                if (!firstPaintDone) { firstPaintDone = true; setFirstFrameReady(true); }
                 const { pins, rotY, rotX, effectiveRadius, zoom, spinAngle, solarText } = e.data;
                 pinPositionsRef.current = pins;
                 // Sync worker-computed animation state so click handlers use the exact
@@ -148,9 +145,8 @@ export default function VisitorGlobe({
 
     const rotateEnabledRef = useRef(rotateEnabled);
     rotateEnabledRef.current = rotateEnabled;
-    // frozenEarthBaseRef holds the spin angle at the moment rotation is paused so
-    // the worker can stay locked at that position until rotation resumes.
-    const frozenEarthBaseRef = useRef(initEarthBase);
+    // spin angle snapshot taken when rotation is paused — worker locks to this
+    const pausedAngleRef = useRef(initEarthBase);
 
     const pinPositionsRef = useRef<PinPosition[]>([]);
 
@@ -159,6 +155,8 @@ export default function VisitorGlobe({
         lat: number; lng: number; city: string; country: string; flag: string;
     } | null>(null);
     const [ipReady, setIpReady] = useState(false);
+    const [geoFeaturesReady, setGeoFeaturesReady] = useState(false);
+    const [firstFrameReady, setFirstFrameReady] = useState(false);
     const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
 
     useEffect(() => {
@@ -201,6 +199,10 @@ export default function VisitorGlobe({
     const [zoomLabel, setZoomLabel] = useState(initialZoom.toFixed(1) + '×');
     const [solarInfo, setSolarInfo] = useState('loading…');
 
+    // Globe is ready to display once both the IP lookup and geo data are done.
+    // Waiting for continents ensures the first visible frame already has country outlines.
+    const readyToShow = ipReady && geoFeaturesReady;
+
     // Merge user location into the visitors list — mark a matching city or prepend a new entry
     const enrichedVisitors = useMemo<Visitor[]>(() => {
         if (!userLocation) return visitors;
@@ -225,7 +227,10 @@ export default function VisitorGlobe({
     );
 
     useEffect(() => {
-        fetchGeoFeatures().then(setGeoFeatures);
+        fetchGeoFeatures().then(features => {
+            setGeoFeatures(features);
+            setGeoFeaturesReady(true);
+        });
     }, []);
 
     // Push geoFeatures and visitors to the render worker whenever they change
@@ -244,7 +249,6 @@ export default function VisitorGlobe({
     canvasWidthRef.current = canvasWidth;
     const canvasHeightRef = useRef(canvasHeight);
     canvasHeightRef.current = canvasHeight;
-
     // Transfer canvas control to render worker on first valid size; send resize on subsequent changes.
     // After transferControlToOffscreen() the canvas element stays in the DOM (events, getBoundingClientRect
     // still work) but the main thread can no longer call getContext() on it.
@@ -264,15 +268,34 @@ export default function VisitorGlobe({
         } else {
             worker.postMessage({ type: 'resize', width: canvasWidth, height: canvasHeight, dpr });
         }
-    }, [canvasWidth, canvasHeight, dpr, ipReady]);
+    }, [canvasWidth, canvasHeight, dpr, readyToShow]);
 
-    // Lightweight RAF — the worker now owns spin angle, zoom lerp, and solar info.
-    // The main thread only steps fly animations and dispatches lightweight frame messages.
+    // Snap globe to user location the moment the globe becomes ready to display.
+    // Runs synchronously before the first RAF tick so the very first rendered frame
+    // is already centred.  buildFlyState is idempotent: if Strict Mode fires this
+    // twice the second call computes delta ≈ 0 and leaves the offset unchanged.
     useEffect(() => {
-        if (!ipReady) return;
+        if (!readyToShow) return;
+        const center = userLocation ?? initialCenter;
+        if (!center) return;
+        const anim = animRef.current;
+        const snap = buildFlyState(center.lat, center.lng, anim.userOffsetY, anim.rotX, getEarthRotY(Date.now()));
+        anim.userOffsetY = snap.toOffsetY;
+        anim.rotX      = snap.toRotX;
+        anim.flyState  = null;
+        if (userLocation) {
+            anim.targetZoom = 1.5;
+            anim.zoom       = 1.5;
+            setZoomLabel('1.5×');
+        }
+    // updateZoomLabel is a stable useCallback([], []); omitting it avoids a
+    // "used before declaration" error since it's defined further down.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [readyToShow, userLocation, initialCenter]);
 
-        // Extracted so both RAF and the worker onmessage handler can dispatch a frame.
-        // Sends input-delta state; the worker derives rotY, effectiveRadius, and sunPos.
+    useEffect(() => {
+        if (!readyToShow) return;
+
         function sendFrame(): void {
             const anim = animRef.current;
             const w = canvasWidthRef.current;
@@ -286,7 +309,7 @@ export default function VisitorGlobe({
                 rotX: anim.rotX,
                 targetZoom: anim.targetZoom,
                 rotateEnabled: rotateEnabledRef.current,
-                frozenEarthBase: frozenEarthBaseRef.current,
+                frozenEarthBase: pausedAngleRef.current,
                 baseRadius: baseRadiusRef.current,
                 cx: w / 2, cy: h / 2, width: w, height: h,
                 frame: anim.frame,
@@ -321,7 +344,7 @@ export default function VisitorGlobe({
 
         rafRef.current = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(rafRef.current);
-    }, [ipReady]);
+    }, [readyToShow]);
 
     const clientToCanvas = useCallback((clientX: number, clientY: number): [number, number] => {
         const rect = canvasRef.current?.getBoundingClientRect();
@@ -464,7 +487,7 @@ export default function VisitorGlobe({
         if (!canvas) return;
         canvas.addEventListener('wheel', handleWheel, { passive: false });
         return () => canvas.removeEventListener('wheel', handleWheel);
-    }, [handleWheel, ipReady]);
+    }, [handleWheel, readyToShow]);
 
     const handleZoomIn = useCallback(() => {
         const next = Math.min(ZOOM_MAX, animRef.current.targetZoom * ZOOM_BUTTON_FACTOR);
@@ -480,7 +503,7 @@ export default function VisitorGlobe({
 
     const handleReset = useCallback(() => {
         if (userLocation) {
-            frozenEarthBaseRef.current = lastWorkerFrameRef.current.spinAngle;
+            pausedAngleRef.current = lastWorkerFrameRef.current.spinAngle;
             setRotateEnabled(false);
             localStorage.setItem('globe-rotate', 'false');
             animRef.current.flyState = buildFlyState(
@@ -488,7 +511,7 @@ export default function VisitorGlobe({
                 userLocation.lng,
                 animRef.current.userOffsetY,
                 animRef.current.rotX,
-                frozenEarthBaseRef.current,
+                pausedAngleRef.current,
             );
             animRef.current.targetZoom = 1.5;
             updateZoomLabel(1.5);
@@ -506,27 +529,9 @@ export default function VisitorGlobe({
         }
     }, [userLocation, initialZoom, updateZoomLabel]);
 
-    // Snap globe to user location as soon as both the canvas and IP lookup are ready — no animation
-    const userSnappedRef = useRef(false);
-    useEffect(() => {
-        if (canvasWidth === 0 || userSnappedRef.current) return;
-        const center = userLocation ?? initialCenter;
-        if (!center) return;
-        userSnappedRef.current = true;
-        const earthBase = lastWorkerFrameRef.current.spinAngle;
-        const snap = buildFlyState(center.lat, center.lng, animRef.current.userOffsetY, animRef.current.rotX, earthBase);
-        animRef.current.userOffsetY = snap.toOffsetY;
-        animRef.current.rotX = snap.toRotX;
-        animRef.current.flyState = null;
-        if (userLocation) {
-            animRef.current.targetZoom = 1.5;
-            animRef.current.zoom = 1.5;
-            updateZoomLabel(1.5);
-        }
-    }, [userLocation, initialCenter, canvasWidth, updateZoomLabel]);
 
     const flyToCity = useCallback((visitor: Visitor) => {
-        frozenEarthBaseRef.current = lastWorkerFrameRef.current.spinAngle;
+        pausedAngleRef.current = lastWorkerFrameRef.current.spinAngle;
         setRotateEnabled(false);
         localStorage.setItem('globe-rotate', 'false');
         animRef.current.flyState = buildFlyState(
@@ -534,7 +539,7 @@ export default function VisitorGlobe({
             visitor.lng,
             animRef.current.userOffsetY,
             animRef.current.rotX,
-            frozenEarthBaseRef.current,
+            pausedAngleRef.current,
         );
         animRef.current.targetZoom = FLY_ZOOM_LEVEL;
         updateZoomLabel(FLY_ZOOM_LEVEL);
@@ -545,12 +550,8 @@ export default function VisitorGlobe({
             const next = !prev;
             localStorage.setItem('globe-rotate', String(next));
             if (!next) {
-                // Pausing: snapshot the worker's last-reported spin angle so the
-                // worker locks to exactly the position in the last rendered frame.
-                frozenEarthBaseRef.current = lastWorkerFrameRef.current.spinAngle;
+                pausedAngleRef.current = lastWorkerFrameRef.current.spinAngle;
             }
-            // Resuming: the worker picks up from frozenEarthBase automatically
-            // once rotateEnabled flips to true in the next frame message.
             return next;
         });
     }, []);
@@ -567,17 +568,24 @@ export default function VisitorGlobe({
     }, [enrichedVisitors, maxChips]);
 
     return (
-        <div className={`globe-root${ipReady ? '' : ' globe-root--loading'}`}>
+        <div className={`globe-root${firstFrameReady ? '' : ' globe-root--loading'}`}>
 
             <div ref={canvasAreaRef} className='globe-canvas-area'>
-                {!ipReady ? (
+                {/* Skeleton: shown until the worker delivers its first painted frame.
+                    This covers both the IP/geo loading window AND the brief worker-init
+                    gap that would otherwise flash a blank canvas. */}
+                {!firstFrameReady && (
                     <div className='globe-skeleton'>
                         <div className='globe-skeleton__circle' />
                     </div>
-                ) : canvasWidth > 0 && canvasHeight > 0 && (
+                )}
+                {/* Canvas enters the DOM as soon as dimensions are known so
+                    transferControlToOffscreen() can run while skeleton is still visible.
+                    It stays hidden until the first frame is ready to avoid a blank flash. */}
+                {readyToShow && canvasWidth > 0 && canvasHeight > 0 && (
                     <div
                         className='globe-container'
-                        style={{ width: canvasWidth, height: canvasHeight }}
+                        style={{ width: canvasWidth, height: canvasHeight, display: firstFrameReady ? undefined : 'none' }}
                     >
                         <canvas
                             ref={canvasRef}
@@ -617,79 +625,79 @@ export default function VisitorGlobe({
                                 )}
                             </div>
                         </div>
+
+                        <div className='globe-stats-bar'>
+                            <div className='globe-stat'>
+                                <span className='globe-stat__number'>{totalVisits}</span>
+                                <span className='globe-stat__label'>visitors</span>
+                            </div>
+                            <div className='globe-stat-divider' />
+                            <div className='globe-stat'>
+                                <span className='globe-stat__number'>{totalCountries}</span>
+                                <span className='globe-stat__label'>countries</span>
+                            </div>
+                            <div className='globe-stat-divider' />
+                            <div className='globe-stat'>
+                                <span className='globe-stat__number globe-stat__number--live'>{liveCount}</span>
+                                <span className='globe-stat__label'>live now</span>
+                            </div>
+                        </div>
+
+                        <div className='globe-chip-row'>
+                            {displayVisitors.map(visitor => (
+                                <button
+                                    key={visitor.city}
+                                    className={['globe-chip', visitor.isUser ? 'globe-chip--user' : ''].join(' ')}
+                                    onClick={() => flyToCity(visitor)}
+                                >
+                                    <span
+                                        className={[
+                                            'globe-chip__dot',
+                                            visitor.isUser ? 'globe-chip__dot--user' :
+                                            visitor.live ? 'globe-chip__dot--live' : 'globe-chip__dot--visited',
+                                        ].join(' ')}
+                                    />
+                                    {visitor.flag} {visitor.city}
+                                    <span className='globe-chip__count'>{visitor.isUser ? '' : `${visitor.count}×`}</span>
+                                    {visitor.live && <span className='globe-chip__live-badge'>live</span>}
+                                    {visitor.isUser && <span className='globe-chip__you-badge'>you</span>}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className='globe-controls'>
+                            <div className='globe-zoom-group'>
+                                <button className='globe-zoom-button' onClick={handleZoomOut} aria-label='Zoom out'>
+                                    −
+                                </button>
+                                <span className='globe-zoom-label'>{zoomLabel}</span>
+                                <button className='globe-zoom-button' onClick={handleZoomIn} aria-label='Zoom in'>
+                                    +
+                                </button>
+                                <div className='globe-zoom-divider' />
+                                <button
+                                    className='globe-zoom-button'
+                                    onClick={handleReset}
+                                    aria-label='Reset view'
+                                    style={{ fontSize: 13 }}
+                                >
+                                    ↺
+                                </button>
+                                <div className='globe-zoom-divider' />
+                                <button
+                                    className='globe-zoom-button'
+                                    onClick={handleToggleRotate}
+                                    aria-label={rotateEnabled ? 'Pause rotation' : 'Resume rotation'}
+                                    title={rotateEnabled ? 'Pause rotation' : 'Resume rotation'}
+                                    style={{ fontSize: 13 }}
+                                >
+                                    {rotateEnabled ? '⏸' : '⏵'}
+                                </button>
+                            </div>
+                            <div className='globe-solar-info'>{solarInfo}</div>
+                        </div>
                     </div>
                 )}
-            </div>
-
-            <div className='globe-controls'>
-                <div className='globe-zoom-group'>
-                    <button className='globe-zoom-button' onClick={handleZoomOut} aria-label='Zoom out'>
-                        −
-                    </button>
-                    <span className='globe-zoom-label'>{zoomLabel}</span>
-                    <button className='globe-zoom-button' onClick={handleZoomIn} aria-label='Zoom in'>
-                        +
-                    </button>
-                    <div className='globe-zoom-divider' />
-                    <button
-                        className='globe-zoom-button'
-                        onClick={handleReset}
-                        aria-label='Reset view'
-                        style={{ fontSize: 13 }}
-                    >
-                        ↺
-                    </button>
-                    <div className='globe-zoom-divider' />
-                    <button
-                        className='globe-zoom-button'
-                        onClick={handleToggleRotate}
-                        aria-label={rotateEnabled ? 'Pause rotation' : 'Resume rotation'}
-                        title={rotateEnabled ? 'Pause rotation' : 'Resume rotation'}
-                        style={{ fontSize: 13 }}
-                    >
-                        {rotateEnabled ? '⏸' : '⏵'}
-                    </button>
-                </div>
-                <div className='globe-solar-info'>{solarInfo}</div>
-            </div>
-
-            <div className='globe-stats-bar'>
-                <div className='globe-stat'>
-                    <span className='globe-stat__number'>{totalVisits}</span>
-                    <span className='globe-stat__label'>visitors</span>
-                </div>
-                <div className='globe-stat-divider' />
-                <div className='globe-stat'>
-                    <span className='globe-stat__number'>{totalCountries}</span>
-                    <span className='globe-stat__label'>countries</span>
-                </div>
-                <div className='globe-stat-divider' />
-                <div className='globe-stat'>
-                    <span className='globe-stat__number globe-stat__number--live'>{liveCount}</span>
-                    <span className='globe-stat__label'>live now</span>
-                </div>
-            </div>
-
-            <div className='globe-chip-row' style={{ maxWidth: canvasWidth || '100%' }}>
-                {displayVisitors.map(visitor => (
-                    <button
-                        key={visitor.city}
-                        className={['globe-chip', visitor.isUser ? 'globe-chip--user' : ''].join(' ')}
-                        onClick={() => flyToCity(visitor)}
-                    >
-                        <span
-                            className={[
-                                'globe-chip__dot',
-                                visitor.isUser ? 'globe-chip__dot--user' :
-                                visitor.live ? 'globe-chip__dot--live' : 'globe-chip__dot--visited',
-                            ].join(' ')}
-                        />
-                        {visitor.flag} {visitor.city}
-                        <span className='globe-chip__count'>{visitor.isUser ? '' : `${visitor.count}×`}</span>
-                        {visitor.live && <span className='globe-chip__live-badge'>live</span>}
-                        {visitor.isUser && <span className='globe-chip__you-badge'>you</span>}
-                    </button>
-                ))}
             </div>
 
         </div>

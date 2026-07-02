@@ -1,10 +1,8 @@
-// WebGL2 globe renderer — runs entirely inside the render worker.
+// WebGL2 globe renderer — runs inside the render worker.
 // Per-frame cost: 4 uniform uploads + 4 drawArrays calls. No Path2D, no per-frame allocation.
 
 import type { GeoFeature } from './globe_utils';
 import type { PrecomputedFeature, PrecomputedGrid, PrecomputedLight } from './globe_renderer';
-
-// ─── Shader sources ───────────────────────────────────────────────────────────
 
 const SPHERE_VERT = `#version 300 es
 in vec3 a_pos;
@@ -22,7 +20,7 @@ void main() {
     gl_Position = u_proj * c;
 }`;
 
-// Day/night blend in a single pass — replaces the 5-canvas compositing pipeline.
+// Day/night blend in a single pass
 const SPHERE_FRAG = `#version 300 es
 precision mediump float;
 in vec3 v_world;
@@ -31,26 +29,24 @@ in float v_camZ;
 uniform sampler2D u_land;
 uniform vec3 u_sun;
 out vec4 fragColor;
-const float TW = 0.15643; // sin(9°) — twilight half-band
+const float TW = 0.15643; // sin(9°) twilight half-band
 void main() {
     if (v_camZ < 0.0) discard;
     float day = clamp((dot(v_world, u_sun) + TW) / (2.0 * TW), 0.0, 1.0);
-    float h = v_world.y * 0.5 + 0.5; // 0=south 1=north
+    float h = v_world.y * 0.5 + 0.5;
     vec3 dayOcean   = mix(vec3(0.063, 0.502, 0.941), vec3(0.039, 0.314, 0.729), h);
     vec3 nightOcean = mix(vec3(0.035, 0.082, 0.122), vec3(0.016, 0.055, 0.082), h);
     vec3 dayLand    = vec3(0.216, 0.451, 0.243);
     vec3 nightLand  = vec3(0.039, 0.110, 0.063);
-    float land = texture(u_land, v_uv).a; // alpha: 0=ocean (clearRect), 1=land (white fill)
+    float land = texture(u_land, v_uv).a;
     vec3 dc = mix(dayOcean, dayLand, land);
     vec3 nc = mix(nightOcean, nightLand, land);
-    // Subtle limb darkening for 3-D shape
     float limb = v_camZ;
     fragColor = vec4(mix(nc, dc, day) * (0.75 + 0.25 * limb), 1.0);
 }`;
 
 // Shared vert for borders and grid.
-// The projection maps camera_z through a negative scale (-0.5), so increasing camera_z
-// decreases clip_z and window_depth, pushing the geometry closer to the viewer.
+// u_zOff nudges geometry in front of the sphere surface to avoid z-fighting.
 const LINE_VERT = `#version 300 es
 in vec3 a_pos;
 uniform mat4 u_rot;
@@ -60,7 +56,7 @@ out float v_camZ;
 void main() {
     vec4 c = u_rot * vec4(a_pos, 1.0);
     v_camZ = c.z;
-    c.z += u_zOff; // increase camZ → more negative clip_z → smaller depth → in front of sphere
+    c.z += u_zOff;
     gl_Position = u_proj * c;
 }`;
 
@@ -74,7 +70,7 @@ void main() {
     fragColor = u_color;
 }`;
 
-// City lights as gl.POINTS — all visibility/day-night math in the vertex shader.
+// City lights as gl.POINTS — visibility and day/night entirely in the vertex shader
 const POINTS_VERT = `#version 300 es
 in vec3 a_pos;
 in float a_size;
@@ -83,6 +79,7 @@ uniform mat4 u_rot;
 uniform mat4 u_proj;
 uniform vec3 u_sun;
 uniform float u_twinkle;
+uniform float u_scale;
 out vec3 v_col;
 out float v_alpha;
 const float TW = 0.15643;
@@ -90,18 +87,19 @@ void main() {
     vec4 c = u_rot * vec4(a_pos, 1.0);
     float hz = clamp((c.z - 0.04) / 0.1, 0.0, 1.0);
     float df = clamp((dot(a_pos, u_sun) + TW) / (2.0 * TW), 0.0, 1.0);
-    float alpha = hz * (1.0 - df) * (0.88 + u_twinkle);
-    if (alpha < 0.04 || c.z < 0.0) {
+    float alpha = hz * (1.0 - df) * (0.55 + u_twinkle * 0.15);
+    if (alpha < 0.02 || c.z < 0.0) {
         gl_PointSize = 0.0; v_alpha = 0.0; v_col = vec3(0.0);
-        gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // clip out
+        gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
         return;
     }
     c.z += 0.015;
     gl_Position = u_proj * c;
-    gl_PointSize = max(1.5, a_size * 9.0);
+    gl_PointSize = clamp(a_size * u_scale * 0.025, 1.5, 16.0);
     v_col = a_col; v_alpha = alpha;
 }`;
 
+// Gaussian glow — with additive blending overlapping halos accumulate into bright hotspots
 const POINTS_FRAG = `#version 300 es
 precision mediump float;
 in vec3 v_col;
@@ -109,21 +107,19 @@ in float v_alpha;
 out vec4 fragColor;
 void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
-    float a = v_alpha * (1.0 - smoothstep(0.2, 1.0, d));
-    if (a < 0.01) discard;
+    float a = v_alpha * exp(-d * d * 2.8);
+    if (a < 0.006) discard;
     fragColor = vec4(v_col, a);
 }`;
 
-// ─── Matrix helpers ───────────────────────────────────────────────────────────
-
-// Orthographic projection matching the canvas math: sx = cx + x*r, sy = cy - y*r
+// Orthographic projection matching sx = cx + x*r, sy = cy - y*r
 function buildOrtho(r: number, cx: number, cy: number, w: number, h: number): Float32Array {
     const sx = 2 * r / w, sy = 2 * r / h;
     return new Float32Array([
-        sx, 0,    0,     0,              // col 0
-        0,  sy,   0,     0,              // col 1
-        0,  0,   -0.5,   0,              // col 2
-        2 * cx / w - 1, 1 - 2 * cy / h, 0, 1, // col 3
+        sx, 0,   0,    0,
+        0,  sy,  0,    0,
+        0,  0,  -0.5,  0,
+        2 * cx / w - 1, 1 - 2 * cy / h, 0, 1,
     ]);
 }
 
@@ -132,10 +128,10 @@ function buildRotMat(rotY: number, rotX: number): Float32Array {
     const cy = Math.cos(rotY), sy = Math.sin(rotY);
     const cx = Math.cos(rotX), sx = Math.sin(rotX);
     return new Float32Array([
-        cy,       sx * sy,  -cx * sy, 0, // col 0
-        0,        cx,        sx,      0, // col 1
-        sy,      -sx * cy,   cx * cy, 0, // col 2
-        0,        0,         0,       1, // col 3
+        cy,      sx * sy,  -cx * sy, 0,
+        0,       cx,        sx,      0,
+        sy,     -sx * cy,   cx * cy, 0,
+        0,       0,         0,       1,
     ]);
 }
 
@@ -146,13 +142,10 @@ function buildSunVec(sunLat: number, sunLng: number): Float32Array {
     return new Float32Array([-sp * Math.cos(theta), cp, sp * Math.sin(theta)]);
 }
 
-// ─── Sphere mesh (64 × 32 lat/lng grid) ──────────────────────────────────────
-
 function buildSphere(lngSegs: number, latSegs: number): { verts: Float32Array; idx: Uint16Array } {
     const D = Math.PI / 180;
     const verts: number[] = [];
     const idx: number[] = [];
-
     for (let li = 0; li <= latSegs; li++) {
         const lat = 90 - li * 180 / latSegs;
         const phi = (90 - lat) * D;
@@ -162,7 +155,7 @@ function buildSphere(lngSegs: number, latSegs: number): { verts: Float32Array; i
             const lng = -180 + gi * 360 / lngSegs;
             const theta = (lng + 180) * D;
             const st = Math.sin(theta), ct = Math.cos(theta);
-            verts.push(-sp * ct, cp, sp * st, gi / lngSegs, v); // pos(3) + uv(2)
+            verts.push(-sp * ct, cp, sp * st, gi / lngSegs, v);
         }
     }
     for (let li = 0; li < latSegs; li++) {
@@ -173,8 +166,6 @@ function buildSphere(lngSegs: number, latSegs: number): { verts: Float32Array; i
     }
     return { verts: new Float32Array(verts), idx: new Uint16Array(idx) };
 }
-
-// ─── GL helpers ───────────────────────────────────────────────────────────────
 
 function compileShader(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
     const s = gl.createShader(type)!;
@@ -199,8 +190,6 @@ function loc(gl: WebGL2RenderingContext, p: WebGLProgram, n: string): WebGLUnifo
     return gl.getUniformLocation(p, n)!;
 }
 
-// ─── State ────────────────────────────────────────────────────────────────────
-
 export interface WebGLGlobeState {
     gl: WebGL2RenderingContext;
     w: number; h: number;
@@ -211,14 +200,11 @@ export interface WebGLGlobeState {
     borderBuf: WebGLBuffer | null; borderCount: number;
     gridBuf: WebGLBuffer | null; gridCount: number;
     lightBuf: WebGLBuffer | null; lightCount: number;
-    // Cached uniform locations
     uSphere: { rot: WebGLUniformLocation; proj: WebGLUniformLocation; sun: WebGLUniformLocation; land: WebGLUniformLocation };
     uLine: { rot: WebGLUniformLocation; proj: WebGLUniformLocation; zOff: WebGLUniformLocation; color: WebGLUniformLocation };
-    uPts: { rot: WebGLUniformLocation; proj: WebGLUniformLocation; sun: WebGLUniformLocation; twinkle: WebGLUniformLocation };
+    uPts: { rot: WebGLUniformLocation; proj: WebGLUniformLocation; sun: WebGLUniformLocation; twinkle: WebGLUniformLocation; scale: WebGLUniformLocation };
     aLine: number; aPts: number; aPtsSize: number; aPtsCol: number;
 }
-
-// ─── Init ─────────────────────────────────────────────────────────────────────
 
 export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLGlobeState | null {
     const gl = canvas.getContext('webgl2', {
@@ -231,13 +217,12 @@ export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLG
     gl.viewport(0, 0, w, h);
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    // No CULL_FACE — rely on in-shader discard (v_camZ < 0) to hide back hemisphere.
 
     const sphereProg = makeProgram(gl, SPHERE_VERT, SPHERE_FRAG);
     const lineProg   = makeProgram(gl, LINE_VERT,   LINE_FRAG);
     const ptsProg    = makeProgram(gl, POINTS_VERT,  POINTS_FRAG);
 
-    // Sphere VAO — static, never rebuilt
+    // sphere VAO — static, never rebuilt
     const { verts, idx } = buildSphere(64, 32);
     const sphereVAO = gl.createVertexArray()!;
     gl.bindVertexArray(sphereVAO);
@@ -256,10 +241,9 @@ export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLG
     const sphereIdxBuf = gl.createBuffer()!;
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIdxBuf);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
-
     gl.bindVertexArray(null);
 
-    // Placeholder 1×1 RGBA texture (alpha=0 → all ocean) until geofeatures arrive.
+    // placeholder 1×1 texture (alpha=0 = all ocean) until geo features arrive
     const landTex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, landTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
@@ -291,6 +275,7 @@ export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLG
             proj:    loc(gl, ptsProg, 'u_proj'),
             sun:     loc(gl, ptsProg, 'u_sun'),
             twinkle: loc(gl, ptsProg, 'u_twinkle'),
+            scale:   loc(gl, ptsProg, 'u_scale'),
         },
         aLine:    gl.getAttribLocation(lineProg, 'a_pos'),
         aPts:     gl.getAttribLocation(ptsProg, 'a_pos'),
@@ -304,14 +289,9 @@ export function resizeWebGL(s: WebGLGlobeState, w: number, h: number): void {
     s.gl.viewport(0, 0, w, h);
 }
 
-// ─── Geo data uploads (once per geofeatures message) ─────────────────────────
-
-// Bake all country polygons into a 2048×1024 equirectangular RGBA8 texture.
-// Alpha=1 for land (white fill), alpha=0 for ocean (clearRect). Sampled as .a in SPHERE_FRAG.
-export function uploadLandTexture(
-    s: WebGLGlobeState,
-    features: GeoFeature[],
-): void {
+// Bakes all country polygons into a 4096×2048 equirectangular RGBA8 texture.
+// Alpha=1 for land, alpha=0 for ocean. Sampled as .a in SPHERE_FRAG.
+export function uploadLandTexture(s: WebGLGlobeState, features: GeoFeature[]): void {
     const { gl } = s;
     const W = 4096, H = 2048;
     const offscreen = new OffscreenCanvas(W, H);
@@ -325,8 +305,7 @@ export function uploadLandTexture(
         for (const ring of feature.rings) {
             if (ring.length < 3) continue;
 
-            // Pre-normalise longitudes: each step stays within 180° of the previous so
-            // that lineTo never draws the short cross-canvas route across the anti-meridian.
+            // Pre-normalise longitudes so lineTo never takes the short route across the antimeridian
             const nLngs: number[] = [ring[0][0]];
             for (let i = 1; i < ring.length; i++) {
                 let lng = ring[i][0];
@@ -337,9 +316,7 @@ export function uploadLandTexture(
             let minNL = nLngs[0], maxNL = nLngs[0];
             for (const l of nLngs) { if (l < minNL) minNL = l; if (l > maxNL) maxNL = l; }
 
-            // A ring spanning > 300° of longitude encircles a pole.  The equirectangular
-            // canvas doesn't naturally close around the pole, so we add two extra corner
-            // points at the canvas top (north pole) or bottom (south pole) edge.
+            // Rings spanning > 300° of longitude encircle a pole; add corner points to close them
             let poleY = -1;
             if (maxNL - minNL > 300) {
                 let latSum = 0;
@@ -347,31 +324,25 @@ export function uploadLandTexture(
                 poleY = latSum / ring.length < 0 ? H : 0;
             }
 
-            // Draw 3× (dx = 0, +W, −W) so anti-meridian-crossing rings fill both sides.
+            // Draw 3× (dx = 0, +W, −W) so antimeridian rings fill both sides
             for (const dx of [0, W, -W]) {
                 path.moveTo((nLngs[0] + 180) / 360 * W + dx, (90 - ring[0][1]) / 180 * H);
                 for (let i = 1; i < ring.length; i++) {
                     path.lineTo((nLngs[i] + 180) / 360 * W + dx, (90 - ring[i][1]) / 180 * H);
                 }
                 if (poleY >= 0) {
-                    // Sweep to the canvas edge that contains the pole, then back, so
-                    // closePath encloses the polar cap instead of leaving it as a hole.
                     path.lineTo((maxNL + 180) / 360 * W + dx, poleY);
                     path.lineTo((minNL + 180) / 360 * W + dx, poleY);
                 }
                 path.closePath();
             }
         }
-        ctx.fill(path); // nonzero: double-covered edge pixels stay filled, no holes
+        ctx.fill(path);
     }
 
-    // ImageData is the safest TexImageSource in workers: no DOM dependency, no type hacks.
-    // Row 0 of ImageData (canvas y=0, lat 90°) → texture t=0 — matches sphere UV v=0 at north pole.
     const imgData = ctx.getImageData(0, 0, W, H);
-    // Count land pixels for diagnostics; alpha=255 means land was drawn.
     let landPx = 0;
     for (let i = 3; i < imgData.data.length; i += 4) if (imgData.data[i]) landPx++;
-    // Relay to main thread so it shows in the normal DevTools console (not worker console).
     try { (self as unknown as { postMessage: (m: unknown) => void }).postMessage({ type: 'debug', msg: `land texture: ${features.length} features, ${landPx} land px` }); } catch {}
 
     if (s.landTex) gl.deleteTexture(s.landTex);
@@ -387,8 +358,7 @@ export function uploadLandTexture(
     s.landTex = tex;
 }
 
-// Country borders as GL_LINES — one pair per ring edge.
-// Uses precomputed 3D vecs to avoid re-running latLngToVec3 trig.
+// Country borders as GL_LINES — one segment per ring edge
 export function uploadBorderData(s: WebGLGlobeState, features: PrecomputedFeature[]): void {
     const { gl } = s;
     const segs: number[] = [];
@@ -410,7 +380,6 @@ export function uploadBorderData(s: WebGLGlobeState, features: PrecomputedFeatur
     s.borderBuf = buf; s.borderCount = segs.length / 3;
 }
 
-// Grid as GL_LINES from precomputed 3D vecs.
 export function uploadGridData(s: WebGLGlobeState, grid: PrecomputedGrid): void {
     const { gl } = s;
     const segs: number[] = [];
@@ -429,7 +398,7 @@ export function uploadGridData(s: WebGLGlobeState, grid: PrecomputedGrid): void 
     s.gridBuf = buf; s.gridCount = segs.length / 3;
 }
 
-// City lights as GL_POINTS — interleaved [vx, vy, vz, dotSize, r, g, b] per light.
+// Interleaved [vx, vy, vz, dotSize, r, g, b] per light
 export function uploadLightData(s: WebGLGlobeState, lights: PrecomputedLight[]): void {
     const { gl } = s;
     const data = new Float32Array(lights.length * 7);
@@ -449,8 +418,6 @@ export function uploadLightData(s: WebGLGlobeState, lights: PrecomputedLight[]):
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     s.lightBuf = buf; s.lightCount = lights.length;
 }
-
-// ─── Per-frame render ─────────────────────────────────────────────────────────
 
 export interface WebGLFrameParams {
     rotY: number; rotX: number;
@@ -472,7 +439,7 @@ export function renderWebGLFrame(s: WebGLGlobeState, p: WebGLFrameParams): void 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // ── Sphere ────────────────────────────────────────────────────────────────
+    // sphere
     gl.useProgram(s.sphereProg);
     gl.uniformMatrix4fv(s.uSphere.rot,  false, rotMat);
     gl.uniformMatrix4fv(s.uSphere.proj, false, projMat);
@@ -480,21 +447,17 @@ export function renderWebGLFrame(s: WebGLGlobeState, p: WebGLFrameParams): void 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, s.landTex);
     gl.uniform1i(s.uSphere.land, 0);
-
     gl.bindVertexArray(s.sphereVAO);
     gl.drawElements(gl.TRIANGLES, s.sphereIdxCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(null);
 
-    // Lines rely on in-shader v_camZ < 0 discard for back-face removal.
-    // Disable depth test: z-fighting with the sphere surface can cause lines to disappear
-    // even with the z-offset, depending on driver depth precision and buffer format.
+    // lines: disable depth test to avoid z-fighting with the sphere surface
     gl.disable(gl.DEPTH_TEST);
     gl.useProgram(s.lineProg);
     gl.uniformMatrix4fv(s.uLine.rot,  false, rotMat);
     gl.uniformMatrix4fv(s.uLine.proj, false, projMat);
-    gl.uniform1f(s.uLine.zOff, 0); // no z-offset needed without depth test
+    gl.uniform1f(s.uLine.zOff, 0);
 
-    // ── Borders ───────────────────────────────────────────────────────────────
     if (s.borderBuf && s.borderCount > 0) {
         gl.uniform4f(s.uLine.color, 0.294, 0.569, 0.314, 0.55);
         gl.bindBuffer(gl.ARRAY_BUFFER, s.borderBuf);
@@ -504,7 +467,6 @@ export function renderWebGLFrame(s: WebGLGlobeState, p: WebGLFrameParams): void 
         gl.disableVertexAttribArray(s.aLine);
     }
 
-    // ── Grid ──────────────────────────────────────────────────────────────────
     if (s.gridBuf && s.gridCount > 0) {
         gl.uniform4f(s.uLine.color, 1, 1, 1, 0.13);
         gl.bindBuffer(gl.ARRAY_BUFFER, s.gridBuf);
@@ -514,15 +476,16 @@ export function renderWebGLFrame(s: WebGLGlobeState, p: WebGLFrameParams): void 
         gl.disableVertexAttribArray(s.aLine);
     }
 
-    gl.enable(gl.DEPTH_TEST); // restore for city lights
-
-    // ── City lights ───────────────────────────────────────────────────────────
+    // city lights — additive blend, overlapping halos accumulate into bright hotspots
     if (s.lightBuf && s.lightCount > 0) {
         gl.useProgram(s.ptsProg);
         gl.uniformMatrix4fv(s.uPts.rot,  false, rotMat);
         gl.uniformMatrix4fv(s.uPts.proj, false, projMat);
         gl.uniform3fv(s.uPts.sun, sunVec);
         gl.uniform1f(s.uPts.twinkle, Math.sin(p.frame * 0.04) * 0.12);
+        gl.uniform1f(s.uPts.scale, p.r);
+        gl.depthMask(false);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, s.lightBuf);
         gl.enableVertexAttribArray(s.aPts);
@@ -531,11 +494,13 @@ export function renderWebGLFrame(s: WebGLGlobeState, p: WebGLFrameParams): void 
         gl.vertexAttribPointer(s.aPtsSize, 1, gl.FLOAT, false, 28, 12);
         gl.enableVertexAttribArray(s.aPtsCol);
         gl.vertexAttribPointer(s.aPtsCol, 3, gl.FLOAT, false, 28, 16);
-
         gl.drawArrays(gl.POINTS, 0, s.lightCount);
-
         gl.disableVertexAttribArray(s.aPts);
         gl.disableVertexAttribArray(s.aPtsSize);
         gl.disableVertexAttribArray(s.aPtsCol);
+
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.depthMask(true);
+        gl.enable(gl.DEPTH_TEST);
     }
 }

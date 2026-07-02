@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
+import { useAuth } from '@/hooks/useAuth';
 import Hero from '@/app/src/sections/hero';
 import AboutMe from '@/app/src/sections/about_me';
 import Projects from '@/app/src/sections/projects';
@@ -18,6 +19,7 @@ export default function Home() {
     const projects = useSelector((state: RootState) => state.projects);
     const experiences = useSelector((state: RootState) => state.experiences);
     const [loaded, setLoaded] = useState(false);
+    const { user } = useAuth();
 
     useEffect(() => {
         setLoaded(aboutMe.loaded && technologies.loaded && projects.loaded && experiences.loaded);
@@ -60,7 +62,7 @@ export default function Home() {
             <main className='w-full'>
                 {!loaded && <LoadingScreen />}
                 <Hero />
-                <VisitorGlobe />
+                {user && <VisitorGlobe />}
                 <AboutMe />
                 <Experience />
                 <Technologies />
