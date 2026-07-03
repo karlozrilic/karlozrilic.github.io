@@ -11,6 +11,7 @@
 
 @import "./components/toaster.css";
 @import "./components/editor.css";
+@import "./components/globe.css";
 
 @custom-variant dark (&:is(.dark *));
 

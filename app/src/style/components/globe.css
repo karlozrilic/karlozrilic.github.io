@@ -1,0 +1,345 @@
+.globe-root {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.globe-canvas-area {
+    width: 100%;
+    flex: 1;
+    min-height: 92dvh; /* keeps skeleton visible before canvas dimensions are measured */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.globe-container {
+    position: relative;
+	max-height: 95dvh;
+	min-height: 95dvh;
+	max-width: 100dvw;
+    /* width and height are set inline from the measured size */
+}
+
+.globe-container--hidden {
+    display: none;
+}
+
+.globe-country-label {
+    position: absolute;
+    bottom: 4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 9999px;
+    padding: 0.2rem 0.75rem;
+    color: rgba(251, 191, 36, 0.95);
+    font-size: 0.75rem;
+    font-weight: 500;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.globe-zoom-button--icon {
+    font-size: 13px;
+}
+
+.globe-canvas {
+    display: block;
+    cursor: grab;
+}
+
+.globe-canvas:active {
+    cursor: grabbing;
+}
+
+.globe-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(4, 10, 18, 0.95);
+    border: 0.5px solid rgba(99, 179, 237, 0.3);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    color: #e2e8f0;
+    opacity: 0;
+    transition: opacity 0.12s;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.globe-tooltip--visible {
+  	opacity: 1;
+}
+
+.globe-tooltip__city {
+	font-weight: 500;
+	font-size: 13px;
+	margin-bottom: 2px;
+}
+
+.globe-tooltip__meta {
+	color: rgba(99, 179, 237, 0.7);
+	font-family: monospace;
+	font-size: 11px;
+}
+
+.globe-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: auto;
+}
+
+.globe-zoom-group {
+	display: flex;
+	align-items: center;
+	background: rgba(8, 18, 30, 0.85);
+	border: 0.5px solid rgba(99, 179, 237, 0.18);
+	border-radius: 20px;
+	overflow: hidden;
+}
+
+.globe-zoom-button {
+	background: none;
+	border: none;
+	color: rgba(99, 179, 237, 0.8);
+	cursor: pointer;
+	font-size: 17px;
+	padding: 6px 13px;
+	transition: background 0.12s;
+}
+
+.globe-zoom-button:hover {
+  	background: rgba(99, 179, 237, 0.1);
+}
+
+.globe-zoom-label {
+	font-size: 12px;
+	color: rgba(99, 179, 237, 0.5);
+	font-family: monospace;
+	min-width: 34px;
+	text-align: center;
+}
+
+.globe-zoom-divider {
+	width: 1px;
+	height: 18px;
+	background: rgba(99, 179, 237, 0.15);
+}
+
+.globe-solar-info {
+	font-size: 11px;
+	color: rgba(99, 179, 237, 0.5);
+	font-family: monospace;
+	background: rgba(8, 18, 30, 0.85);
+	border: 0.5px solid rgba(99, 179, 237, 0.18);
+	border-radius: 20px;
+	padding: 6px 13px;
+}
+
+.globe-stats-bar {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.globe-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1px;
+}
+
+.globe-stat__number {
+	font-size: 20px;
+	font-weight: 500;
+	color: var(--text-primary, #e2e8f0);
+	font-variant-numeric: tabular-nums;
+}
+
+.globe-stat__number--live {
+	color: #63b3ed;
+}
+
+.globe-stat__label {
+	font-size: 11px;
+	color: var(--text-muted, #718096);
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+.globe-stat-divider {
+	width: 1px;
+	height: 28px;
+	background: var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.globe-chip-row {
+    position: absolute;
+    bottom: 20px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    max-height: calc(100% - 80px);
+    overflow-y: auto;
+    z-index: 5;
+    pointer-events: auto;
+}
+
+.globe-chip {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	background: rgba(5, 12, 20, 0.6);
+	border: 0.5px solid rgba(99, 179, 237, 0.15);
+	border-radius: 20px;
+	padding: 4px 10px;
+	font-size: 12px;
+	color: rgba(226, 232, 240, 0.7);
+	cursor: pointer;
+	transition: border-color 0.15s, background 0.15s;
+}
+
+.globe-chip:hover {
+	border-color: rgba(99, 179, 237, 0.45);
+	background: rgba(99, 179, 237, 0.07);
+}
+
+.globe-chip__dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.globe-chip__dot--live {
+  	background: #63b3ed;
+}
+
+.globe-chip__dot--visited {
+  	background: #f6ad55;
+}
+
+.globe-chip__count {
+	color: var(--text-muted, #718096);
+	margin-left: 2px;
+}
+
+.globe-chip__live-badge {
+	font-size: 10px;
+	background: rgba(99, 179, 237, 0.15);
+	color: #63b3ed;
+	padding: 1px 5px;
+	border-radius: 10px;
+	margin-left: 2px;
+}
+
+.globe-chip--user {
+	border-color: rgba(104, 211, 145, 0.3);
+}
+
+.globe-chip--user:hover {
+	border-color: rgba(104, 211, 145, 0.55);
+	background: rgba(104, 211, 145, 0.07);
+}
+
+.globe-chip__dot--user {
+	background: #68d391;
+	box-shadow: 0 0 0 2px rgba(104, 211, 145, 0.25);
+}
+
+.globe-chip__you-badge {
+	font-size: 10px;
+	background: rgba(104, 211, 145, 0.15);
+	color: #68d391;
+	padding: 1px 5px;
+	border-radius: 10px;
+	margin-left: 2px;
+}
+
+.globe-tooltip__you {
+	color: #68d391;
+	font-size: 11px;
+}
+
+
+.globe-skeleton {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* No height: 100% — globe-canvas-area is a flex container that centers
+	   this element vertically via align-items: center. */
+}
+
+/* width: 87% would be relative to container WIDTH, but the globe uses
+   min(width, height) × 0.87 — on wide layouts that makes the skeleton huge.
+   max-width: 60dvh caps the circle to 60 % of viewport height, which
+   closely tracks the height-constrained globe diameter without JS. */
+.globe-skeleton__circle {
+	width: 87%;
+	max-width: 60dvh;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	background: radial-gradient(circle at 35% 35%, #1a3a5c, #0d2240, #060f1e);
+	box-shadow: 0 0 0 1px rgba(99, 179, 237, 0.35), 0 0 80px rgba(40, 110, 220, 0.25);
+	animation: globe-skeleton-pulse 2.4s ease-in-out infinite;
+	position: relative;
+	overflow: hidden;
+}
+
+.globe-skeleton__circle::before {
+	content: '';
+	position: absolute;
+	inset: -50%;
+	background: conic-gradient(
+		from 45deg,
+		transparent 0%,
+		rgba(80, 160, 255, 0.06) 25%,
+		transparent 50%
+	);
+	animation: globe-skeleton-spin 10s linear infinite;
+}
+
+.globe-skeleton__circle::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	background: linear-gradient(
+		135deg,
+		rgba(80, 140, 255, 0.1) 0%,
+		transparent 40%,
+		transparent 60%,
+		rgba(0, 0, 0, 0.2) 100%
+	);
+}
+
+@keyframes globe-skeleton-pulse {
+	0%, 100% { opacity: 0.5; }
+	50% { opacity: 0.9; }
+}
+
+@keyframes globe-skeleton-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
