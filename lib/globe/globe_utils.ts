@@ -99,26 +99,26 @@ const TWILIGHT_COS_OFFSET = Math.sin(TWILIGHT_HALF_BAND_DEG * DEG_TO_RAD);
 // Greenwich Mean Sidereal Time in degrees — accurate to ~0.1°, good enough for a globe
 export function getGMST(ms: number): number {
     const JD = ms / 86_400_000 + 2_440_587.5;
-    const T = (JD - 2_451_545.0) / 36_525.0;
-    const g = 280.460_618_37
+    const julianCenturies = (JD - 2_451_545.0) / 36_525.0;
+    const gmstDegrees = 280.460_618_37
         + 360.985_647_366_29 * (JD - 2_451_545.0)
-        + 0.000_387_933 * T * T
-        - (T * T * T) / 38_710_000;
-    return ((g % 360) + 360) % 360;
+        + 0.000_387_933 * julianCenturies * julianCenturies
+        - (julianCenturies * julianCenturies * julianCenturies) / 38_710_000;
+    return ((gmstDegrees % 360) + 360) % 360;
 }
 
 // Sub-solar point — the lat/lng directly under the sun at a given timestamp
 export function getSolarPosition(ms: number): SolarPosition {
     const JD = ms / 86_400_000 + 2_440_587.5;
-    const n = JD - 2_451_545.0;
-    const L = (280.46 + 0.985_647_4 * n) % 360;
-    const g = ((357.528 + 0.985_600_3 * n) % 360) * DEG_TO_RAD;
-    const lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * DEG_TO_RAD;
-    const eps = (23.439 - 0.000_000_4 * n) * DEG_TO_RAD;
+    const daysSinceJ2000 = JD - 2_451_545.0;
+    const sunMeanLong = (280.46 + 0.985_647_4 * daysSinceJ2000) % 360;
+    const sunMeanAnomaly = ((357.528 + 0.985_600_3 * daysSinceJ2000) % 360) * DEG_TO_RAD;
+    const eclipticLng = (sunMeanLong + 1.915 * Math.sin(sunMeanAnomaly) + 0.02 * Math.sin(2 * sunMeanAnomaly)) * DEG_TO_RAD;
+    const obliquity = (23.439 - 0.000_000_4 * daysSinceJ2000) * DEG_TO_RAD;
 
-    const sunLat = Math.asin(Math.sin(eps) * Math.sin(lam)) * RAD_TO_DEG;
-    const RA = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)) * RAD_TO_DEG;
-    const sunLng = ((RA - getGMST(ms)) % 360 + 540) % 360 - 180;
+    const sunLat = Math.asin(Math.sin(obliquity) * Math.sin(eclipticLng)) * RAD_TO_DEG;
+    const rightAscension = Math.atan2(Math.cos(obliquity) * Math.sin(eclipticLng), Math.cos(eclipticLng)) * RAD_TO_DEG;
+    const sunLng = ((rightAscension - getGMST(ms)) % 360 + 540) % 360 - 180;
 
     return { sunLat, sunLng };
 }
@@ -149,26 +149,26 @@ export function latLngToVec3(lat: number, lng: number): Vec3 {
 
 // Y rotation then X rotation — same camera transform applied to every world point
 export function applyRotation(vec: Vec3, rotY: number, rotX: number): Vec3 {
-    const [x, y, z] = vec;
-    const x1 = x * Math.cos(rotY) + z * Math.sin(rotY);
-    const z1 = -x * Math.sin(rotY) + z * Math.cos(rotY);
-    const y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
-    const z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
-    return [x1, y2, z2];
+    const [vecX, vecY, vecZ] = vec;
+    const xAfterRotY = vecX * Math.cos(rotY) + vecZ * Math.sin(rotY);
+    const zAfterRotY = -vecX * Math.sin(rotY) + vecZ * Math.cos(rotY);
+    const yAfterRotX = vecY * Math.cos(rotX) - zAfterRotY * Math.sin(rotX);
+    const zAfterRotX = vecY * Math.sin(rotX) + zAfterRotY * Math.cos(rotX);
+    return [xAfterRotY, yAfterRotX, zAfterRotX];
 }
 
 export function projectLatLng(
     lat: number, lng: number,
     rotY: number, rotX: number,
-    r: number, cx: number, cy: number,
+    radius: number, cx: number, cy: number,
 ): Projected {
-    const [x, y, z] = applyRotation(latLngToVec3(lat, lng), rotY, rotX);
-    return { sx: cx + x * r, sy: cy - y * r, z: z * r };
+    const [vecX, vecY, vecZ] = applyRotation(latLngToVec3(lat, lng), rotY, rotX);
+    return { sx: cx + vecX * radius, sy: cy - vecY * radius, z: vecZ * radius };
 }
 
 // Fades out as a point approaches the horizon so pins don't pop in/out
-export function getHorizonAlpha(z: number, r: number): number {
-    return Math.max(0, Math.min(1, (z / r - 0.04) / 0.10));
+export function getHorizonAlpha(cameraZ: number, radius: number): number {
+    return Math.max(0, Math.min(1, (cameraZ / radius - 0.04) / 0.10));
 }
 
 // Dividing by zoom means dragging at high zoom moves the globe less per pixel
@@ -192,31 +192,31 @@ export function buildFlyState(
     const toOffsetY = currentOffsetY + delta;
 
     // rotX that vertically centres the target city after the Y rotation
-    const [wx, wy, wz] = latLngToVec3(targetLat, targetLng);
-    const z1 = -wx * Math.sin(targetRY) + wz * Math.cos(targetRY);
-    const toRotX = Math.max(-1.3, Math.min(1.3, Math.atan2(wy, z1)));
+    const [targetVecX, targetVecY, targetVecZ] = latLngToVec3(targetLat, targetLng);
+    const zAfterRotY = -targetVecX * Math.sin(targetRY) + targetVecZ * Math.cos(targetRY);
+    const toRotX = Math.max(-1.3, Math.min(1.3, Math.atan2(targetVecY, zAfterRotY)));
 
     return { active: true, t: 0, fromOffsetY: currentOffsetY, fromRotX: currentRotX, toOffsetY, toRotX };
 }
 
 export function stepFlyAnimation(state: FlyState, dt = 0.03): { offsetY: number; rotX: number; active: boolean } {
-    const t = Math.min(1, state.t + dt);
-    const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease in-out quadratic
+    const progress = Math.min(1, state.t + dt);
+    const eased = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress; // ease in-out quadratic
     return {
         offsetY: state.fromOffsetY + (state.toOffsetY - state.fromOffsetY) * eased,
         rotX:    state.fromRotX   + (state.toRotX   - state.fromRotX)   * eased,
-        active: t < 1,
+        active: progress < 1,
     };
 }
 
-// Decodes one TopoJSON arc into [x, y] quantized points; negative index = reversed
+// Decodes one TopoJSON arc into [lng, lat] quantized points; negative index = reversed
 function decodeArc(index: number, arcs: [number, number][][]): [number, number][] {
     const reversed = index < 0;
     const arc = arcs[reversed ? ~index : index];
-    let x = 0, y = 0;
+    let accX = 0, accY = 0;
     const points = arc.map(([dx, dy]): [number, number] => {
-        x += dx; y += dy;
-        return [x, y];
+        accX += dx; accY += dy;
+        return [accX, accY];
     });
     if (reversed) points.reverse();
     return points;
@@ -267,37 +267,37 @@ export async function fetchGeoFeatures(): Promise<GeoFeature[]> {
 export function hitTestPins(mx: number, my: number, pins: PinPosition[], minAlpha = 0.3): PinPosition | undefined {
     for (const pin of pins) {
         if (pin.horizonAlpha < minAlpha) continue;
-        const dx = mx - pin.sx, dy = my - pin.sy;
-        if (dx * dx + dy * dy < pin.hitRadius * pin.hitRadius) return pin;
+        const distX = mx - pin.sx, distY = my - pin.sy;
+        if (distX * distX + distY * distY < pin.hitRadius * pin.hitRadius) return pin;
     }
     return undefined;
 }
 
-export function isInsideGlobe(mx: number, my: number, cx: number, cy: number, r: number): boolean {
-    const dx = mx - cx, dy = my - cy;
-    return dx * dx + dy * dy <= r * r;
+export function isInsideGlobe(mx: number, my: number, cx: number, cy: number, radius: number): boolean {
+    const distX = mx - cx, distY = my - cy;
+    return distX * distX + distY * distY <= radius * radius;
 }
 
 // Unprojects a canvas point back to lat/lng on the globe surface; null if outside the disc
 export function inverseProjectGlobe(
     mx: number, my: number,
     rotY: number, rotX: number,
-    r: number, cx: number, cy: number,
+    radius: number, cx: number, cy: number,
 ): { lat: number; lng: number } | null {
-    const x1 = (mx - cx) / r;
-    const y2 = -(my - cy) / r;
-    const d2 = x1 * x1 + y2 * y2;
-    if (d2 > 1) return null;
-    const z2 = Math.sqrt(1 - d2);
+    const normX = (mx - cx) / radius;
+    const normY = -(my - cy) / radius;
+    const distSq = normX * normX + normY * normY;
+    if (distSq > 1) return null;
+    const sphereZ = Math.sqrt(1 - distSq);
     const cosRX = Math.cos(rotX), sinRX = Math.sin(rotX);
-    const y  = y2 * cosRX + z2 * sinRX;
-    const z1 = -y2 * sinRX + z2 * cosRX;
+    const worldY = normY * cosRX + sphereZ * sinRX;
+    const rotatedZ = -normY * sinRX + sphereZ * cosRX;
     const cosRY = Math.cos(rotY), sinRY = Math.sin(rotY);
-    const x = x1 * cosRY - z1 * sinRY;
-    const z = x1 * sinRY + z1 * cosRY;
-    const rawLng = Math.atan2(z, -x) * RAD_TO_DEG - 180;
+    const worldX = normX * cosRY - rotatedZ * sinRY;
+    const worldZ = normX * sinRY + rotatedZ * cosRY;
+    const rawLng = Math.atan2(worldZ, -worldX) * RAD_TO_DEG - 180;
     return {
-        lat: Math.asin(Math.max(-1, Math.min(1, y))) * RAD_TO_DEG,
+        lat: Math.asin(Math.max(-1, Math.min(1, worldY))) * RAD_TO_DEG,
         lng: rawLng < -180 ? rawLng + 360 : rawLng,
     };
 }
@@ -313,28 +313,28 @@ export function inverseProjectGlobe(
 let _vx: Float64Array = new Float64Array(0);
 let _vy: Float64Array = new Float64Array(0);
 let _vz: Float64Array = new Float64Array(0);
-function ensureVecBufs(n: number): void {
-    if (_vx.length < n) { _vx = new Float64Array(n); _vy = new Float64Array(n); _vz = new Float64Array(n); }
+function ensureVecBufs(size: number): void {
+    if (_vx.length < size) { _vx = new Float64Array(size); _vy = new Float64Array(size); _vz = new Float64Array(size); }
 }
 
 export function hitTestCountry(lat: number, lng: number, features: GeoFeature[]): number | null {
     const phi = (90 - lat) * DEG_TO_RAD, theta = (lng + 180) * DEG_TO_RAD;
     const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
-    const px = -sinPhi * Math.cos(theta);
-    const py =  cosPhi;
-    const pz =  sinPhi * Math.sin(theta);
+    const testX = -sinPhi * Math.cos(theta);
+    const testY = cosPhi;
+    const testZ = sinPhi * Math.sin(theta);
 
-    // n1 = P × [0, 0, −1] = [−py, px, 0]
-    const n1x = -py, n1y = px;
+    // half-plane normal: testPoint × [0, 0, −1] = [−testY, testX, 0]
+    const planeNormX = -testY, planeNormY = testX;
 
     let bestIdx: number | null = null;
     let bestArea = Infinity;
 
-    for (let fi = 0; fi < features.length; fi++) {
+    for (let featIdx = 0; featIdx < features.length; featIdx++) {
         // lat bounding box pre-filter — fast, no trig, antimeridian-safe
         let fMinLat = Infinity, fMaxLat = -Infinity;
         let fMinLng = Infinity, fMaxLng = -Infinity;
-        for (const ring of features[fi].rings) {
+        for (const ring of features[featIdx].rings) {
             for (const pt of ring) {
                 if (pt[1] < fMinLat) fMinLat = pt[1];
                 if (pt[1] > fMaxLat) fMaxLat = pt[1];
@@ -346,36 +346,36 @@ export function hitTestCountry(lat: number, lng: number, features: GeoFeature[])
 
         // 3D great-circle crossing count
         let crossings = 0;
-        for (const ring of features[fi].rings) {
-            const n = ring.length;
-            if (n < 3) continue;
-            ensureVecBufs(n);
+        for (const ring of features[featIdx].rings) {
+            const ringLen = ring.length;
+            if (ringLen < 3) continue;
+            ensureVecBufs(ringLen);
 
-            for (let k = 0; k < n; k++) {
-                const p2 = (90 - ring[k][1]) * DEG_TO_RAD;
-                const t2 = (ring[k][0] + 180) * DEG_TO_RAD;
-                const sp2 = Math.sin(p2), cp2 = Math.cos(p2);
-                _vx[k] = -sp2 * Math.cos(t2);
-                _vy[k] =  cp2;
-                _vz[k] =  sp2 * Math.sin(t2);
+            for (let k = 0; k < ringLen; k++) {
+                const vertPolar = (90 - ring[k][1]) * DEG_TO_RAD;
+                const vertAzimuth = (ring[k][0] + 180) * DEG_TO_RAD;
+                const sinPolar = Math.sin(vertPolar), cosPolar = Math.cos(vertPolar);
+                _vx[k] = -sinPolar * Math.cos(vertAzimuth);
+                _vy[k] = cosPolar;
+                _vz[k] = sinPolar * Math.sin(vertAzimuth);
             }
 
-            for (let i = 0, j = n - 1; i < n; j = i++) {
-                const ax = _vx[j], ay = _vy[j], az = _vz[j];
-                const bx = _vx[i], by = _vy[i], bz = _vz[i];
-                const d1a = n1x * ax + n1y * ay;
-                const d1b = n1x * bx + n1y * by;
-                if (d1a * d1b >= 0) continue;
-                const n2x = ay * bz - az * by;
-                const n2y = az * bx - ax * bz;
-                const n2z = ax * by - ay * bx;
-                if ((n2x * px + n2y * py + n2z * pz) * (-n2z) < 0) crossings++;
+            for (let i = 0, j = ringLen - 1; i < ringLen; j = i++) {
+                const prevX = _vx[j], prevY = _vy[j], prevZ = _vz[j];
+                const currX = _vx[i], currY = _vy[i], currZ = _vz[i];
+                const dotEdgeA = planeNormX * prevX + planeNormY * prevY;
+                const dotEdgeB = planeNormX * currX + planeNormY * currY;
+                if (dotEdgeA * dotEdgeB >= 0) continue;
+                const crossX = prevY * currZ - prevZ * currY;
+                const crossY = prevZ * currX - prevX * currZ;
+                const crossZ = prevX * currY - prevY * currX;
+                if ((crossX * testX + crossY * testY + crossZ * testZ) * (-crossZ) < 0) crossings++;
             }
         }
 
         if (crossings % 2 !== 1) continue;
         const area = (fMaxLat - fMinLat) * (fMaxLng - fMinLng);
-        if (area < bestArea) { bestArea = area; bestIdx = fi; }
+        if (area < bestArea) { bestArea = area; bestIdx = featIdx; }
     }
 
     return bestIdx;

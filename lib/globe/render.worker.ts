@@ -18,26 +18,26 @@ import {
 import { CITY_LIGHTS } from './globe_data';
 
 // Starfield generated once with a deterministic LCG so it's the same every load
-interface Star { nx: number; ny: number; alpha: number; r: number }
+interface Star { nx: number; ny: number; alpha: number; radius: number }
 const STARS: Star[] = (() => {
     const arr: Star[] = [];
-    let s = 0xdeadbeef;
-    const rand = (): number => { s = (Math.imul(s, 1664525) + 1013904223) | 0; return (s >>> 0) / 0xFFFFFFFF; };
+    let seed = 0xdeadbeef;
+    const rand = (): number => { seed = (Math.imul(seed, 1664525) + 1013904223) | 0; return (seed >>> 0) / 0xFFFFFFFF; };
     for (let i = 0; i < 900; i++) {
         arr.push({
             nx: rand(), ny: rand(),
             alpha: 0.35 + rand() * 0.65,
-            r: rand() < 0.12 ? 0.9 + rand() * 1.3 : 0.3 + rand() * 0.55,
+            radius: rand() < 0.12 ? 0.9 + rand() * 1.3 : 0.3 + rand() * 0.55,
         });
     }
     return arr;
 })();
 
-function drawStars(ctx: OffscreenCanvasRenderingContext2D, w: number, h: number): void {
-    for (const st of STARS) {
-        ctx.fillStyle = `rgba(255,255,255,${st.alpha.toFixed(2)})`;
+function drawStars(ctx: OffscreenCanvasRenderingContext2D, width: number, height: number): void {
+    for (const star of STARS) {
+        ctx.fillStyle = `rgba(255,255,255,${star.alpha.toFixed(2)})`;
         ctx.beginPath();
-        ctx.arc(st.nx * w, st.ny * h, st.r, 0, Math.PI * 2);
+        ctx.arc(star.nx * width, star.ny * height, star.radius, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -56,31 +56,31 @@ let precomputedGrid: PrecomputedGrid | null = null;
 let precomputedLights: PrecomputedLight[] = [];
 
 function buildPrecomputed(features: GeoFeature[]): PrecomputedFeature[] {
-    const D = Math.PI / 180;
-    return features.map(f => ({
-        rings: f.rings
+    const degToRad = Math.PI / 180;
+    return features.map(feature => ({
+        rings: feature.rings
             .filter(ring => ring.length >= 3)
             .map(ring => {
-                const n = ring.length;
-                const vecs = new Float32Array(n * 3);
-                for (let i = 0; i < n; i++) {
+                const vertexCount = ring.length;
+                const vecs = new Float32Array(vertexCount * 3);
+                for (let i = 0; i < vertexCount; i++) {
                     const [lng, lat] = ring[i];
-                    const phi = (90 - lat) * D, theta = (lng + 180) * D;
-                    const sp = Math.sin(phi), cp = Math.cos(phi);
-                    vecs[i * 3]     = -sp * Math.cos(theta);
-                    vecs[i * 3 + 1] =  cp;
-                    vecs[i * 3 + 2] =  sp * Math.sin(theta);
+                    const phi = (90 - lat) * degToRad, theta = (lng + 180) * degToRad;
+                    const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+                    vecs[i * 3]     = -sinPhi * Math.cos(theta);
+                    vecs[i * 3 + 1] =  cosPhi;
+                    vecs[i * 3 + 2] =  sinPhi * Math.sin(theta);
                 }
-                let sx = 0, sy = 0, sz = 0;
-                for (let i = 0; i < n; i++) { sx += vecs[i * 3]; sy += vecs[i * 3 + 1]; sz += vecs[i * 3 + 2]; }
-                const len = Math.sqrt(sx * sx + sy * sy + sz * sz);
+                let sumX = 0, sumY = 0, sumZ = 0;
+                for (let i = 0; i < vertexCount; i++) { sumX += vecs[i * 3]; sumY += vecs[i * 3 + 1]; sumZ += vecs[i * 3 + 2]; }
+                const len = Math.sqrt(sumX * sumX + sumY * sumY + sumZ * sumZ);
                 const centroid = len > 0
-                    ? new Float32Array([sx / len, sy / len, sz / len])
+                    ? new Float32Array([sumX / len, sumY / len, sumZ / len])
                     : new Float32Array([0, 1, 0]);
                 let minDot = 1;
-                for (let i = 0; i < n; i++) {
-                    const d = centroid[0] * vecs[i * 3] + centroid[1] * vecs[i * 3 + 1] + centroid[2] * vecs[i * 3 + 2];
-                    if (d < minDot) minDot = d;
+                for (let i = 0; i < vertexCount; i++) {
+                    const dot = centroid[0] * vecs[i * 3] + centroid[1] * vecs[i * 3 + 1] + centroid[2] * vecs[i * 3 + 2];
+                    if (dot < minDot) minDot = dot;
                 }
                 const coneSin = minDot >= 1 ? 0 : Math.sqrt(1 - minDot * minDot);
                 return { vecs, centroid, coneSin };
@@ -90,22 +90,22 @@ function buildPrecomputed(features: GeoFeature[]): PrecomputedFeature[] {
 
 // Animation state
 const ZOOM_LERP_SPEED = 0.10;
-const SPIN_RAMP_MS    = 5000; // ease from 0 → full speed on load
-let spinAngle      = 0;
-let zoom           = 1.0;
-let lastNowMs      = 0;
-let spinStartMs    = 0;
-let initialized    = false;
-let lastSolarMs    = 0;
+const SPIN_RAMP_MS = 5000; // ease from 0 → full speed on load
+let spinAngle = 0;
+let zoom = 1.0;
+let lastNowMs = 0;
+let spinStartMs = 0;
+let initialized = false;
+let lastSolarMs = 0;
 
 // Russia / Canada have thousands of vertices; Path2D rebuild each frame causes jank.
 // Cache the last-built path and the camera state it was built from, rebuild only when
-// the view shifts by more than 1 px (eps = 3/r radians).
+// the view shifts by more than 1 px (eps = 3/radius radians).
 interface SelPathCache {
     path: Path2D;
     selIdx: number;
     rotY: number; rotX: number;
-    r: number; cx: number; cy: number;
+    radius: number; cx: number; cy: number;
 }
 let selPathCache: SelPathCache | null = null;
 
@@ -195,17 +195,17 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
 
         // spin angle + zoom
         if (!initialized) {
-            spinAngle   = getEarthRotY(nowMs);
-            zoom        = targetZoom;
-            lastNowMs   = nowMs;
+            spinAngle = getEarthRotY(nowMs);
+            zoom = targetZoom;
+            lastNowMs = nowMs;
             spinStartMs = nowMs;
             initialized = true;
         } else {
             const elapsed = (nowMs - lastNowMs) / 1000;
             if (rotateEnabled) {
                 // smoothstep ramp from 0→1 over SPIN_RAMP_MS so the globe eases into rotation
-                const t    = Math.min((nowMs - spinStartMs) / SPIN_RAMP_MS, 1);
-                const ramp = t * t * (3 - 2 * t);
+                const rampT = Math.min((nowMs - spinStartMs) / SPIN_RAMP_MS, 1);
+                const ramp = rampT * rampT * (3 - 2 * rampT);
                 spinAngle += SPIN_SPEED_RAD_S * elapsed * ramp;
             } else {
                 spinAngle = frozenEarthBase;
@@ -223,18 +223,18 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
         let solarText: string | undefined;
         if (nowMs - lastSolarMs >= 1000) {
             lastSolarMs = nowMs;
-            const d = new Date(nowMs);
-            const H = d.getUTCHours().toString().padStart(2, '0');
-            const M = d.getUTCMinutes().toString().padStart(2, '0');
-            const S = d.getUTCSeconds().toString().padStart(2, '0');
-            solarText = `☀ ${sunLat >= 0 ? '+' : ''}${sunLat.toFixed(1)}°  ${sunLng >= 0 ? 'E' : 'W'}${Math.abs(sunLng).toFixed(1)}°  UTC ${H}:${M}:${S}`;
+            const date = new Date(nowMs);
+            const hours = date.getUTCHours().toString().padStart(2, '0');
+            const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+            const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+            solarText = `☀ ${sunLat >= 0 ? '+' : ''}${sunLat.toFixed(1)}°  ${sunLng >= 0 ? 'E' : 'W'}${Math.abs(sunLng).toFixed(1)}°  UTC ${hours}:${minutes}:${seconds}`;
         }
 
         // WebGL render
         renderWebGLFrame(glState, {
             rotY, rotX, sunLat, sunLng,
-            r: effectiveRadius, cx, cy,
-            w: width, h: height, frame,
+            radius: effectiveRadius, cx, cy,
+            width, height, frame,
         });
 
         // 2D canvas: background + stars
@@ -252,37 +252,37 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
         mainCtx.drawImage(webglCanvas as unknown as CanvasImageSource, 0, 0, width, height);
 
         // atmosphere glow
-        const r = effectiveRadius;
-        const atm = mainCtx.createRadialGradient(cx, cy, r * 0.97, cx, cy, r * 1.08);
+        const radius = effectiveRadius;
+        const atm = mainCtx.createRadialGradient(cx, cy, radius * 0.97, cx, cy, radius * 1.08);
         atm.addColorStop(0,    'rgba(80,160,255,0)');
         atm.addColorStop(0.30, 'rgba(80,160,255,0.18)');
         atm.addColorStop(1,    'rgba(80,160,255,0)');
         mainCtx.beginPath();
-        mainCtx.arc(cx, cy, r * 1.08, 0, Math.PI * 2);
+        mainCtx.arc(cx, cy, radius * 1.08, 0, Math.PI * 2);
         mainCtx.fillStyle = atm;
         mainCtx.fill();
 
         // selected country highlight
         const selIdx = selectedFeatureIdx;
         if (selIdx >= 0 && precomputedFeatures.length > selIdx) {
-            const eps = 3 / r;
-            const c   = selPathCache;
-            const stale = !c
-                || c.selIdx !== selIdx
-                || Math.abs(c.rotY - rotY) > eps
-                || Math.abs(c.rotX - rotX) > eps
-                || c.r !== r || c.cx !== cx || c.cy !== cy;
+            const eps = 3 / radius;
+            const cache = selPathCache;
+            const stale = !cache
+                || cache.selIdx !== selIdx
+                || Math.abs(cache.rotY - rotY) > eps
+                || Math.abs(cache.rotX - rotX) > eps
+                || cache.radius !== radius || cache.cx !== cx || cache.cy !== cy;
 
             if (stale) {
-                const rs = { rotY, rotX, effectiveRadius: r, canvasCX: cx, canvasCY: cy, canvasWidth: width, canvasHeight: height, sunLat, sunLng, frame };
-                const { selected } = buildLandPaths(precomputedFeatures, rs, selIdx, true);
-                selPathCache = { path: selected, selIdx, rotY, rotX, r, cx, cy };
+                const renderState = { rotY, rotX, effectiveRadius: radius, canvasCX: cx, canvasCY: cy, canvasWidth: width, canvasHeight: height, sunLat, sunLng, frame };
+                const { selected } = buildLandPaths(precomputedFeatures, renderState, selIdx, true);
+                selPathCache = { path: selected, selIdx, rotY, rotX, radius, cx, cy };
             }
 
             const mc = mainCtx as unknown as CanvasRenderingContext2D;
             mc.save();
             mc.beginPath();
-            mc.arc(cx, cy, r, 0, Math.PI * 2);
+            mc.arc(cx, cy, radius, 0, Math.PI * 2);
             mc.clip();
             mc.fillStyle = 'rgba(251,191,36,0.82)';
             mc.fill(selPathCache!.path);
@@ -294,7 +294,7 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
         // visitor pins
         const collectedPins: PinPosition[] = [];
         const pinState = {
-            rotY, rotX, effectiveRadius: r,
+            rotY, rotX, effectiveRadius: radius,
             canvasCX: cx, canvasCY: cy,
             canvasWidth: width, canvasHeight: height,
             sunLat, sunLng, frame,

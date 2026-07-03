@@ -22,6 +22,31 @@
     /* width and height are set inline from the measured size */
 }
 
+.globe-container--hidden {
+    display: none;
+}
+
+.globe-country-label {
+    position: absolute;
+    bottom: 4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 9999px;
+    padding: 0.2rem 0.75rem;
+    color: rgba(251, 191, 36, 0.95);
+    font-size: 0.75rem;
+    font-weight: 500;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.globe-zoom-button--icon {
+    font-size: 13px;
+}
+
 .globe-canvas {
     display: block;
     cursor: grab;
@@ -168,14 +193,14 @@
 
 .globe-chip-row {
     position: absolute;
-    bottom: 72px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 20px;
+    right: 16px;
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: calc(100% - 32px);
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    max-height: calc(100% - 80px);
+    overflow-y: auto;
     z-index: 5;
     pointer-events: auto;
 }

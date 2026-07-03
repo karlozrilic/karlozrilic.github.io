@@ -15,9 +15,9 @@ out float v_camZ;
 void main() {
     v_world = a_pos;
     v_uv = a_uv;
-    vec4 c = u_rot * vec4(a_pos, 1.0);
-    v_camZ = c.z;
-    gl_Position = u_proj * c;
+    vec4 camPos = u_rot * vec4(a_pos, 1.0);
+    v_camZ = camPos.z;
+    gl_Position = u_proj * camPos;
 }`;
 
 // Day/night blend in a single pass
@@ -29,20 +29,20 @@ in float v_camZ;
 uniform sampler2D u_land;
 uniform vec3 u_sun;
 out vec4 fragColor;
-const float TW = 0.15643; // sin(9°) twilight half-band
+const float TWILIGHT = 0.15643; // sin(9°) twilight half-band
 void main() {
     if (v_camZ < 0.0) discard;
-    float day = clamp((dot(v_world, u_sun) + TW) / (2.0 * TW), 0.0, 1.0);
-    float h = v_world.y * 0.5 + 0.5;
-    vec3 dayOcean   = mix(vec3(0.063, 0.502, 0.941), vec3(0.039, 0.314, 0.729), h);
-    vec3 nightOcean = mix(vec3(0.035, 0.082, 0.122), vec3(0.016, 0.055, 0.082), h);
-    vec3 dayLand    = vec3(0.216, 0.451, 0.243);
-    vec3 nightLand  = vec3(0.039, 0.110, 0.063);
+    float day = clamp((dot(v_world, u_sun) + TWILIGHT) / (2.0 * TWILIGHT), 0.0, 1.0);
+    float heightFactor = v_world.y * 0.5 + 0.5;
+    vec3 dayOcean = mix(vec3(0.063, 0.502, 0.941), vec3(0.039, 0.314, 0.729), heightFactor);
+    vec3 nightOcean = mix(vec3(0.035, 0.082, 0.122), vec3(0.016, 0.055, 0.082), heightFactor);
+    vec3 dayLand = vec3(0.216, 0.451, 0.243);
+    vec3 nightLand = vec3(0.039, 0.110, 0.063);
     float land = texture(u_land, v_uv).a;
-    vec3 dc = mix(dayOcean, dayLand, land);
-    vec3 nc = mix(nightOcean, nightLand, land);
+    vec3 dayColor = mix(dayOcean, dayLand, land);
+    vec3 nightColor = mix(nightOcean, nightLand, land);
     float limb = v_camZ;
-    fragColor = vec4(mix(nc, dc, day) * (0.75 + 0.25 * limb), 1.0);
+    fragColor = vec4(mix(nightColor, dayColor, day) * (0.75 + 0.25 * limb), 1.0);
 }`;
 
 // Shared vert for borders and grid.
@@ -54,10 +54,10 @@ uniform mat4 u_proj;
 uniform float u_zOff;
 out float v_camZ;
 void main() {
-    vec4 c = u_rot * vec4(a_pos, 1.0);
-    v_camZ = c.z;
-    c.z += u_zOff;
-    gl_Position = u_proj * c;
+    vec4 camPos = u_rot * vec4(a_pos, 1.0);
+    v_camZ = camPos.z;
+    camPos.z += u_zOff;
+    gl_Position = u_proj * camPos;
 }`;
 
 const LINE_FRAG = `#version 300 es
@@ -82,19 +82,19 @@ uniform float u_twinkle;
 uniform float u_scale;
 out vec3 v_col;
 out float v_alpha;
-const float TW = 0.15643;
+const float TWILIGHT = 0.15643;
 void main() {
-    vec4 c = u_rot * vec4(a_pos, 1.0);
-    float hz = clamp((c.z - 0.04) / 0.1, 0.0, 1.0);
-    float df = clamp((dot(a_pos, u_sun) + TW) / (2.0 * TW), 0.0, 1.0);
-    float alpha = hz * (1.0 - df) * (0.55 + u_twinkle * 0.15);
-    if (alpha < 0.02 || c.z < 0.0) {
+    vec4 camPos = u_rot * vec4(a_pos, 1.0);
+    float horizonFactor = clamp((camPos.z - 0.04) / 0.1, 0.0, 1.0);
+    float daylightFactor = clamp((dot(a_pos, u_sun) + TWILIGHT) / (2.0 * TWILIGHT), 0.0, 1.0);
+    float alpha = horizonFactor * (1.0 - daylightFactor) * (0.55 + u_twinkle * 0.15);
+    if (alpha < 0.02 || camPos.z < 0.0) {
         gl_PointSize = 0.0; v_alpha = 0.0; v_col = vec3(0.0);
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
         return;
     }
-    c.z += 0.015;
-    gl_Position = u_proj * c;
+    camPos.z += 0.015;
+    gl_Position = u_proj * camPos;
     gl_PointSize = clamp(a_size * u_scale * 0.025, 1.5, 16.0);
     v_col = a_col; v_alpha = alpha;
 }`;
@@ -106,93 +106,93 @@ in vec3 v_col;
 in float v_alpha;
 out vec4 fragColor;
 void main() {
-    float d = length(gl_PointCoord - 0.5) * 2.0;
-    float a = v_alpha * exp(-d * d * 2.8);
-    if (a < 0.006) discard;
-    fragColor = vec4(v_col, a);
+    float dist = length(gl_PointCoord - 0.5) * 2.0;
+    float glowAlpha = v_alpha * exp(-dist * dist * 2.8);
+    if (glowAlpha < 0.006) discard;
+    fragColor = vec4(v_col, glowAlpha);
 }`;
 
-// Orthographic projection matching sx = cx + x*r, sy = cy - y*r
-function buildOrtho(r: number, cx: number, cy: number, w: number, h: number): Float32Array {
-    const sx = 2 * r / w, sy = 2 * r / h;
+// Orthographic projection matching sx = cx + x*radius, sy = cy - y*radius
+function buildOrtho(radius: number, cx: number, cy: number, width: number, height: number): Float32Array {
+    const scaleX = 2 * radius / width, scaleY = 2 * radius / height;
     return new Float32Array([
-        sx, 0,   0,    0,
-        0,  sy,  0,    0,
-        0,  0,  -0.5,  0,
-        2 * cx / w - 1, 1 - 2 * cy / h, 0, 1,
+        scaleX, 0,      0,    0,
+        0,      scaleY, 0,    0,
+        0,      0,     -0.5,  0,
+        2 * cx / width - 1, 1 - 2 * cy / height, 0, 1,
     ]);
 }
 
 // Combined rotY then rotX — same convention as applyRotation() in globe_utils
 function buildRotMat(rotY: number, rotX: number): Float32Array {
-    const cy = Math.cos(rotY), sy = Math.sin(rotY);
-    const cx = Math.cos(rotX), sx = Math.sin(rotX);
+    const cosRotY = Math.cos(rotY), sinRotY = Math.sin(rotY);
+    const cosRotX = Math.cos(rotX), sinRotX = Math.sin(rotX);
     return new Float32Array([
-        cy,      sx * sy,  -cx * sy, 0,
-        0,       cx,        sx,      0,
-        sy,     -sx * cy,   cx * cy, 0,
-        0,       0,         0,       1,
+        cosRotY, sinRotX * sinRotY,  -cosRotX * sinRotY, 0,
+        0,       cosRotX,             sinRotX,            0,
+        sinRotY, -sinRotX * cosRotY,  cosRotX * cosRotY,  0,
+        0,       0,                   0,                   1,
     ]);
 }
 
 function buildSunVec(sunLat: number, sunLng: number): Float32Array {
-    const D = Math.PI / 180;
-    const phi = (90 - sunLat) * D, theta = (sunLng + 180) * D;
-    const sp = Math.sin(phi), cp = Math.cos(phi);
-    return new Float32Array([-sp * Math.cos(theta), cp, sp * Math.sin(theta)]);
+    const phi = (90 - sunLat) * Math.PI / 180;
+    const theta = (sunLng + 180) * Math.PI / 180;
+    const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+    return new Float32Array([-sinPhi * Math.cos(theta), cosPhi, sinPhi * Math.sin(theta)]);
 }
 
 function buildSphere(lngSegs: number, latSegs: number): { verts: Float32Array; idx: Uint16Array } {
-    const D = Math.PI / 180;
+    const degToRad = Math.PI / 180;
     const verts: number[] = [];
     const idx: number[] = [];
-    for (let li = 0; li <= latSegs; li++) {
-        const lat = 90 - li * 180 / latSegs;
-        const phi = (90 - lat) * D;
-        const sp = Math.sin(phi), cp = Math.cos(phi);
-        const v = li / latSegs;
-        for (let gi = 0; gi <= lngSegs; gi++) {
-            const lng = -180 + gi * 360 / lngSegs;
-            const theta = (lng + 180) * D;
-            const st = Math.sin(theta), ct = Math.cos(theta);
-            verts.push(-sp * ct, cp, sp * st, gi / lngSegs, v);
+    for (let latIdx = 0; latIdx <= latSegs; latIdx++) {
+        const lat = 90 - latIdx * 180 / latSegs;
+        const phi = (90 - lat) * degToRad;
+        const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+        const texV = latIdx / latSegs;
+        for (let lngIdx = 0; lngIdx <= lngSegs; lngIdx++) {
+            const lng = -180 + lngIdx * 360 / lngSegs;
+            const theta = (lng + 180) * degToRad;
+            const sinTheta = Math.sin(theta), cosTheta = Math.cos(theta);
+            verts.push(-sinPhi * cosTheta, cosPhi, sinPhi * sinTheta, lngIdx / lngSegs, texV);
         }
     }
-    for (let li = 0; li < latSegs; li++) {
-        for (let gi = 0; gi < lngSegs; gi++) {
-            const a = li * (lngSegs + 1) + gi, b = a + lngSegs + 1;
-            idx.push(a, b, a + 1, b, b + 1, a + 1);
+    for (let latIdx = 0; latIdx < latSegs; latIdx++) {
+        for (let lngIdx = 0; lngIdx < lngSegs; lngIdx++) {
+            const topIdx = latIdx * (lngSegs + 1) + lngIdx, bottomIdx = topIdx + lngSegs + 1;
+            idx.push(topIdx, bottomIdx, topIdx + 1, bottomIdx, bottomIdx + 1, topIdx + 1);
         }
     }
     return { verts: new Float32Array(verts), idx: new Uint16Array(idx) };
 }
 
 function compileShader(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
-    const s = gl.createShader(type)!;
-    gl.shaderSource(s, src);
-    gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
-        throw new Error(`Shader: ${gl.getShaderInfoLog(s)}`);
-    return s;
+    const shader = gl.createShader(type)!;
+    gl.shaderSource(shader, src);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+        throw new Error(`Shader: ${gl.getShaderInfoLog(shader)}`);
+    return shader;
 }
 
 function makeProgram(gl: WebGL2RenderingContext, vert: string, frag: string): WebGLProgram {
-    const p = gl.createProgram()!;
-    gl.attachShader(p, compileShader(gl, gl.VERTEX_SHADER, vert));
-    gl.attachShader(p, compileShader(gl, gl.FRAGMENT_SHADER, frag));
-    gl.linkProgram(p);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS))
-        throw new Error(`Program: ${gl.getProgramInfoLog(p)}`);
-    return p;
+    const program = gl.createProgram()!;
+    gl.attachShader(program, compileShader(gl, gl.VERTEX_SHADER, vert));
+    gl.attachShader(program, compileShader(gl, gl.FRAGMENT_SHADER, frag));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+        throw new Error(`Program: ${gl.getProgramInfoLog(program)}`);
+    return program;
 }
 
-function loc(gl: WebGL2RenderingContext, p: WebGLProgram, n: string): WebGLUniformLocation {
-    return gl.getUniformLocation(p, n)!;
+function loc(gl: WebGL2RenderingContext, prog: WebGLProgram, name: string): WebGLUniformLocation {
+    return gl.getUniformLocation(prog, name)!;
 }
 
 export interface WebGLGlobeState {
     gl: WebGL2RenderingContext;
-    w: number; h: number;
+    width: number; height: number;
     sphereProg: WebGLProgram; sphereVAO: WebGLVertexArrayObject; sphereIdxBuf: WebGLBuffer; sphereIdxCount: number;
     lineProg: WebGLProgram;
     ptsProg: WebGLProgram;
@@ -206,7 +206,7 @@ export interface WebGLGlobeState {
     aLine: number; aPts: number; aPtsSize: number; aPtsCol: number;
 }
 
-export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLGlobeState | null {
+export function initWebGL(canvas: OffscreenCanvas, width: number, height: number): WebGLGlobeState | null {
     const gl = canvas.getContext('webgl2', {
         antialias: true, alpha: true,
         premultipliedAlpha: false,
@@ -214,7 +214,7 @@ export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLG
     }) as WebGL2RenderingContext | null;
     if (!gl) return null;
 
-    gl.viewport(0, 0, w, h);
+    gl.viewport(0, 0, width, height);
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -251,7 +251,7 @@ export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLG
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
     return {
-        gl, w, h,
+        gl, width, height,
         sphereProg, sphereVAO, sphereIdxBuf, sphereIdxCount: idx.length,
         lineProg, ptsProg,
         landTex,
@@ -284,15 +284,15 @@ export function initWebGL(canvas: OffscreenCanvas, w: number, h: number): WebGLG
     };
 }
 
-export function resizeWebGL(s: WebGLGlobeState, w: number, h: number): void {
-    s.w = w; s.h = h;
-    s.gl.viewport(0, 0, w, h);
+export function resizeWebGL(state: WebGLGlobeState, width: number, height: number): void {
+    state.width = width; state.height = height;
+    state.gl.viewport(0, 0, width, height);
 }
 
 // Bakes all country polygons into a 4096×2048 equirectangular RGBA8 texture.
 // Alpha=1 for land, alpha=0 for ocean. Sampled as .a in SPHERE_FRAG.
-export function uploadLandTexture(s: WebGLGlobeState, features: GeoFeature[]): void {
-    const { gl } = s;
+export function uploadLandTexture(state: WebGLGlobeState, features: GeoFeature[]): void {
+    const { gl } = state;
     const W = 4096, H = 2048;
     const offscreen = new OffscreenCanvas(W, H);
     const ctx = offscreen.getContext('2d');
@@ -314,13 +314,13 @@ export function uploadLandTexture(s: WebGLGlobeState, features: GeoFeature[]): v
                 nLngs.push(lng);
             }
             let minNL = nLngs[0], maxNL = nLngs[0];
-            for (const l of nLngs) { if (l < minNL) minNL = l; if (l > maxNL) maxNL = l; }
+            for (const nLng of nLngs) { if (nLng < minNL) minNL = nLng; if (nLng > maxNL) maxNL = nLng; }
 
             // Rings spanning > 300° of longitude encircle a pole; add corner points to close them
             let poleY = -1;
             if (maxNL - minNL > 300) {
                 let latSum = 0;
-                for (const p of ring) latSum += p[1];
+                for (const pt of ring) latSum += pt[1];
                 poleY = latSum / ring.length < 0 ? H : 0;
             }
 
@@ -345,7 +345,7 @@ export function uploadLandTexture(s: WebGLGlobeState, features: GeoFeature[]): v
     for (let i = 3; i < imgData.data.length; i += 4) if (imgData.data[i]) landPx++;
     try { (self as unknown as { postMessage: (m: unknown) => void }).postMessage({ type: 'debug', msg: `land texture: ${features.length} features, ${landPx} land px` }); } catch {}
 
-    if (s.landTex) gl.deleteTexture(s.landTex);
+    if (state.landTex) gl.deleteTexture(state.landTex);
     const tex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgData);
@@ -355,149 +355,149 @@ export function uploadLandTexture(s: WebGLGlobeState, features: GeoFeature[]): v
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    s.landTex = tex;
+    state.landTex = tex;
 }
 
 // Country borders as GL_LINES — one segment per ring edge
-export function uploadBorderData(s: WebGLGlobeState, features: PrecomputedFeature[]): void {
-    const { gl } = s;
+export function uploadBorderData(state: WebGLGlobeState, features: PrecomputedFeature[]): void {
+    const { gl } = state;
     const segs: number[] = [];
     for (const feat of features) {
         for (const { vecs } of feat.rings) {
-            const n = vecs.length / 3;
-            for (let i = 0; i < n; i++) {
-                const j = (i + 1) % n;
-                const si = i * 3, sj = j * 3;
-                segs.push(vecs[si], vecs[si + 1], vecs[si + 2]);
-                segs.push(vecs[sj], vecs[sj + 1], vecs[sj + 2]);
+            const vertexCount = vecs.length / 3;
+            for (let i = 0; i < vertexCount; i++) {
+                const j = (i + 1) % vertexCount;
+                const iBase = i * 3, jBase = j * 3;
+                segs.push(vecs[iBase], vecs[iBase + 1], vecs[iBase + 2]);
+                segs.push(vecs[jBase], vecs[jBase + 1], vecs[jBase + 2]);
             }
         }
     }
-    if (s.borderBuf) gl.deleteBuffer(s.borderBuf);
+    if (state.borderBuf) gl.deleteBuffer(state.borderBuf);
     const buf = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(segs), gl.STATIC_DRAW);
-    s.borderBuf = buf; s.borderCount = segs.length / 3;
+    state.borderBuf = buf; state.borderCount = segs.length / 3;
 }
 
-export function uploadGridData(s: WebGLGlobeState, grid: PrecomputedGrid): void {
-    const { gl } = s;
+export function uploadGridData(state: WebGLGlobeState, grid: PrecomputedGrid): void {
+    const { gl } = state;
     const segs: number[] = [];
     for (const vecs of grid.lines) {
-        const n = vecs.length / 3;
-        for (let i = 0; i < n - 1; i++) {
-            const si = i * 3;
-            segs.push(vecs[si], vecs[si + 1], vecs[si + 2]);
-            segs.push(vecs[si + 3], vecs[si + 4], vecs[si + 5]);
+        const pointCount = vecs.length / 3;
+        for (let i = 0; i < pointCount - 1; i++) {
+            const iBase = i * 3;
+            segs.push(vecs[iBase], vecs[iBase + 1], vecs[iBase + 2]);
+            segs.push(vecs[iBase + 3], vecs[iBase + 4], vecs[iBase + 5]);
         }
     }
-    if (s.gridBuf) gl.deleteBuffer(s.gridBuf);
+    if (state.gridBuf) gl.deleteBuffer(state.gridBuf);
     const buf = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(segs), gl.STATIC_DRAW);
-    s.gridBuf = buf; s.gridCount = segs.length / 3;
+    state.gridBuf = buf; state.gridCount = segs.length / 3;
 }
 
 // Interleaved [vx, vy, vz, dotSize, r, g, b] per light
-export function uploadLightData(s: WebGLGlobeState, lights: PrecomputedLight[]): void {
-    const { gl } = s;
+export function uploadLightData(state: WebGLGlobeState, lights: PrecomputedLight[]): void {
+    const { gl } = state;
     const data = new Float32Array(lights.length * 7);
     for (let i = 0; i < lights.length; i++) {
         const { vx, vy, vz, dotSize, color } = lights[i];
         const parts = color.split(',');
-        const b = i * 7;
-        data[b] = vx; data[b + 1] = vy; data[b + 2] = vz;
-        data[b + 3] = dotSize;
-        data[b + 4] = +parts[0] / 255;
-        data[b + 5] = +parts[1] / 255;
-        data[b + 6] = +parts[2] / 255;
+        const offset = i * 7;
+        data[offset]     = vx; data[offset + 1] = vy; data[offset + 2] = vz;
+        data[offset + 3] = dotSize;
+        data[offset + 4] = +parts[0] / 255;
+        data[offset + 5] = +parts[1] / 255;
+        data[offset + 6] = +parts[2] / 255;
     }
-    if (s.lightBuf) gl.deleteBuffer(s.lightBuf);
+    if (state.lightBuf) gl.deleteBuffer(state.lightBuf);
     const buf = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-    s.lightBuf = buf; s.lightCount = lights.length;
+    state.lightBuf = buf; state.lightCount = lights.length;
 }
 
 export interface WebGLFrameParams {
     rotY: number; rotX: number;
     sunLat: number; sunLng: number;
-    r: number; cx: number; cy: number;
-    w: number; h: number;
+    radius: number; cx: number; cy: number;
+    width: number; height: number;
     frame: number;
 }
 
-export function renderWebGLFrame(s: WebGLGlobeState, p: WebGLFrameParams): void {
-    const { gl } = s;
+export function renderWebGLFrame(state: WebGLGlobeState, params: WebGLFrameParams): void {
+    const { gl } = state;
 
-    if (s.w !== p.w || s.h !== p.h) resizeWebGL(s, p.w, p.h);
+    if (state.width !== params.width || state.height !== params.height) resizeWebGL(state, params.width, params.height);
 
-    const rotMat  = buildRotMat(p.rotY, p.rotX);
-    const projMat = buildOrtho(p.r, p.cx, p.cy, p.w, p.h);
-    const sunVec  = buildSunVec(p.sunLat, p.sunLng);
+    const rotMat  = buildRotMat(params.rotY, params.rotX);
+    const projMat = buildOrtho(params.radius, params.cx, params.cy, params.width, params.height);
+    const sunVec  = buildSunVec(params.sunLat, params.sunLng);
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // sphere
-    gl.useProgram(s.sphereProg);
-    gl.uniformMatrix4fv(s.uSphere.rot,  false, rotMat);
-    gl.uniformMatrix4fv(s.uSphere.proj, false, projMat);
-    gl.uniform3fv(s.uSphere.sun, sunVec);
+    gl.useProgram(state.sphereProg);
+    gl.uniformMatrix4fv(state.uSphere.rot,  false, rotMat);
+    gl.uniformMatrix4fv(state.uSphere.proj, false, projMat);
+    gl.uniform3fv(state.uSphere.sun, sunVec);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, s.landTex);
-    gl.uniform1i(s.uSphere.land, 0);
-    gl.bindVertexArray(s.sphereVAO);
-    gl.drawElements(gl.TRIANGLES, s.sphereIdxCount, gl.UNSIGNED_SHORT, 0);
+    gl.bindTexture(gl.TEXTURE_2D, state.landTex);
+    gl.uniform1i(state.uSphere.land, 0);
+    gl.bindVertexArray(state.sphereVAO);
+    gl.drawElements(gl.TRIANGLES, state.sphereIdxCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(null);
 
     // lines: disable depth test to avoid z-fighting with the sphere surface
     gl.disable(gl.DEPTH_TEST);
-    gl.useProgram(s.lineProg);
-    gl.uniformMatrix4fv(s.uLine.rot,  false, rotMat);
-    gl.uniformMatrix4fv(s.uLine.proj, false, projMat);
-    gl.uniform1f(s.uLine.zOff, 0);
+    gl.useProgram(state.lineProg);
+    gl.uniformMatrix4fv(state.uLine.rot,  false, rotMat);
+    gl.uniformMatrix4fv(state.uLine.proj, false, projMat);
+    gl.uniform1f(state.uLine.zOff, 0);
 
-    if (s.borderBuf && s.borderCount > 0) {
-        gl.uniform4f(s.uLine.color, 0.294, 0.569, 0.314, 0.55);
-        gl.bindBuffer(gl.ARRAY_BUFFER, s.borderBuf);
-        gl.enableVertexAttribArray(s.aLine);
-        gl.vertexAttribPointer(s.aLine, 3, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.LINES, 0, s.borderCount);
-        gl.disableVertexAttribArray(s.aLine);
+    if (state.borderBuf && state.borderCount > 0) {
+        gl.uniform4f(state.uLine.color, 0.294, 0.569, 0.314, 0.55);
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.borderBuf);
+        gl.enableVertexAttribArray(state.aLine);
+        gl.vertexAttribPointer(state.aLine, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.LINES, 0, state.borderCount);
+        gl.disableVertexAttribArray(state.aLine);
     }
 
-    if (s.gridBuf && s.gridCount > 0) {
-        gl.uniform4f(s.uLine.color, 1, 1, 1, 0.13);
-        gl.bindBuffer(gl.ARRAY_BUFFER, s.gridBuf);
-        gl.enableVertexAttribArray(s.aLine);
-        gl.vertexAttribPointer(s.aLine, 3, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.LINES, 0, s.gridCount);
-        gl.disableVertexAttribArray(s.aLine);
+    if (state.gridBuf && state.gridCount > 0) {
+        gl.uniform4f(state.uLine.color, 1, 1, 1, 0.13);
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.gridBuf);
+        gl.enableVertexAttribArray(state.aLine);
+        gl.vertexAttribPointer(state.aLine, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.LINES, 0, state.gridCount);
+        gl.disableVertexAttribArray(state.aLine);
     }
 
     // city lights — additive blend, overlapping halos accumulate into bright hotspots
-    if (s.lightBuf && s.lightCount > 0) {
-        gl.useProgram(s.ptsProg);
-        gl.uniformMatrix4fv(s.uPts.rot,  false, rotMat);
-        gl.uniformMatrix4fv(s.uPts.proj, false, projMat);
-        gl.uniform3fv(s.uPts.sun, sunVec);
-        gl.uniform1f(s.uPts.twinkle, Math.sin(p.frame * 0.04) * 0.12);
-        gl.uniform1f(s.uPts.scale, p.r);
+    if (state.lightBuf && state.lightCount > 0) {
+        gl.useProgram(state.ptsProg);
+        gl.uniformMatrix4fv(state.uPts.rot,  false, rotMat);
+        gl.uniformMatrix4fv(state.uPts.proj, false, projMat);
+        gl.uniform3fv(state.uPts.sun, sunVec);
+        gl.uniform1f(state.uPts.twinkle, Math.sin(params.frame * 0.04) * 0.12);
+        gl.uniform1f(state.uPts.scale, params.radius);
         gl.depthMask(false);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, s.lightBuf);
-        gl.enableVertexAttribArray(s.aPts);
-        gl.vertexAttribPointer(s.aPts, 3, gl.FLOAT, false, 28, 0);
-        gl.enableVertexAttribArray(s.aPtsSize);
-        gl.vertexAttribPointer(s.aPtsSize, 1, gl.FLOAT, false, 28, 12);
-        gl.enableVertexAttribArray(s.aPtsCol);
-        gl.vertexAttribPointer(s.aPtsCol, 3, gl.FLOAT, false, 28, 16);
-        gl.drawArrays(gl.POINTS, 0, s.lightCount);
-        gl.disableVertexAttribArray(s.aPts);
-        gl.disableVertexAttribArray(s.aPtsSize);
-        gl.disableVertexAttribArray(s.aPtsCol);
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.lightBuf);
+        gl.enableVertexAttribArray(state.aPts);
+        gl.vertexAttribPointer(state.aPts, 3, gl.FLOAT, false, 28, 0);
+        gl.enableVertexAttribArray(state.aPtsSize);
+        gl.vertexAttribPointer(state.aPtsSize, 1, gl.FLOAT, false, 28, 12);
+        gl.enableVertexAttribArray(state.aPtsCol);
+        gl.vertexAttribPointer(state.aPtsCol, 3, gl.FLOAT, false, 28, 16);
+        gl.drawArrays(gl.POINTS, 0, state.lightCount);
+        gl.disableVertexAttribArray(state.aPts);
+        gl.disableVertexAttribArray(state.aPtsSize);
+        gl.disableVertexAttribArray(state.aPtsCol);
 
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(true);

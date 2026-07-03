@@ -58,11 +58,11 @@ export default function VisitorGlobe({
         if (!el) return;
         const observer = new ResizeObserver(entries => {
             const { width, height } = entries[0].contentRect;
-            const w = Math.floor(width);
-            const h = Math.floor(height);
-            if (w > 0) {
-                setCanvasWidth(w);
-                setCanvasHeight(h > 0 ? h : w);
+            const pixelWidth = Math.floor(width);
+            const pixelHeight = Math.floor(height);
+            if (pixelWidth > 0) {
+                setCanvasWidth(pixelWidth);
+                setCanvasHeight(pixelHeight > 0 ? pixelHeight : pixelWidth);
             }
         });
         observer.observe(el);
@@ -298,8 +298,8 @@ export default function VisitorGlobe({
 
         function sendFrame(): void {
             const anim = animRef.current;
-            const w = canvasWidthRef.current;
-            const h = canvasHeightRef.current;
+            const width = canvasWidthRef.current;
+            const height = canvasHeightRef.current;
             workerIdleRef.current = false;
             pendingFrameRef.current = false;
             renderWorkerRef.current?.postMessage({
@@ -311,7 +311,7 @@ export default function VisitorGlobe({
                 rotateEnabled: rotateEnabledRef.current,
                 frozenEarthBase: pausedAngleRef.current,
                 baseRadius: baseRadiusRef.current,
-                cx: w / 2, cy: h / 2, width: w, height: h,
+                cx: width / 2, cy: height / 2, width, height,
                 frame: anim.frame,
                 selectedFeatureIdx: selectedFeatureIdxRef.current,
             });
@@ -366,8 +366,8 @@ export default function VisitorGlobe({
     const handleGlobeClick = useCallback((mx: number, my: number) => {
         // Use the exact rotation from the last rendered frame — more accurate than
         // reading a stale ref that may have advanced past what the user sees.
-        const { rotY, rotX, effectiveRadius: r } = lastWorkerFrameRef.current;
-        const hit = inverseProjectGlobe(mx, my, rotY, rotX, r, canvasWidthRef.current / 2, canvasHeightRef.current / 2);
+        const { rotY, rotX, effectiveRadius: radius } = lastWorkerFrameRef.current;
+        const hit = inverseProjectGlobe(mx, my, rotY, rotX, radius, canvasWidthRef.current / 2, canvasHeightRef.current / 2);
         if (!hit) { setSelectedFeatureIdx(-1); return; }
         const clickedIdx = hitTestCountry(hit.lat, hit.lng, geoFeatures);
         if (clickedIdx === null) { setSelectedFeatureIdx(-1); return; }
@@ -584,8 +584,8 @@ export default function VisitorGlobe({
                     It stays hidden until the first frame is ready to avoid a blank flash. */}
                 {readyToShow && canvasWidth > 0 && canvasHeight > 0 && (
                     <div
-                        className='globe-container'
-                        style={{ width: canvasWidth, height: canvasHeight, display: firstFrameReady ? undefined : 'none' }}
+                        className={`globe-container${firstFrameReady ? '' : ' globe-container--hidden'}`}
+                        style={{ width: canvasWidth, height: canvasHeight }}
                     >
                         <canvas
                             ref={canvasRef}
@@ -596,13 +596,7 @@ export default function VisitorGlobe({
                         />
 
                         {selectedFeatureIdx >= 0 && geoFeatures[selectedFeatureIdx] && (
-                            <div style={{
-                                position: 'absolute', bottom: '2.5rem', left: '50%', transform: 'translateX(-50%)',
-                                background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)',
-                                borderRadius: '9999px', padding: '0.2rem 0.75rem',
-                                color: 'rgba(251,191,36,0.95)', fontSize: '0.75rem', fontWeight: 500,
-                                pointerEvents: 'none', whiteSpace: 'nowrap',
-                            }}>
+                            <div className='globe-country-label'>
                                 {geoFeatures[selectedFeatureIdx].name ?? `Country #${geoFeatures[selectedFeatureIdx].id}`}
                             </div>
                         )}
@@ -676,20 +670,18 @@ export default function VisitorGlobe({
                                 </button>
                                 <div className='globe-zoom-divider' />
                                 <button
-                                    className='globe-zoom-button'
+                                    className='globe-zoom-button globe-zoom-button--icon'
                                     onClick={handleReset}
                                     aria-label='Reset view'
-                                    style={{ fontSize: 13 }}
                                 >
                                     ↺
                                 </button>
                                 <div className='globe-zoom-divider' />
                                 <button
-                                    className='globe-zoom-button'
+                                    className='globe-zoom-button globe-zoom-button--icon'
                                     onClick={handleToggleRotate}
                                     aria-label={rotateEnabled ? 'Pause rotation' : 'Resume rotation'}
                                     title={rotateEnabled ? 'Pause rotation' : 'Resume rotation'}
-                                    style={{ fontSize: 13 }}
                                 >
                                     {rotateEnabled ? '⏸' : '⏵'}
                                 </button>
