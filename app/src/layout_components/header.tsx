@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { AnimatedThemeToggler } from '@/app/src/components/ui/animated-theme-toggler'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
@@ -20,6 +20,8 @@ export default function Header() {
 	const drawerRef = useRef<HTMLDivElement>(null);
 	const closeDrawerButtonRef = useRef<HTMLButtonElement>(null);
 
+	const [isMobile, setIsMobile] = useState(false);
+
 	const longPressHandlers = useLongPress(() => {
 		if (!user && !loading) {
 			handleLogin();
@@ -27,6 +29,18 @@ export default function Header() {
 	}, 2000);
 
 	const headerTitle = 'Karlo Zrilić';
+
+	useEffect(() => {
+		const media = window.matchMedia('(max-width: 768px)');
+
+		const update = () => setIsMobile(media.matches);
+
+		update();
+
+		media.addEventListener('change', update);
+
+		return () => media.removeEventListener('change', update);
+	}, []);
 
 	useEffect(() => {
 		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -86,7 +100,7 @@ export default function Header() {
 
 	async function handleLogin() {
 		try {
-		  await loginGoogle();
+		  await loginGoogle(!isMobile);
 		} catch (error) {
 		  console.error(error);
 		}

@@ -1,11 +1,11 @@
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
-export async function loginGoogle() {
+export async function loginGoogle(popup = true) {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
+    const result = await (popup ? signInWithPopup : signInWithRedirect)(auth, provider);
 
     const email = result.user.email;
 
