@@ -132,7 +132,7 @@ export default function Header() {
 						onPointerUp={longPressHandlers.onPointerUp}
 						onPointerLeave={longPressHandlers.onPointerLeave}
 						onPointerCancel={longPressHandlers.onPointerCancel}
-						className='text-xl font-bold cursor-pointer'
+						className='text-xl font-bold cursor-pointer select-none'
 					>{headerTitle}</span>
 					<div className='hidden space-x-6 md:flex'>
 						{links()}
