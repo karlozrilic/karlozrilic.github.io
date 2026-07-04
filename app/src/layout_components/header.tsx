@@ -136,6 +136,7 @@ export default function Header() {
 						onPointerCancel={longPressHandlers.onPointerCancel}
 						onTouchStart={longPressHandlers.onTouchStart}
 						onTouchEnd={longPressHandlers.onTouchEnd}
+						onTouchCancel={longPressHandlers.onTouchCancel}
 						className='text-xl font-bold cursor-pointer select-none'
 					>{headerTitle}</span>
 					<div className='hidden space-x-6 md:flex'>

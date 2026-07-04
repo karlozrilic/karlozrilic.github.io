@@ -29,6 +29,7 @@ export function useLongPress(callback: () => void, duration = 2000) {
         onPointerCancel: clear,
         onTouchStart: start,
         onTouchEnd: clear,
+        onTouchCancel: clear,
         isLongPress
     };
 }
