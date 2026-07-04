@@ -9,18 +9,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/app/src/components/ui/sidebar';
 import { useLongPress } from '@/hooks/long_press';
 import { loginGoogle } from '@/helpers/firebase';
+import { useIsMobile } from '@/hooks/use_mobile';
 
 export default function Header() {
 	const { user, loading } = useAuth();
 	const { trigger } = useWebHaptics();
 	const { toggleSidebar } = useSidebar();
+	const isMobile = useIsMobile();
 
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const drawerBackdropRef = useRef<HTMLDivElement>(null);
 	const drawerRef = useRef<HTMLDivElement>(null);
 	const closeDrawerButtonRef = useRef<HTMLButtonElement>(null);
-
-	const [isMobile, setIsMobile] = useState(false);
 
 	const longPressHandlers = useLongPress(() => {
 		if (!user && !loading) {
@@ -29,18 +29,6 @@ export default function Header() {
 	}, 2000);
 
 	const headerTitle = 'Karlo Zrilić';
-
-	useEffect(() => {
-		const media = window.matchMedia('(max-width: 768px)');
-
-		const update = () => setIsMobile(media.matches);
-
-		update();
-
-		media.addEventListener('change', update);
-
-		return () => media.removeEventListener('change', update);
-	}, []);
 
 	useEffect(() => {
 		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
