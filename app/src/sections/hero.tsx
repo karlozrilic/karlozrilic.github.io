@@ -204,13 +204,13 @@ export default function Hero() {
             <div className='w-96 h-96 bg-white opacity-5 rounded-full parallax-layer hidden pointer-events-none' data-speed='0.2' data-base-bottom='-20' style={{bottom: '-20%', left: '25%' }}></div> */}
 
             {/* Particles */}
-            {/* <canvas ref={canvasRef} className='absolute top-0 left-0 w-full h-full pointer-events-none'></canvas> */}
+            <canvas ref={canvasRef} className='absolute top-0 left-0 w-full h-full pointer-events-none'></canvas>
 
-            <div className='absolute top-0 left-0 w-full h-full pointer-events-none'>
+            {/* <div className='absolute top-0 left-0 w-full h-full pointer-events-none'>
                 <div className='hero-grid-mask absolute top-0 left-0 w-full h-full'>
                     <div className='hero-grid absolute top-0 left-0 w-full h-full'></div>
                 </div>
-            </div>
+            </div> */}
 
             <h1 className='text-6xl md:text-7xl font-extrabold mb-4 fade-in z-1'>Hello, I'm Karlo Zrilić</h1>
             <div className='text-2xl md:text-3xl mb-6 z-1'>
