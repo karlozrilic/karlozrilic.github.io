@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import moment from 'moment';
 import { Card, CardContent } from '@/app/src/components/ui/card';
 import { Badge } from '@/app/src/components/ui/badge';
-import LoadingComponent from '@/app/src/layout_components/loading';
 import { capitalizeFirstLetter } from '@/helpers/string';
 
 export default function Experience() {
@@ -33,7 +32,6 @@ export default function Experience() {
 
     return (
         <>
-            { experiences.loaded ? null : <LoadingComponent /> }
             <span id='experience'></span>
             <section className='relative py-10 md:py-20 bg-secondary text-secondary-foreground fade-in px-1' id='experience'>
                 

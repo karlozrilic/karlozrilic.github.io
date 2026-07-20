@@ -2,7 +2,6 @@
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
-import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function AboutMe() {
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
@@ -29,7 +28,6 @@ export default function AboutMe() {
 
     return (
         <>
-            { aboutMe.data?.content ? null : <LoadingComponent /> }
             <span id='about'></span>
             <section className='container mx-auto py-10 md:py-20 fade-in px-1' id='about'>
                 <h2 className='text-4xl font-bold text-center mb-10'>About Me</h2>

@@ -3,7 +3,6 @@ import { Marquee } from '@/app/src/components/ui/marquee';
 import Technology from '@/app/src/components/custom/technology';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
-import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function Technologies() {
     const technologies = useSelector((state: RootState) => state.technologies);
@@ -35,7 +34,6 @@ export default function Technologies() {
         <>
             <span id='technologies'></span>
             <section className='relative py-10 md:py-20 overflow-hidden fade-in'>
-                { technologies.loaded ? null : <LoadingComponent /> }
                 <h2 className='text-4xl font-bold text-center mb-12'>Technologies</h2>
 
                 <div className='relative flex w-full flex-col items-center justify-center overflow-hidden'>

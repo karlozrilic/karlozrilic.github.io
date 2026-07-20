@@ -6,7 +6,6 @@ import { BentoCard, BentoGrid } from '@/app/src/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';
 import { AspectRatio } from '@/app/src/components/ui/aspect-ratio';
 import Image from 'next/image';
-import LoadingComponent from '@/app/src/layout_components/loading';
 
 export default function Projects() {
     const projects = useSelector((state: RootState) => state.projects);
@@ -70,7 +69,6 @@ export default function Projects() {
         <>
             <span id='projects'></span>
             <section className='relative bg-secondary text-secondary-foreground fade-in px-1' id='projects'>
-                { projects.loaded ? null : <LoadingComponent /> }
                 <div className='container mx-auto py-10 md:py-20'>
                     <h2 className='text-4xl font-bold text-center mb-10'>Projects</h2>
                     <div className='flex justify-center flex-wrap mb-10 gap-3'>

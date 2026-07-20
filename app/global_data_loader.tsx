@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
 import { fetchAboutMe } from '@/app/src/store/slices/aboutMeSlice';
@@ -9,6 +9,7 @@ import { fetchProjects } from '@/app/src/store/slices/projectsSlice';
 import { fetchExperiences } from '@/app/src/store/slices/experienceSlice';
 import { fetchVercelProjects } from '@/app/src/store/slices/vercelProjectsSlice';
 import { fetchCountries } from '@/app/src/store/slices/countriesSlice';
+import LoadingComponent from './src/layout_components/loading';
 
 export default function GlobalDataLoader() {
     const dispatch = useDispatch<AppDispatch>();
@@ -18,6 +19,33 @@ export default function GlobalDataLoader() {
     const experiencesStatus = useSelector((state: RootState) => state.experiences.status);
     const vercelProjectsStatus = useSelector((state: RootState) => state.vercelProjects.status);
     const countriesStatus = useSelector((state: RootState) => state.countries.status);
+
+    const dataLoaded = useMemo(() => {
+        return (
+            (aboutMeStatus === 'succeeded' || aboutMeStatus === 'failed') &&
+            (technologiesStatus === 'succeeded' || technologiesStatus === 'failed') &&
+            (projectsStatus === 'succeeded' || projectsStatus === 'failed') &&
+            (experiencesStatus === 'succeeded' || experiencesStatus === 'failed') &&
+            (vercelProjectsStatus === 'succeeded' || vercelProjectsStatus === 'failed') &&
+            (countriesStatus === 'succeeded' || countriesStatus === 'failed')
+        );
+    }, [aboutMeStatus, technologiesStatus, projectsStatus, experiencesStatus, vercelProjectsStatus, countriesStatus]);
+
+    useLayoutEffect(() => {
+        const hash = window.location.hash;
+
+        if (!hash) return;
+
+        // Save it for later
+        sessionStorage.setItem('pendingScrollHash', hash);
+
+        // Remove hash without triggering navigation
+        window.history.replaceState(
+            null,
+            '',
+            window.location.pathname + window.location.search
+        );
+    }, []);
 
     useEffect(() => {
         if (aboutMeStatus === 'idle') {
@@ -54,6 +82,33 @@ export default function GlobalDataLoader() {
             dispatch(fetchCountries())
         }
     }, [dispatch, countriesStatus])
+
+    useEffect(() => {
+        if (!dataLoaded) return;
+
+        const hash = sessionStorage.getItem('pendingScrollHash');
+
+        if (!hash) return;
+
+        requestAnimationFrame(() => {
+            document.getElementById(hash.slice(1))?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+            sessionStorage.removeItem('pendingScrollHash');
+        });
+    }, [dataLoaded]);
+
+    if (
+        aboutMeStatus === 'loading' ||
+        technologiesStatus === 'loading' ||
+        projectsStatus === 'loading' ||
+        experiencesStatus === 'loading' ||
+        vercelProjectsStatus === 'loading' ||
+        countriesStatus === 'loading'
+    ) {
+        return <LoadingComponent />;
+    }
 
     return null;
 }
