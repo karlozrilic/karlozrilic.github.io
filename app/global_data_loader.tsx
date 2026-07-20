@@ -74,8 +74,6 @@ export default function GlobalDataLoader() {
 
         if (!hash) return;
 
-        console.log('Restoring scroll position for hash:', hash);
-
         requestAnimationFrame(() => {
             document.getElementById(hash.slice(1))?.scrollIntoView({
                 behavior: 'smooth',
