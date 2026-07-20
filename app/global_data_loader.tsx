@@ -38,6 +38,7 @@ export default function GlobalDataLoader() {
 
         // Save it for later
         sessionStorage.setItem('pendingScrollHash', hash);
+        console.log('Saved hash for later:', hash);
 
         // Remove hash without triggering navigation
         window.history.replaceState(
@@ -89,6 +90,8 @@ export default function GlobalDataLoader() {
         const hash = sessionStorage.getItem('pendingScrollHash');
 
         if (!hash) return;
+
+        console.log('Restoring scroll position for hash:', hash);
 
         requestAnimationFrame(() => {
             document.getElementById(hash.slice(1))?.scrollIntoView({
