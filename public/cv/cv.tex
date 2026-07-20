@@ -1,0 +1,186 @@
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+\begin{center}
+    \textbf{\Huge \scshape Karlo Zrilić} \\ \vspace{1pt}
+    \small +385 95 512 7131 $|$ \href{mailto:karlozrilic@gmail.com}{\underline{karlozrilic@gmail.com}} $|$ 
+    \href{https://www.linkedin.com/in/karlo-zrilić}{\underline{linkedin.com/in/karlo-zrilić}} $|$
+    \href{https://github.com/karlozrilic}{\underline{github.com/karlozrilic}}
+\end{center}
+
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Sveučilište u Zadru}{Zadar, Croatia}
+      {Bachelor's degree in information technology (bacc.ing. techn. inf.)}{September 2018 -- October 2021}
+    \resumeSubheading
+      {Prirodoslovno-grafička škola}{Zadar, Croatia}
+      {Web designer}{September 2014 -- June 2018}
+  \resumeSubHeadingListEnd
+
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Frontend web developer}{February 2026 -- Present}
+      {EveryMatrix}{Zagreb, Croatia}
+      \resumeItemListStart
+        \resumeItem{Develop and maintain frontend features for a large-scale B2B sports betting platform used by 200+ operators worldwide, ensuring reliability and performance in real-time betting environments}
+        \resumeItem{Implement and maintain real-time data integrations via REST APIs, WebSockets, and SSE, enabling live sports odds updates and bet interactions with minimal latency}
+        \resumeItem{Improve frontend performance by optimizing state management, component lifecycle usage, and rendering patterns, resulting in faster UI updates in high-frequency data environments}
+        \resumeItem{Collaborate with cross-functional teams (PMs, backend engineers, QA) in an agile environment to deliver features across multiple betting products and markets}
+        \resumeItem{Maintained and developed various Web components used in company's products}
+        \resumeItem{Implemented compatibility support for legacy ESC/POS printers, adapting the printing system to work with older ESC/POS printers used in retail betting shops, ensuring reliable ticket printing and seamless integration with existing retail infrastructure}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Sales Advisor}{April 2025 -- July 2025}
+      {Hrvatski Telekom d.d.}{Zadar, Croatia}
+      \resumeItemListStart
+        \resumeItem{Actively advised customers and presented the full range of HT products and services (mobile and fixed plans, devices, internet, TV packages)}
+        \resumeItem{Achieved individual and team sales targets through in-person and phone-based sales}
+        \resumeItem{Managed new contracts and renewals, optimizing plans based on customer needs}
+        \resumeItem{Resolved customer inquiries, complaints, and technical issues in coordination with technical support}
+    \resumeItemListEnd
+
+    \resumeSubheading
+      {Frontend web developer}{February 2021 -- November 2024}
+      {Plava tvornica d.o.o.}{Virovitica, Croatia (Remote)}
+      \resumeItemListStart
+        \resumeItem{Developing responsive and intuitive user interfaces using HTML, CSS, and JavaScript frameworks such as React, Angular, and Vue}
+        \resumeItem{Optimizing web performance by reducing load times, optimizing assets, and implementing caching strategies to ensure efficient, fast-loading websites}
+        \resumeItem{Implementing mobile-first and responsive design principles, creating layouts that were adapting smoothly to different devices and screen sizes}
+        \resumeItem{Integrating APIs and backend services by working closely with backend developers to ensure smooth communication between front-end and back-end systems}
+        \resumeItem{Participating in Agile teams, attending daily stand-ups, sprint planning, and code reviews to ensure timely feature delivery}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+
+%-----------PROJECTS-----------
+\section{Projects}
+    \textbf{\scshape For projects view:}
+    \href{https://karlozrilic.github.io/#projects}{\underline{karlozrilic.github.io}}
+
+%
+%-----------PROGRAMMING SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: JavaScript, TypeScript, HTML/CSS, Java, Python, Dart, Java, SQL (Postgres), PHP} \\
+     \textbf{Frameworks}{: React, Vue, Node.js, Next.js, Electron, React native, Flutter, Flask, Twig, Tailwind, Material-UI} \\
+     \textbf{Developer Tools}{: Git, Docker, Firebase, Postman, Google Cloud Platform, VS Code, Android Studio} \\
+    }}
+ \end{itemize}
+
+
+%-------------------------------------------
+\end{document}
