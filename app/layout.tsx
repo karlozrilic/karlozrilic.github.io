@@ -38,6 +38,24 @@ export default function RootLayout({ children }: Readonly<{children: React.React
 						__html: `(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();`,
 					}}
 				/>
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+							(function () {
+								const hash = window.location.hash;
+								if (!hash) return;
+								// Save it for later
+								window.__pendingHash = hash;
+								// Remove hash without triggering navigation
+								window.history.replaceState(
+									null,
+									'',
+									window.location.pathname + window.location.search
+								);
+							})();
+						`
+					}}
+				/>
 			</head>
 			<body
 				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}

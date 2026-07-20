@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
 import { fetchAboutMe } from '@/app/src/store/slices/aboutMeSlice';
@@ -30,23 +30,6 @@ export default function GlobalDataLoader() {
             (countriesStatus === 'succeeded' || countriesStatus === 'failed')
         );
     }, [aboutMeStatus, technologiesStatus, projectsStatus, experiencesStatus, vercelProjectsStatus, countriesStatus]);
-
-    useLayoutEffect(() => {
-        const hash = window.location.hash;
-
-        if (!hash) return;
-
-        // Save it for later
-        sessionStorage.setItem('pendingScrollHash', hash);
-        console.log('Saved hash for later:', hash);
-
-        // Remove hash without triggering navigation
-        window.history.replaceState(
-            null,
-            '',
-            window.location.pathname + window.location.search
-        );
-    }, []);
 
     useEffect(() => {
         if (aboutMeStatus === 'idle') {
@@ -87,7 +70,7 @@ export default function GlobalDataLoader() {
     useEffect(() => {
         if (!dataLoaded) return;
 
-        const hash = sessionStorage.getItem('pendingScrollHash');
+        const hash = (window as any).__pendingHash;
 
         if (!hash) return;
 
@@ -98,7 +81,7 @@ export default function GlobalDataLoader() {
                 behavior: 'smooth',
                 block: 'start',
             });
-            sessionStorage.removeItem('pendingScrollHash');
+            delete (window as any).__pendingHash;
         });
     }, [dataLoaded]);
 
