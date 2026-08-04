@@ -1,7 +1,7 @@
 'use client'
 
 import '@/app/src/style/print.css';
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../src/store/store';
 import { formatDatePrecise } from '@/helpers/constants';
