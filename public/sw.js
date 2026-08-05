@@ -1,5 +1,5 @@
 const R2_BASE = "https://assets.zrilich.com/busytex";
-const PREFIX = "/core/busytex/";   // include your basePath
+const PREFIX = "/core/busytex/";
 const CACHE = "busytex-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -7,9 +7,9 @@ self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 
 self.addEventListener("fetch", (event) => {
     const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin) return;
 
     if (
-        url.origin === self.location.origin &&
         url.pathname.startsWith(PREFIX) &&
         (url.pathname.endsWith(".wasm") || url.pathname.endsWith(".data"))
     ) {
@@ -17,7 +17,13 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    if (event.request.mode === "navigate" && url.origin === self.location.origin) {
+    const destination = event.request.destination;
+    if (
+        event.request.mode === "navigate" ||
+        destination === "worker" ||
+        destination === "sharedworker" ||
+        destination === "script"
+    ) {
         event.respondWith(withCoiHeaders(event.request));
     }
 });
@@ -44,8 +50,11 @@ async function proxyAsset(request, url) {
 async function withCoiHeaders(request) {
     const res = await fetch(request);
     const headers = new Headers(res.headers);
-    headers.set("Cross-Origin-Opener-Policy", "same-origin");
     headers.set("Cross-Origin-Embedder-Policy", "require-corp");
+    headers.set("Cross-Origin-Resource-Policy", "same-origin");
+    if (request.mode === "navigate") {
+        headers.set("Cross-Origin-Opener-Policy", "same-origin");
+    }
     return new Response(res.body, {
         status: res.status,
         statusText: res.statusText,
