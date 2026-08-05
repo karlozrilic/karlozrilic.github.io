@@ -12,8 +12,11 @@ type LatexEditorProps = {
 
 export default function LatexEditor({ value, onChange }: LatexEditorProps) {
     const host = useRef<HTMLDivElement>(null);
+    const viewRef = useRef<EditorView | null>(null);
 
     useEffect(() => {
+        if (!host.current) return;
+
         const view = new EditorView({
             state: EditorState.create({
                 doc: value,
@@ -27,9 +30,31 @@ export default function LatexEditor({ value, onChange }: LatexEditorProps) {
             }),
             parent: host.current!,
         });
-        return () => view.destroy();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
+        viewRef.current = view;
+        
+        return () => {
+            view.destroy();
+            viewRef.current = null;
+        };
     }, []);
+
+    useEffect(() => {
+        const view = viewRef.current;
+        if (!view) return;
+
+        const currentValue = view.state.doc.toString();
+
+        if (value !== currentValue) {
+            view.dispatch({
+                changes: {
+                    from: 0,
+                    to: currentValue.length,
+                    insert: value,
+                },
+            });
+        }
+    }, [value]);
 
     return <div ref={host} className='h-full overflow-auto' />;
 }

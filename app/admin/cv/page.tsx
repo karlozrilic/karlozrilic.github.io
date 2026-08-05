@@ -17,7 +17,7 @@ export default function CV() {
 
     return (
         <div className='grid h-screen grid-cols-2'>
-            <LatexEditor value='' onChange={(value) => {
+            <LatexEditor value={cvData.data ?? ''} onChange={(value) => {
                 console.log(value);
                 setSource(value);
             }} />
