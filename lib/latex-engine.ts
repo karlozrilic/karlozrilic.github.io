@@ -2,7 +2,6 @@
 import { BusyTexRunner, PdfLatex } from 'texlyre-busytex';
 
 const ASSET_BASE = process.env.NEXT_PUBLIC_BUSYTEX_BASE ?? '/core/busytex';
-const PROGRESS_RE = /Downloading data\.\.\.\s*\((\d+)\/(\d+)\)/;
 
 export interface CompileResult {
 	ok: boolean;
@@ -20,7 +19,10 @@ let runner: BusyTexRunner | null = null;
 let booting: Promise<BusyTexRunner> | null = null;
 let chain: Promise<unknown> = Promise.resolve();
 
-const BINARIES = ['busytex.wasm', 'texlive-basic.data'];
+const BINARIES = [
+	{ name: 'busytex.wasm', size: 32501975 },
+  	{ name: 'texlive-basic.data', size: 90786746 },
+];
 const listeners = new Set<(progress: BootProgress) => void>();
 
 export function onBootProgress(fn: (progress: BootProgress) => void): () => void {
@@ -34,26 +36,24 @@ function emit(loaded: number, total: number) {
 }
 
 async function prefetchBinaries() {
-	const responses: Response[] = [];
+	const responses: { res: Response; size: number }[] = [];
 	let total = 0;
 
-	for (const name of BINARIES) {
+	for (const { name, size } of BINARIES) {
 		const res = await fetch(`${ASSET_BASE}/${name}`);
 		if (!res.ok || !res.body) throw new Error(`prefetch failed: ${name} (${res.status})`);
-		total += Number(res.headers.get('content-length') ?? 0);
-		responses.push(res);
+		const declared = Number(res.headers.get('content-length')) || size;
+		total += declared;
+		responses.push({ res, size: declared });
 	}
 
 	let loaded = 0;
-	for (const res of responses) {
+	for (const { res } of responses) {
 		const reader = res.body!.getReader();
-		let chunks = 0;
 		for (;;) {
 			const { done, value } = await reader.read();
 			if (done) break;
-			chunks++;
 			loaded += value.byteLength;
-			console.log('[prefetch] chunk', chunks, loaded, '/', total);
 			emit(loaded, total);
     	}
   	}
