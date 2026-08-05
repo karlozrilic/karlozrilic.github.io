@@ -22,6 +22,7 @@ async function boot(): Promise<BusyTexRunner> {
 			busytexBasePath: ASSET_BASE,
 			preloadDataPackages: ['texlive-basic.js'],
   			catalogDataPackages: ['texlive-recommended.js', 'texlive-extra.js'],
+			verbose: true
 			// engineMode: 'pdftex', // smaller than 'combined'; use 'xetex' if you need UTF-8/OpenType
 		});
 		await r.initialize(true); // true = run in a Web Worker

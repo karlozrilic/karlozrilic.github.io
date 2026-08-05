@@ -39,7 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-public/core/
-!public/core/busytex/
+public/core/*
+!public/core/busytex
+public/core/busytex/*
 !public/core/busytex/*.js
 !public/core/busytex/*.txt

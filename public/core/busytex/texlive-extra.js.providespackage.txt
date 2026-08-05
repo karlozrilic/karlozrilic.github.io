@@ -1,0 +1,2871 @@
+// \ProvidesPackage{placeat}%
+// \ProvidesPackage{lum-dejavu}
+// \ProvidesPackage{lum-fira}
+// \ProvidesPackage{lum-termes}
+// \ProvidesPackage{lum-newcomputermodern}
+// \ProvidesPackage{lum-gfsneohellenic}
+// \ProvidesPackage{lum-bonum}
+// \ProvidesPackage{lum-concrete}
+// \ProvidesPackage{lum-xits}
+// \ProvidesPackage{lum-schola}
+// \ProvidesPackage{lum-xcharter}
+// \ProvidesPackage{lum-pagella}
+// \ProvidesPackage{lum-erewhon}
+// \ProvidesPackage{lum-lmodern}
+// \ProvidesPackage{lum-newcomputermodernsans}
+// \ProvidesPackage{lum-stix2}
+// \ProvidesPackage{luainputenc}
+// \ProvidesPackage{luahttp}[LuaHTTP Package, Version 1.0.1]
+// \ProvidesPackage{truthtable}[2023/09/16 0.1.0 Package for generating truth tables automatically using LuaTeX]
+// \ProvidesPackage{spacekern}[2023/07/08 v0.3 Kerning between words and against space]
+// \ProvidesPackage{luatodonotes}
+// \ProvidesPackage{yamlvars}[2025-02-11]
+// \ProvidesPackage{luahyphenrules}
+// \ProvidesPackage{pyluatex}[2024/01/10 v0.6.3 Execute Python code on the fly]
+// \ProvidesPackage{ideavault}[1.0.5]
+// \ProvidesPackage{luagcd}[1.1]
+// \ProvidesPackage{lua-widow-control}%
+// \ProvidesPackage{luamaths}[1.6]
+// \ProvidesPackage{luatruthtable}[1.3]
+// \ProvidesPackage{lualinalg}[1.9]
+// \ProvidesPackage{showkerning}[2023/07/08 v0.3 Showing kerns in a document]
+// \ProvidesPackage{lua-check-hyphen}[\luachekchyphenpkgdate\space v\luachekchyphenversion\space Hyphenation checking for LuaTeX (PGU)]
+// \ProvidesPackage{KKluaverb}[2026/01/27 v2.1.2]
+// \ProvidesPackage{luaimageembed}[2017/08/12 luaimageembed alpha version 0.1]
+// \ProvidesPackage{luamesh}[\filedate\space\fileversion]%
+// \ProvidesPackage{addliga}[2019/04/30 addliga 1.0]
+// \ProvidesPackage{unitconv}[%
+// \ProvidesPackage{odsfile}[2025/10/31 v0.10 odsfile package to select cells from ODS sheets and
+// \ProvidesPackage{luacomplex}[1.4]
+// \ProvidesPackage{selnolig-german-hyphex}%
+// \ProvidesPackage{selnolig}[\selnoligpackagedate]
+// \ProvidesPackage{selnolig-english-hyphex}%
+// \ProvidesPackage{selnolig-german-patterns}%
+// \ProvidesPackage{selnolig-english-patterns}%
+// \ProvidesPackage{luaquotes}
+// \ProvidesPackage{bezierplot}[2024/11/02 bezierplot]
+// \ProvidesPackage{ekdosis}
+// \ProvidesPackage{luaset}[1.1]
+// \ProvidesPackage{SympyCalc}[2023/05/08 v0.1.1 Sympy commands with TeX printing]
+// \ProvidesPackage{luacensor}
+// \ProvidesPackage{\packagename}[\packagedate\space \packageversion\space
+// \ProvidesPackage{uninormalize}
+// \ProvidesPackage{luaoptions}[2022/10/30 v0.8]
+// \ProvidesPackage{luaplot}[1.5]
+// \ProvidesPackage{gitinfo-lua}[2024/09/14 1.2.0 Xerdi's Git Package]
+// \ProvidesPackage{typewriter}[2025-02-10 v1.3 typewriter package]
+// \ProvidesPackage{luarandom}[2023/11/12 v 0.02 package for random numbers]
+// \ProvidesPackage{fancymag}[2025/07/07 v1.0 Modern, stylish typography for academic magazines and scientific publications]
+// \ProvidesPackage{luatextra}[2010/10/10 v1.0 Loading usual LuaLaTeX packages]
+// \ProvidesPackage{datestamp}[2021/12/14 v0.3
+// \ProvidesPackage{pgfpages-rl}[2021/08/15 ver 1 adapt pgfpages for TRT pagedir (lualatex)]
+// \ProvidesPackage{showhyphenation}[2023/07/08 v0.3 Marking of hyphenation points]
+// \ProvidesPackage{innerscript}[2025/05/08 v. 1.4a]
+// \ProvidesPackage{luasseq}[2023/01/10]
+// \ProvidesPackage{plantuml}
+// \ProvidesPackage{scikgtex}[2022/11/13 v2.1.1]
+// \ProvidesPackage{linebreaker}
+// \ProvidesPackage{ligtype}[2023/07/08 v0.3 Comprehensive ligature suppression functionalities]
+// \ProvidesPackage{luamodulartables}[1.0]
+// \ProvidesPackage{luaindex}
+// \ProvidesPackage{longmath}[2024/07/04]
+// \ProvidesPackage{semesterplannerlua}
+// \ProvidesPackage{lualatex-truncate}%
+// \ProvidesPackage{pgfmolbio}[2024/06/17 v0.21a Molecular biology graphs with TikZ]
+// \ProvidesPackage{autopuncitems}[2022-04-16]
+// \ProvidesPackage{luacode}[2012/01/23 v1.2a lua-in-tex helpers (mpg)]
+// \ProvidesPackage{cstypo}
+// \ProvidesPackage{lua-placeholders}[2024/04/02 1.0.3 Lua Placeholders Package]
+// \ProvidesPackage{luacas}
+// \ProvidesPackage{lua-typo}
+// \ProvidesPackage{lua-typo}
+// \ProvidesPackage{lua-typo}
+// \ProvidesPackage{minim-mp}[2025/02/12 Run MetaPost code from LaTeX]
+// \ProvidesPackage{barracuda}[2022/06/23 v0.0.12 a barcode typesetting package]%
+// \ProvidesPackage{interpreter}[2012/06/10 v.1.2 Preprocessing input files on the fly.]
+// \ProvidesPackage{lutabulartools}[2025-01-06]
+//   \ProvidesPackage{luamplib}
+// \ProvidesPackage{luatexbase-attr}
+// \ProvidesPackage{luatexbase-cctb}
+// \ProvidesPackage{luatexbase-mcb}
+// \ProvidesPackage{luatexbase}
+// \ProvidesPackage{luatexbase-compat}
+// \ProvidesPackage{luatexbase-loader}
+// \ProvidesPackage{luatexbase-regs}
+// \ProvidesPackage{luatexbase-modutils}
+//   \ProvidesPackage{luatexko}[2026/02/20 v5.7 typesetting Korean with LuaTeX]
+// \ProvidesPackage{spelling}
+// \ProvidesPackage{lparse}[2025/07/02 v0.3.0 Parse and scan macro arguments in Lua on LuaTeX using a xparse like argument specification]
+// \ProvidesPackage{ctablestack}
+// \ProvidesPackage{tsvtemplate} \RequirePackage{environ} \input tsvtemplate
+// \ProvidesPackage{nodetree-embed}
+// \ProvidesPackage{nodetree}
+// \ProvidesPackage{cloze}
+// \ProvidesPackage{penlight}[2024-09-15]
+//   \ProvidesPackage{lua-visual-debug}[2025-12-29 v1.0
+// \ProvidesPackage{luavlna}[2025-10-29 luavlna]
+// \ProvidesPackage{chickenize}%
+// \ProvidesPackage{pdfextra}
+// \ProvidesPackage{farbe}[2025/06/08 v0.2.0 Color management (conversion, names) for LuaTeX implemented in Lua.]
+// \ProvidesPackage{addtoluatexpath}[2025-01-11]
+// \ProvidesPackage{penlightplus}[2025-02-14]
+//   \ProvidesPackage{luaotfload}%
+//   \ProvidesPackage{luapackageloader}[\luapackageloaderpkgdate\space v\luapackageloaderversion\space Lua package searchers for LuaTeX]
+// \ProvidesPackage{luakeys}[2025/07/19 v0.17.0 Parsing key-value options using Lua.]
+// \ProvidesPackage{luakeys-debug}[2025/07/19 v0.17.0 Debug package for luakeys.]
+// \ProvidesPackage{xecyr}%
+// \ProvidesPackage{ucharclasses}[2022/10/20 v2.6.0 Unicode block character classes for XeLaTeX]
+// \ProvidesPackage{parsa}[\parsadate\space v\parsa@version\space
+// \ProvidesPackage{bidicontour}
+// \ProvidesPackage{unisugar}[\date@unisugar{} \signature@unisugar:
+// \ProvidesPackage{bidi-atbegshi}[2022/02/14 v0.2 bidi-aware shipout macros]
+// \ProvidesPackage{interchar}[2015/02/17 v0.2
+// \ProvidesPackage{xeindex}[2014/12/05 v.0.3 Automatic index for XeLaTeX.]
+// \ProvidesPackage{xevlna}[2016/09/05 vlna for both XeLaTeX and plain XeTeX]
+// \ProvidesPackage{arabxetex}
+// \ProvidesPackage{mathspec}
+// \ProvidesPackage{ptext}[2013/04/28 v1.1 A package similar to the lipsum 
+// \ProvidesPackage{bidishadowtext}
+// \ProvidesPackage{na-position}[2020/06/14 version1.2]
+// \ProvidesPackage{xechangebar}
+// \ProvidesPackage{unicode-bidi}[2016/11/09 v0.01
+// \ProvidesPackage{tetragonos}[2019/01/15 v1 package tetragonos]
+// \ProvidesPackage{fontwrap}
+// \ProvidesPackage{fontbook}
+// \ProvidesPackage{fontbook}
+// \ProvidesPackage{xltxtra}
+// \ProvidesPackage{bidipagegrid}%
+// \ProvidesPackage{xespotcolor}
+// \ProvidesPackage{xecolor}[2013/04/04 v0.1 color in xelatex]
+//   \ProvidesPackage{xetexko}[2025/08/24 v4.6 typesetting Korean with XeTeX]
+//   \ProvidesPackage{xetexko-space}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-josa}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-font}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-vertical}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-hanging} [2025/02/24 v4.4 A depricated addendum to XeTeX-ko]
+//   \ProvidesPackage{xesearch}[2019/04/24  v.0.2  Searching documents.]
+// \ProvidesPackage{beamer-reveal}
+// \ProvidesPackage{mathfont}[2026/02/07 v. 3.0a]
+// \ProvidesPackage{tikzpeople}[2017/04/22 v0.4 People shaped nodes for Tikz]
+// \ProvidesPackage{svnkw}
+// \ProvidesPackage{svn-multi}[%
+// \ProvidesPackage{exframe}[2026/01/22 v3.5.2 Framework for Exercise Problems]
+// \ProvidesPackage{beamerouterthemecsh}[2025/11/27 v1.1 CSH Beamer Outer Theme]
+// \ProvidesPackage{beamerthemecsh}[2025/11/27 v1.1 CSH Beamer Theme]
+// \ProvidesPackage{beamercolorthemecsh}[2025/11/27 v1.1 CSH Beamer Color Theme]
+// \ProvidesPackage{beamerinnerthemecsh}[2025/11/27 v1.1 CSH Beamer Inner Theme]
+// \ProvidesPackage{xcntperchap}[2018/01/05 - v\xcntperchappackageversion]
+// \ProvidesPackage{pagepc}[1995/05/13]
+// \ProvidesPackage{fixme}[2019/01/03 v4.5 Collaborative annotations for LaTeX2e]
+// \newcommand*\FXProvidesLayout[1]{\ProvidesPackage{fxlayout#1}}
+// \newcommand*\FXProvidesEnvLayout[1]{\ProvidesPackage{fxenvlayout#1}}
+// \newcommand*\FXProvidesTargetLayout[1]{\ProvidesPackage{fxtargetlayout#1}}
+// \newcommand*\FXProvidesTheme[1]{\ProvidesPackage{fxtheme#1}}
+// \ProvidesPackage{environ}[2014/05/04 v0.3 A new way to define environments]
+// \ProvidesPackage{pdfcprot}[2002/02/27 v1.5 character protruding using
+// \ProvidesPackage{zed-csp}[{%
+// \ProvidesPackage{wrapfig2}%
+// \ProvidesPackage{tkz-grapheur}[2026/02/26 0.30b Des outils en TikZ pour travailler comme avec un grapheur]
+//   \ProvidesPackage{sepnum}%
+// \ProvidesPackage{xassoccnt}[2021/11/21 - v\xassoccntpackageversion]
+// \ProvidesPackage{trsym}
+// \ProvidesPackage{xnewcommand}%
+// \ProvidesPackage{fjodor}
+// \ProvidesPackage{ktv-texdata}
+// \ProvidesPackage{ktv-buildnum}[2003/10/10 v1.5  KTV, Build Number]
+// \ProvidesPackage{nonumonpart}
+// \ProvidesPackage{grid-system}[2014/02/16 v. 0.3.0 LaTeX Grid System]
+// \ProvidesPackage{seealso}
+// \ProvidesPackage{exercisepoints}[%
+// \ProvidesPackage{hyphenat}[2009/09/02 v2.3c hyphenation utilities]
+// \ProvidesPackage{phfsvnwatermark}
+// \ProvidesPackage{collectbox}[%
+// \ProvidesPackage{uni8}[2019/01/14 v0.03 Universal inputenc, fontenc and babel for pdflatex + lualatex]
+// \ProvidesPackage{exesheet}
+// \ProvidesPackage{graphicscache}
+// \ProvidesPackage{graphicscache}[2018/10/02 Graphics Cache]
+// \ProvidesPackage{ocg-p}[2013/01/10 v\ocgpversion\space Optional Content Group in a PDF document]
+// \ProvidesPackage{cuisine}[2014/06/26 v0.7 recipe typesetting]
+// \ProvidesPackage{tikz-shields}[2025/05/12 version v0.1 Drawing badges with TikZ]
+// \ProvidesPackage{hobsub-generic}[2019-11-14]
+// \ProvidesPackage{hobsub-hyperref}[2019-11-14]
+// \ProvidesPackage{hobsub}[2019/11/14]
+// \ProvidesPackage{thumby}[2010/01/14 v0.1 Thumby]
+// \ProvidesPackage{pdfcolfoot}%
+// \ProvidesPackage{beamerthemefocus}[2024/02/07 v3.4.0 Focus Beamer theme]
+// \ProvidesPackage{chextras}[2012/07/20 v1.01 Swiss companion package]
+// \ProvidesPackage{nidanfloat}%
+// \ProvidesPackage{iffont}
+// \ProvidesPackage{pgfopts}
+// \ProvidesPackage{circuitikz-0.8.3}
+// \ProvidesPackage{circuitikz-1.0}
+// \ProvidesPackage{circuitikz-1.7.2}
+// \ProvidesPackage{circuitikz-0.7}
+// \ProvidesPackage{circuitikz-0.4}%
+// \ProvidesPackage{circuitikz-0.9.3}
+// \ProvidesPackage{circuitikz-1.4.6}
+// \ProvidesPackage{circuitikz-1.1.2}
+// \ProvidesPackage{circuitikz}%
+// \ProvidesPackage{circuitikz-0.6}
+// \ProvidesPackage{circuitikz-1.2.7}
+// \ProvidesPackage{circuitikz-0.9.6}
+// \ProvidesPackage{copyrightbox}[2011/11/27 \space  v 0.1]
+// \ProvidesPackage{xcolor-solarized}
+// \ProvidesPackage{beamerouterthememoloch}[2025-12-18 v2.1.0 Moloch outer theme]
+// \ProvidesPackage{beamerfontthememoloch}[2025-12-18 v2.1.0 Moloch font theme]
+// \ProvidesPackage{beamercolorthememoloch-highcontrast}[2025-12-18 v2.1.0 Moloch high-contrast color theme]
+// \ProvidesPackage{beamercolorthememoloch-tomorrow}[2025-12-18 v2.1.0 Moloch tomorrow color theme]
+// \ProvidesPackage{beamercolorthememoloch}[2025-12-18 v2.1.0 Moloch color theme]
+// \ProvidesPackage{beamerthememoloch}[2025-12-18 v2.1.0 Moloch theme]
+// \ProvidesPackage{beamerinnerthememoloch}[2025-12-18 v2.1.0 Moloch inner theme]
+// \ProvidesPackage{constants}%
+// \ProvidesPackage{FramedSyntax}%
+// \ProvidesPackage{gmverb}
+// \ProvidesPackage{luatikz}[2024/12/04 2.12.0 Luatikz]
+// \ProvidesPackage{hep-acronym}[2025/09/01 v1.4 Acronyms using glossaries]
+// \ProvidesPackage{overlays}[2021/02/23 v2.12 Incremental slides]
+// \ProvidesPackage{engpron}
+// \ProvidesPackage{engpron-tools}
+// \ProvidesPackage{parnotes}[2024/06/12 rev. 3c Notes after every paragraph, or elsewhere]
+// \ProvidesPackage{forms16be}
+// \ProvidesPackage{parskip}[2001/04/09 non-zero parskip adjustments]
+// \ProvidesPackage{parskip}[2021-03-14 v2.0h non-zero parskip adjustments]
+// \ProvidesPackage{yplan}[1999/07/06]
+// \ProvidesPackage{templatetools}
+// \ProvidesPackage{\filename}[2026/02/27 version v2.3 Fancy QR-Codes]
+// \ProvidesPackage{tikz3d-fr}[2025/05/22 0.1.5 Aide pour l'utilisation de TikZ 3D]
+// \ProvidesPackage{tramlines}
+// \ProvidesPackage{tikz-feynman}[\tikzfeynman@date v\tikzfeynman@version Feynman diagrams with TikZ]
+// \ProvidesPackage{komacv-classic}
+// \ProvidesPackage{komacv-oldstyle}
+// \ProvidesPackage{komacv-casual}
+// \ProvidesPackage{kvsetkeys}%
+// \ProvidesPackage{threadcol}
+// \ProvidesPackage{postit}[2025/07/29 0.1.5 Display sticky notes in a doc]
+// \ProvidesPackage{vectorlogos}[2024/03/30 0.1.3 Vectorial logos of 'classic' softwares, for inline use.]
+// \ProvidesPackage{anyfontsize}[2007/11/22 anyfontsize.sty by pts]
+// \ProvidesPackage{tikzpagenodes}[%
+// \ProvidesPackage{highlightlatex}[2021/03/14]
+// \ProvidesPackage{komacv-multilang}
+// \ProvidesPackage{komacv-lco}
+// \ProvidesPackage{komacv-addons}
+// \ProvidesPackage{graphicxbox}
+// \ProvidesPackage{storebox-pgf}[%
+// \ProvidesPackage{storebox}[%
+// \ProvidesPackage{cellspace}%
+// \ProvidesPackage{authblk}
+// \ProvidesPackage{fullpage}
+// \ProvidesPackage{figcaps}
+// \ProvidesPackage{balance}
+// \ProvidesPackage{sublabel}
+// \ProvidesPackage{fancylabel}[2017/12/30 v1.1 Referencing in a fancy way]
+// \ProvidesPackage{ccaption}
+// \ProvidesPackage{harveyballs}[2013/10/22 Harvey Balls for LaTeX by Sascha Roth, Technical University Munich, sascha.roth@mytum.de]
+// \ProvidesPackage{tikzPackets}
+// \ProvidesPackage{svninfo}[2010/03/22 v0.7.4]
+// \ProvidesPackage{tonevalue}
+// \ProvidesPackage{ipsum}[2025/07/15 0.1.3 Multilanguage simply dummy texts]
+// \ProvidesPackage{puyotikz}[2020/12/28 v1.0.1 PuyoTikZ]
+// \ProvidesPackage{arabicfront}[2006/09/03 v1.0 Arabic page numbering]
+// \ProvidesPackage{suetterl}[1996/07/18 v1.2 LaTeX package suetterl]
+// \ProvidesPackage{xwatermark}[\StyleFileInfo]
+// \ProvidesPackage{pdfpagediff}
+// \ProvidesPackage{alnumsec}
+// \ProvidesPackage{csvsimple-legacy}[2024/09/27 version 2.7.0 LaTeX2e CSV file processing]
+// \ProvidesPackage{memoizable}[2024/12/02 v1.4.1 A programmer's stub for Memoize]
+// \ProvidesPackage{nomemoize}[2024/12/02 v1.4.1 A no-op stub for Memoize]
+// \ProvidesPackage{memoize}[2024/12/02 v1.4.1 Fast and flexible externalization]
+// \ProvidesPackage{coptic}[2010/01/09 v.0.2 Claudio Beccari]
+// \ProvidesPackage{numprint}
+// \ProvidesPackage{nbaseprt}
+// \ProvidesPackage{numprint032}[\nprtfiledate\space v\nprtfileversion\space
+// \ProvidesPackage{hideanswer}[2024/11/23 v1.2]
+// \ProvidesPackage{fifo-stack}[2014/03/24 v1.0 Multi-FIFO/stack system]
+// \ProvidesPackage{thinsp}[2016/10/02 v 0.2 Package providing stretchable thinspaces]
+// \ProvidesPackage{xfakebold}[2023/11/21 v0.10 using bold characters]
+// \ProvidesPackage{cntformats}[%
+// \ProvidesPackage{pdfcomment}[2018/11/01 pdfcomment.sty v2.4a - Josef Kleber (C) 2008-2012, 2015-2016, 2018]%
+// \ProvidesPackage{combinet}
+// \ProvidesPackage{combcite}
+// \ProvidesPackage{combnat}
+// \ProvidesPackage{transparent-nometadata}%
+// \ProvidesPackage{nomencl}%
+//   \ProvidesPackage{qsymbols}[#4 Quoted math symbol abbreviations v.#2]
+// \ProvidesPackage{parselines}
+// \ProvidesPackage{doi}[2018/09/09 handle doi numbers]
+// \ProvidesPackage{ecsubzcm}[1999/01/19]
+// \ProvidesPackage{relenc}[1999/01/23]
+// \ProvidesPackage{2sidedoc}[1999/01/24]
+// \ProvidesPackage{tagpair}[2016/02/03 v1.1 Word-by-word glosses, translations,
+// \ProvidesPackage{ltablex}[2014/08/13 v1.1 Modified tabularx]% RN, 2014/08/13
+// \ProvidesPackage{beton}[\filedate\space\fileversion]
+// \ProvidesPackage{ltabptch}[\filedate\space v\fileversion\space
+// \ProvidesPackage{bchart}
+// \ProvidesPackage{secretx}
+// \ProvidesPackage{ftnxtra}%
+// \ProvidesPackage{amsmidx}[2007/09/25 v2.02 multiple indexes for AMS classes]
+// \ProvidesPackage{upref}[2007/03/14 v2.04]
+// \ProvidesPackage{amsthm}[2020/05/29 v2.20.6]
+// \ProvidesPackage{amsbooka}[2014/07/11 v2.08 monograph part/chapter authors]
+// \ProvidesPackage{koma-moderncvclassic}[2012/01/04 v0.5]
+// \ProvidesPackage{nestquot}[1999/12/10 V 0.1 Nested Quotes]
+// \ProvidesPackage{eulerpx}[\filedate\space\fileversion]
+// \ProvidesPackage{metre}%
+// \ProvidesPackage{icomma}
+// \ProvidesPackage{upgreek}
+// \ProvidesPackage{akkmathnum}[2005/04/30 1.1.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing utilities for typesetting numeric elements]
+// \ProvidesPackage{akkmathbasic}[2005/04/30 3.0.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing basic utilities for typesetting mathematics]
+// \ProvidesPackage{akknum}[2005/05/01 1.0.0 by Igor Akkerman (c) 2005 Package providing numeric utilities.]
+// \ProvidesPackage{akktex}[2005/05/05 1.0.1 by Igor Akkerman (c) 2005 Package loading all AkkTeX packages.]
+// \ProvidesPackage{akkgerman}[2005/04/27 1.0.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package for typesetting German documents.]
+// \ProvidesPackage{akkparskip}[2005/04/30 by Igor Akkerman (c) 2004, 2005 v1.3.2 Package providing a non empty paragraph skip with list and section environment corrections.]
+// \ProvidesPackage{akkwidepage}[2005/05/05 by Igor Akkerman (c) 2004, 2005 v1.1.1 Package providing wide pages.]
+// \ProvidesPackage{akklongpage}[2004/06/12 by Igor Akkerman (c) 2004 v1.0.1 Package providing long pages.]
+// \ProvidesPackage{akkmathtext}[2005/05/01 1.0.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing utilities for typesetting text elements within mathematic formulas]
+// \ProvidesPackage{akkstring}[2005/04/30 1.2.2 by Igor Akkerman (c) 2004, 2005 Package providing string operation utilities.]
+// \ProvidesPackage{akkmathfun}[2005/04/28 1.0.1 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing utilities for typesetting mathematical functions]
+// \ProvidesPackage{akkcounterlabelpattern}[2006/10/25 1.0.2 by Igor Akkerman (c)2004-2006 Package providing easy counter label creation using a specified pattern.]
+// \ProvidesPackage{akkmathset}[2005/04/30 1.0.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004 Package providing utilities for typesetting mathematical sets]
+// \ProvidesPackage{akkconditional}[2005/04/30 1.1.1 by Igor Akkerman (c) 2004, 2005 Package providing utilities for handling conditionals.]
+// \ProvidesPackage{akkcs}[2005/04/30 1.0.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing utilities for typesetting computer science elements]
+// \ProvidesPackage{akkmathpaper}[2005/04/30 1.1.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing utilities for typesetting mathematical papers as lecture scripts]
+// \ProvidesPackage{akkmath}[2005/05/05 1.2.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package importing all AkkTeX and AMS math packages]
+// \ProvidesPackage{akkmathproof}[2005/04/30 1.2.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing utilities for typesetting mathematical proofs]
+// \ProvidesPackage{akkgermanabbreviations}[2004/06/10 1.1.1 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004 Package providing common German abbreviations.]
+// \ProvidesPackage{akkmathrel}[2006/10/22 2.0.1 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005, 2006 Package providing utilities for typesetting mathematical relations]
+// \ProvidesPackage{akkdoc}[2005/04/30 1.0.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing commands for documents.]
+// \ProvidesPackage{akksection}[2005/04/30 by Igor Akkerman (c) 2004, 2005 v1.0.2 Package providing an alternative section definition command.]
+// \ProvidesPackage{akkmathdisc}[2005/04/30 1.0.0 by Igor Akkerman (c) 2000, 2001, 2002, 2003, 2004, 2005 Package providing utilities for typesetting discrete mathematics like graphs]
+// \ProvidesPackage{twoup}[2007/02/26 version 1.3]
+// \ProvidesPackage{dimnum}
+// \ProvidesPackage{dimnum}
+// \ProvidesPackage{centeredline}[2022/10/10 v1.2 centering a line the JFB way]
+// \ProvidesPackage{pgfplotstable}[\pgfplotsversiondate\space v\pgfplotsversion\space Table typesetting and Pretty-printing (\pgfplotsrevision)]
+// \ProvidesPackage{pgfregressiontest}[2010/10/31 Version 0.1]
+// \ProvidesPackage{pgfplots}[\pgfplotsversiondate\space v\pgfplotsversion\space Data Visualization (\pgfplotsrevision)]
+// \ProvidesPackage{bugtracker}[2010/07/23 Version 0.1]
+// \ProvidesPackage{changelayout}[2009/10/07 v0.1 Change page layout on the fly]
+// \ProvidesPackage{a4wide}[1994/08/30]
+// \ProvidesPackage{draftcopy}[2002/02/25 v2.16]
+// \ProvidesPackage{notes}
+// \ProvidesPackage{showframe}[2020/10/14 v0.1j showframe (new impl., RN)]
+// \ProvidesPackage{eso-pic}
+// \ProvidesPackage{paracol}[2025/07/14 1.37 typeset columns in parallel]
+// \ProvidesPackage{paracol}
+// \ProvidesPackage{pgf-umlsd}[2011/07/27 v0.6 Some LaTeX macros for UML
+// \ProvidesPackage{affilauthor}[2023/11/29 1.0.1 key value style for author names]
+// \ProvidesPackage{unisc}[2022/04/29 v0.2
+// \ProvidesPackage{caption}[2023/08/05 v3.5j Customizing captions (AR)]
+// \ProvidesPackage{caption3}[2022/04/06 v2.2h caption3 kernel (AR)]
+// \ProvidesPackage{caption2}[2021/01/20 v2.2i Customising captions (AR)]
+// \ProvidesPackage{caption2}[1995/10/09 v2.0 caption package (AS)]
+// \ProvidesPackage{caption}[2023/08/05 v3.1o Customizing captions (AR)]
+// \ProvidesPackage{caption3}[2010/01/14 v1.1m caption3 kernel (AR)]
+// \ProvidesPackage{caption}[2023/08/05 v3.3f Customizing captions (AR)]
+// \ProvidesPackage{caption2}[2005/10/03 v2.1d Customising captions (AS)]
+// \ProvidesPackage{caption}[2023/08/05 v3.2g Customizing captions (AR)]
+// \ProvidesPackage{caption}[2023/08/05 v3.6o Customizing captions (AR)]
+// \ProvidesPackage{caption3}[2022/03/17 v1.8i caption3 kernel (AR)]
+// \ProvidesPackage{caption3}[2023/07/31 v2.4d caption3 kernel (AR)]
+// \ProvidesPackage{subcaption}[2023/07/28 v1.6b Sub-captions (AR)]
+// \ProvidesPackage{caption3}[2011/11/01 v1.4a caption3 kernel (AR)]
+// \ProvidesPackage{caption}[2023/08/05 v3.4p Customizing captions (AR)]
+// \ProvidesPackage{caption3}[2022/04/06 v1.13b caption3 kernel (AR)]
+// \ProvidesPackage{bicaption}[2023/02/19 v1.6 Bilingual Captions (AR)]
+// \ProvidesPackage{ltcaption}[2021/01/08 v1.4c longtable captions (AR)]
+// \ProvidesPackage{caption-light}[2021/03/21 v1.0a Customizing captions (AR)]
+// \ProvidesPackage{caption}[2022/07/10 v3.0r Customising captions (AR)]
+// \ProvidesPackage{caption}[1995/04/05 v1.4b caption package (AS)]
+// \ProvidesPackage{caption3}[2007/04/11 v1.0q caption3 kernel (AR)]
+// \ProvidesPackage{gridpapers}
+// \ProvidesPackage{sectionbreak}[2019-03-11 v0.1d (Michal Hoftich)]
+// \ProvidesPackage{pdfscreen}
+// \ProvidesPackage{thumbs}[2026-01-18 v1.1d Thumb marks and overview page(s) (HMM)]
+// \ProvidesPackage{latex-lab-kernel-changes}
+// \ProvidesPackage{latex-lab-testphase-new-or-2}
+// \ProvidesPackage{latex-lab-testphase-math}
+// \ProvidesPackage{latex-lab-testphase-latest}
+// \ProvidesPackage{latex-lab-testphase-new-or-1}
+// \ProvidesPackage{latex-lab-footmisc}%
+// \ProvidesPackage{supertabular}
+// \ProvidesPackage{colorweb}
+// \ProvidesPackage{endnotes-hy}
+// \ProvidesPackage{beamerthemeclagrange}[2024-01-21 v2024B Beamer Theme cLagrange]
+// \ProvidesPackage{beamerthemecmobius}[2024-01-21 v2024B Beamer Theme cMobius]
+// \ProvidesPackage{beamerthemecbernoulli}[2024-01-21 v2024B Beamer Theme cBernoulli]
+// \ProvidesPackage{beamerthemecriemann}[2024-01-21 v2024B Beamer Theme cRiemann]
+// \ProvidesPackage{beamerthemecfermat}[2024-01-21 v2024B Beamer Theme cFermat]
+// \ProvidesPackage{beamerthemecgauss}[2024-01-21 v2024B Beamer Theme cGauss]
+// \ProvidesPackage{beamerthemecdirichlet}[2024-01-21 v2024B Beamer Theme cDirichlet]
+// \ProvidesPackage{paravesp}[2016/02/05 space above and below paragraphs]
+// \ProvidesPackage{excludeonly}[2003/03/14 v1.0 %
+// \ProvidesPackage{pageslts}[2025-08-14 v2.0g Refers to special pages' numbers/names (HMM)]
+// \ProvidesPackage{sitem}
+// \ProvidesPackage{maker}[2017/06/09 maker LaTeX package]
+// \ProvidesPackage{chet}
+// \ProvidesPackage{gcite}[2009/07/03 1.0.1]
+// \ProvidesPackage{memhfixc}[2025/09/16 v1.24 hyperref package fixes for memoir class]
+// \ProvidesPackage{svgcolor}[2006/12/20 v1.0 (M. A. Caprio)]
+// \ProvidesPackage{cutwin}[2021/10/13 v0.2 cutout windows]
+// \ProvidesPackage{signchart}[2016/02/12 v1.01]
+// \ProvidesPackage{commedit}
+// \ProvidesPackage{beamercolorthemeowl}
+// \ProvidesPackage{sparklines}
+// \ProvidesPackage{verbatimbox}
+// \ProvidesPackage{\filename}[\filedate]
+// \ProvidesPackage{onlyamsmath}
+// \ProvidesPackage{background}[2014/03/04 v2.1 background material]
+// \ProvidesPackage{NotesTeX}[2017/03/21 r1]
+// \ProvidesPackage{metalogo}[2010/05/29 v0.12 Extended TeX logo macros]
+// \ProvidesPackage{coolthms}[2013/02/04 v1.2 Theorem markup and advanced referencing]
+// \ProvidesPackage{upquote}
+// \ProvidesPackage{pas-cours}[2019/09/04]
+// \ProvidesPackage{calligra}[2012/04/10 v1.9 LaTeX package calligra]
+// \ProvidesPackage{notoccite}[2000/07/20]
+// \ProvidesPackage{tikz-bpmn}[2011/08/16 BPMN diagrams using the
+// \ProvidesPackage{lwarp-common-mathjax-overlaysymbols}[2020/08/17]
+// \ProvidesPackage{lwarp-axessibility}% no date is declared by the original
+// \ProvidesPackage{lwarp-common-multimedia}[2019/04/22]
+// \ProvidesPackage{lwarp-common-mathjax-newpxtxmath}[2020/09/20]
+// \ProvidesPackage{lwarp}
+//         {\ProvidesPackage{lwarp-#1}[#2]}%
+//         {\ProvidesPackage{lwarp-#1}}%
+//     {\ProvidesPackage{lwarp-#1}[#2]}
+//     {\ProvidesPackage{lwarp-#1}}
+// \ProvidesPackage{lwarp-common-mathjax-nonunicode}[2020/09/20]
+// \ProvidesPackage{lwarp-patch-memoir}
+// \ProvidesPackage{lwarp-common-mathjax-letters}[2020/08/10]
+// \ProvidesPackage{lwarp-patch-komascript}
+// \ProvidesPackage{tablericons}[2025/12/26 v0.1.2 LaTeX tablericons (source v3.36.0)]
+// \ProvidesPackage{datetime2-calc}[2021/03/21 v1.5.7 (NLCT)]
+// \ProvidesPackage{datetime2}[2021/03/21 v1.5.7 (NLCT) date and time formats]
+// \ProvidesPackage{textfit}[\filedate]
+// \ProvidesPackage{autopagewidth}
+// \ProvidesPackage{extsizes}
+// \ProvidesPackage{gauss}[2003/01/14]
+// \ProvidesPackage{exceltex}[2006/04/30 v.\exceltexVersion]
+// \ProvidesPackage{colorblind}[2026/01/19 Easy colorblind-safe typesetting]
+// \ProvidesPackage{bubblesort}
+// \ProvidesPackage{braids}[2011/10/18 v1.1 Tikz/PGF commands for drawing braid diagrams (depreciated package)]
+// \ProvidesPackage{hep-text}[2025/09/01 v1.4 Some text macros]
+// \ProvidesPackage{xprintlen}[2014/12/25 v1.0 print lengths with units]
+// \ProvidesPackage{defoldfonts}
+// \ProvidesPackage{newfloat}[2021/02/27 v1.1p Defining new floating environments (AR)]
+// \ProvidesPackage{newfloat}[2023/10/01 v1.2 Defining new floating environments (AR)]
+// \ProvidesPackage{newfloat}[2012/05/19 v1.0b Defining new floating environments (AR)]
+// \ProvidesPackage{dirtytalk}[2010/11/21 A package making "quoting" easier]
+// \ProvidesPackage{counttexruns}
+// \ProvidesPackage{pdfcolmk}%
+// \ProvidesPackage{biolist}%
+// \ProvidesPackage{sltables}
+// \ProvidesPackage{add2}%
+// \ProvidesPackage{biokey}%
+// \ProvidesPackage{textfrac}%
+// \ProvidesPackage{textfrac}
+// \ProvidesPackage{qqru}%
+// \ProvidesPackage{dline}
+// \ProvidesPackage{flower}%
+// \ProvidesPackage{numerus}%
+// \ProvidesPackage{classif2}%
+// \ProvidesPackage{autolist}%
+// \ProvidesPackage{autolist}
+// \ProvidesPackage{drcaps}%
+// \ProvidesPackage{boldline}%
+// \ProvidesPackage{starfn}%
+// \ProvidesPackage{punct}%
+// \ProvidesPackage{isyntax}
+// \ProvidesPackage{altverse}
+// \ProvidesPackage{mailmerge}[2009/09/23 v1.0 repeat amount of text merging fields]
+// \ProvidesPackage{ednmath0}[\filedate\space\fileversion\space
+// \ProvidesPackage{lineno}
+// \ProvidesPackage{fnlineno}[2011/01/07 v0.55
+// \ProvidesPackage{vplref}[\filedate\space v\fileversion \space
+// \ProvidesPackage{edtable}[\filedate\space v\fileversion\space
+// \ProvidesPackage{makebarcode}[2008/07/27 Make various bar codes]
+// \ProvidesPackage{clefval}
+// \ProvidesPackage{avremu} [2014/10/09 v0.1 avremu]
+// \ProvidesPackage{quicktype}[2016/09/26]
+// \ProvidesPackage{getmap}[2019/03/25 v1.11 getmap.sty - Josef Kleber (C) 2014,2016,2018,2019]%
+// \ProvidesPackage{handoutWithNotes}
+// \ProvidesPackage{handoutWithNotes}[2022/02/02 v1.2
+// \ProvidesPackage{xoptarg}%
+// \ProvidesPackage{moodle}
+// \ProvidesPackage{lpic}
+//   \ProvidesPackage{fancybox}[\filedate\space\fileversion]}
+// \ProvidesPackage{anysize}[1994/08/13 setting margin sizes]
+// \ProvidesPackage{tkz-tab}[2020/04/29 v2.12c  variations  (ctan  version)]
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{expl3}
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{identkey}[2018/10/29 v0.1.0 Package for typesetting bracketed dichotomous identification keys]
+// \ProvidesPackage{polytable}%
+// \ProvidesPackage{fixmetodonotes}[2013/04/28 v0.2.2]
+// \ProvidesPackage{letltxmacro}%
+// \ProvidesPackage{makeglos}[2000/02/24 v0.1 Glossary package]
+// \ProvidesPackage{actuarialangle}[2019/06/13 v2.1 Actuarial angle]
+// \ProvidesPackage{hhead}[2009/07/02 v2.4 Brian heading class]
+// \ProvidesPackage{pressrelease-symbols}[2014/09/10 v1.0 (NLCT)]
+// \ProvidesPackage{rccol}[2005/05/17 v1.2c right-centered columns]
+// \ProvidesPackage{ifnextok}[2011/06/27 v0.3 test next token (UL)]
+// \ProvidesPackage{tgtermes}
+// \ProvidesPackage{qswiss}
+// \ProvidesPackage{tgadventor}
+// \ProvidesPackage{tgchorus}
+// \ProvidesPackage{qbookman}
+// \ProvidesPackage{tgpagella}
+// \ProvidesPackage{qpalatin}
+// \ProvidesPackage{tgheros}
+// \ProvidesPackage{qcourier}
+// \ProvidesPackage{tgschola}
+// \ProvidesPackage{tgcursor}
+// \ProvidesPackage{qzapfcha}
+// \ProvidesPackage{tgbonum}
+// \ProvidesPackage{qtimes}
+// \ProvidesPackage{keyreader}
+// \ProvidesPackage{tablists}
+// \ProvidesPackage{makerobust}[2019/11/12 v2.0 Legacy MakeRobust(Command) definition]
+// \ProvidesPackage{parcolumns}
+// \ProvidesPackage{processkv}
+// \ProvidesPackage{metainfo}
+// \ProvidesPackage{optparams}
+// \ProvidesPackage{collect}
+// \ProvidesPackage{zahl2string}
+// \ProvidesPackage{manyind}
+// \ProvidesPackage{foreign}
+// \ProvidesPackage{diagmac2}[2009/05/09 v2.1 LaTeX style for (category-theory) diagrams] 
+// \ProvidesPackage{scrlayer-fancyhdr}
+// \ProvidesPackage{beamerouterthemeArguelles}[2025/09/19 Argüelles]
+// \ProvidesPackage{beamerthemeArguelles}[2025/09/19 Argüelles]
+// \ProvidesPackage{beamerinnerthemeArguelles}[2025/09/19 Argüelles]
+// \ProvidesPackage{beamercolorthemeArguelles}[2025/09/19 Argüelles]
+// \ProvidesPackage{beamerfontthemeArguelles}[2025/09/19 Argüelles]
+// \ProvidesPackage{indextools}%
+// \ProvidesPackage{fp-random}[1995/02/23]
+// \ProvidesPackage{fp-exp}[1995/04/03]
+// \ProvidesPackage{fp-trigo}[1995/04/14]
+// \ProvidesPackage{fp}[1995/04/02]
+// \ProvidesPackage{defpattern}[1994/10/12]
+// \ProvidesPackage{fp-eval}[1995/04/03]
+// \ProvidesPackage{fp-eqn}[1995/04/03]
+// \ProvidesPackage{fp-addons}[1995/03/15]
+// \ProvidesPackage{fp-snap}[1995/04/05]
+// \ProvidesPackage{fp-basic}[1996/05/13]
+// \ProvidesPackage{fp-upn}[1996/10/21]
+// \ProvidesPackage{fp-pas}[1994/08/29]
+// \ProvidesPackage{import}[2020/04/01 \space  v 6.2]
+// \ProvidesPackage{epcqrcode}[2025-10-16 v1.2 dtx epcqrcode file]%
+// \ProvidesPackage{newspaper}
+// \ProvidesPackage{secdot}[2000/06/20 v1.0 section numbers with dots]
+// \ProvidesPackage{pxgreeks}
+// \ProvidesPackage{libertineMono}[%
+// \ProvidesPackage{libertineRoman}[%
+// \ProvidesPackage{libertine}[%
+// \ProvidesPackage{biolinum}[%
+// \ProvidesPackage{achemso}
+// \ProvidesPackage{natmove}
+// \ProvidesPackage{totcount}
+// \ProvidesPackage{nowidow}
+// \ProvidesPackage{nowidow}
+// \ProvidesPackage{bodegraph}[version 1.6]
+// \ProvidesPackage{tabstackengine}
+// \ProvidesPackage{Gratzer-Color-Scheme}
+// \ProvidesPackage{underlin}
+// \ProvidesPackage{quiz2socrative}[2019/10/01 version 1.0 (Paolo Lella)]
+// \ProvidesPackage{packdoc}[2025/01/31 v0.1 A tool to document LaTeX packages]
+// \ProvidesPackage{xurl}[2022/01/09 v 0.10 modify URL breaks]
+// \ProvidesPackage{mandi}
+// \ProvidesPackage{mandistudent}
+// \ProvidesPackage{mandiexp}
+// \ProvidesPackage{stepv13}[2002/01/10 v1.3.2 STEP general package]
+// \ProvidesPackage{apv12}[2002/01/10 v1.2.2 STEP AP package]
+// \ProvidesPackage{irv12}[2002/01/10 v1.2.2 STEP IR package]
+// \ProvidesPackage{aicv1}[2002/01/10 v1.0.2 STEP AIC package]
+// \ProvidesPackage{atsv11}[2002/01/10 v1.1.2 STEP ATS package]
+// \ProvidesPackage{titleref}[2001/04/05 v3.1 \space 
+// \ProvidesPackage{randintlist}[2026/02/20 0.20a Create a list of random numbers with or without multiple values]
+// \ProvidesPackage{zebra-goodies}
+// \ProvidesPackage{docmfp}[2004/05/14 v1.2b General coding extension to the doc package]
+// \ProvidesPackage{genealogytree}[2023/03/09 version 2.3.0 genealogy trees]
+// \ProvidesPackage{rulerbox}[2019/04/18 v1.01 package rulerbox]
+// \ProvidesPackage{newfile}[2009/09/03 v1.0c Output and input files]
+// \ProvidesPackage{hypernat}[2001/07/09 v1.0b hyperref and natbib compatibility (jb)]
+// \ProvidesPackage{shadowtext}
+// \ProvidesPackage{xistercian}[2025-04-13 v1.3 Cistercian numerals in LaTeX]
+// \ProvidesPackage{mla}
+// \ProvidesPackage{syntax}
+// \ProvidesPackage{sverb}
+// \ProvidesPackage{doafter}
+// \ProvidesPackage{at}
+// \ProvidesPackage{cmtt}
+// \ProvidesPackage{mdwlist}
+// \ProvidesPackage{mdwtab}
+// \ProvidesPackage{mathenv}
+// \ProvidesPackage{footnote}
+// \ProvidesPackage{mdwmath}
+// \ProvidesPackage{outlines}[2012/1/23 1.1 Ch. Pecheur]
+// \ProvidesPackage{crossreftools}[2020/07/19 - v\crossreftoolspackageversion]
+// \ProvidesPackage{easylist}[2014/01/11 v.1.4 Numbered items with a single command.]
+// \ProvidesPackage{rainbowbrackets}[2025-08-05 v. 1.3.2 LaTeX package that colors parentheses on the same nesting level with a matching color.]
+// \ProvidesPackage{shadethm}[1999/11/23]
+// \ProvidesPackage{iitem}
+// \ProvidesPackage{hackthefootline}[2018/01/29 hackthefootline: Arbitrary footline selection and configuration for LaTeX beamer's standard themes]
+// \ProvidesPackage{drac}
+// \ProvidesPackage{centerlastline}[2020/10/12 v1.0 Last line centered (spanish par.)]
+// \ProvidesPackage{floatflt}[1997/07/16 v. 1.31]
+// \ProvidesPackage{xcolor-patches-tmp-ltx}[2026-01-23 v0.96y patch xcolor for l3color]
+// \ProvidesPackage{color-ltx}[2026-01-23 v0.96y
+// \ProvidesPackage{bullenum}
+// \ProvidesPackage{bullcntr}
+// \ProvidesPackage{multilang-tags}[2018/11/02 v0.9b Filtering of multilingual macros by tags]
+// \ProvidesPackage{multilang-sect}[2018/11/02 v0.9b Multilingual sectioning environments]
+// \ProvidesPackage{multilang}
+// \ProvidesPackage{autonum}[2015/01/18 v0.3.11 Automatic numbering of equations]
+// \ProvidesPackage{histogr}
+// \ProvidesPackage{rotfloat}[2004/01/04 v1.2 Combining float+rotating package (AS)]
+// \ProvidesPackage{index}[2025/02/06 v4.04 Improved index support (dmj)]
+// \ProvidesPackage{phfparen}
+// \ProvidesPackage{savefnmark}
+// \ProvidesPackage{refcount}%
+// \ProvidesPackage{underoverlap}[2013/02/03 0.0.1-r1
+// \ProvidesPackage{pict2e}[2020/09/30 v0.4b Improved picture commands (HjG,RN,JT)]
+// \ProvidesPackage{tikz-dependency}[2011/01/08 v1.1 Macros to draw dependency trees]
+// \ProvidesPackage{mathgreeks}
+// \ProvidesPackage{xargs}
+// \ProvidesPackage{autofancyhdr}%
+// \ProvidesPackage{etextools}
+// \ProvidesPackage{currency}
+// \ProvidesPackage{csquotes}
+// \ProvidesPackage{ae}[\filedate\space\fileversion\space
+// \ProvidesPackage{aecompl}[\filedate\space\fileversion\space
+// \ProvidesPackage{grafcet}[2007/03/05]
+// \ProvidesPackage{quoted}[2009/04/17 language-dependent inline quotes]
+// \ProvidesPackage{onedash}[2009/05/09 language-dependent dashes]
+// \ProvidesPackage{lcg}[2013/08/09 v1.3 generating random numbers]
+// \ProvidesPackage{tikz-osci}[2023/10/24 0.4.0 Tikz Osci package]
+// \ProvidesPackage{xpunctuate}
+// \ProvidesPackage{prisma-flow-diagram}[2025/01/20 PRISMA Flow Diagram Generator]
+// \ProvidesPackage{hardwrap}
+// \ProvidesPackage{tablefootnote}[2014/01/26 v1.1c
+// \ProvidesPackage{chngpage}[2009/10/20 v1.2b change page layout]
+// \ProvidesPackage{changepage}[2009/10/20 v1.0c check page and change page layout]
+// \ProvidesPackage{CreationBoites}[2026/02/12 0.20a Macros pour creer des boites tcbox simples, avec personnalisation(s)]
+// \ProvidesPackage{pbalance}[2022/07/28 v1.4.0 Poor man's balance]
+// \ProvidesPackage{animate}
+// \ProvidesPackage{photo}
+// \ProvidesPackage{beamercolorthemegoeagles}[2009/12/31 V1.0 Boston College color theme]
+// \ProvidesPackage{beamercolorthemepenn}[2009/12/31 V1.0 University of Pennsylvania color theme]
+// \ProvidesPackage{ltxtable}
+// \ProvidesPackage{slashed}
+// \ProvidesPackage{dotlessj}[1998/12/09 v0.03 dotless j package (DPC)]
+// \ProvidesPackage{plain}[1996/04/22 Plain TeX emulation (DPC)]
+// \ProvidesPackage{beamerthemeNord}[2020/08/24 v0.2.0 A simple beamer theme using Nord color scheme]
+// \ProvidesPackage{beamercolorthemerainbow}[2024/11/14 version v1.0 Beamer colour theme with alternating theme colours]
+// \ProvidesPackage{boxhandler}
+// \ProvidesPackage{romanbarpagenumber}
+// \ProvidesPackage{thumb}[\filedate\space\fileversion\space thumb
+// \ProvidesPackage{verbdef}[2000/10/06 v0.2 define verbatim csnames]
+// \ProvidesPackage{dialogue}[\PPOptArg]
+// \ProvidesPackage{moredefs}[\PPOptArg]
+// \ProvidesPackage{lips}[\PPOptArg]
+// \ProvidesPackage{compsci}[\PPOptArg]
+// \ProvidesPackage{attrib}[\PPOptArg]
+// \ProvidesPackage{lips}[\PPOptArg]
+// \ProvidesPackage{blkcntrl}[\PPOptArg]
+// \ProvidesPackage{blkcntrl}[\PPOptArg]
+// \ProvidesPackage{dialogue}[\PPOptArg]
+// \ProvidesPackage{achicago}[\PPOptArg]
+// \ProvidesPackage{moredefs}[\PPOptArg]
+// \ProvidesPackage{slemph}[\PPOptArg]
+// \ProvidesPackage{compsci}[\PPOptArg]
+// \ProvidesPackage{slemph}[\PPOptArg]
+// \ProvidesPackage{newclude}[\PPOptArg]
+// \ProvidesPackage{abbrevs}[\PPOptArg]
+// \ProvidesPackage{newclude}[\PPOptArg]
+// \ProvidesPackage{abbrevs}[\PPOptArg]
+// \ProvidesPackage{titles}[\PPOptArg]
+// \ProvidesPackage{titles}[\PPOptArg]
+// \ProvidesPackage{attrib}[\PPOptArg]
+// \ProvidesPackage{achicago}[\PPOptArg]
+// \ProvidesPackage{beamerfontthemeDetlevCM}[2013/12/08 v 1.00 (dcm) http://detlevcm.eu ]
+// \ProvidesPackage{beamercolorthemeETII}[2013/12/08 v 1.00 (dcm)]
+// \ProvidesPackage{beamerouterthemeDetlevCM}[2015/12/07 v 1.02 (dcm) http://detlevcm.eu ]
+// \ProvidesPackage{beamerthemeDetlevCM}[2013/12/08 v 1.00 (dcm) http://detlevcm.eu ]
+// \ProvidesPackage{cprotect}[2011/01/27 v1.0e (Bruno Le Floch)]
+// \ProvidesPackage{blindtext}[\blindfiledate\space\blindfileversion\space%
+// \ProvidesPackage{pgf-pie}[2022/06/14 v0.7 Some LaTeX macros for pie
+// \ProvidesPackage{skeyval}[2013/05/15 v1.3 Robust key-value parser (AM)]
+// \ProvidesPackage{skeyval-ltxpatch}
+// \ProvidesPackage{skeyval-view}
+// \ProvidesPackage{skeyval-testpkg}
+// \ProvidesPackage{skeyval}[%
+// \ProvidesPackage{skeyval-pstkey}
+// \ProvidesPackage{figsize}[2002/03/18 v0.1 FigSize sizes graphics for graphicx package]
+// \ProvidesPackage{sffdumb}[2001/09/23 v1.1
+// \ProvidesPackage{sffsmart}[2001/09/10 v1.0
+// \ProvidesPackage{tabularborder}
+// \ProvidesPackage{emarks}
+// \NeedsTeXFormat{LaTeX2e} \ProvidesPackage{plates}[2002/03/18 v0.1 FigSize sizes graphics for graphicx package]
+// \ProvidesPackage{endplate}[2002/03/18 v0.1 endplates for plates package by AT]
+// \ProvidesPackage{ftcap}[1999/10/16 ..captionskip richtig setzen]
+// \ProvidesPackage{gincltex}
+// \ProvidesPackage{stackengine}
+// \ProvidesPackage{egplot}[\filedate\space\fileversion\space
+// \ProvidesPackage{tblr-extras}[2024/06/25 package tblr-extras]
+// \ProvidesPackage{endheads}
+// \ProvidesPackage{miniplot}
+// \ProvidesPackage{scratch}[\SCRdate\space v\SCRver\space Draw scratch instructions (CT)]
+// \ProvidesPackage{draftfigure}[\df@styid]
+// \ProvidesPackage{arraysort}
+// \ProvidesPackage{randbild}
+// \ProvidesPackage{warning}[2025/01/01 v0.11 Global warnings at end of logfile]
+// \ProvidesPackage{draftwatermark-2x}%
+// \ProvidesPackage{draftwatermark}%
+// \ProvidesPackage{bnumexpr}[2025/09/27 v1.7b Expressions with big integers (JFB)]%
+// \ProvidesPackage{datax}
+// \ProvidesPackage{colourchange}[2011/03/15 v1.22]
+// \ProvidesPackage{pspicture}
+// \ProvidesPackage{abstract}[2009/06/08 v1.2a configurable abstracts]
+// \ProvidesPackage{makegobbler}
+// \ProvidesPackage{phffullpagefigure}
+// \ProvidesPackage{magaz}[2011/11/24 v0.4]
+// \ProvidesPackage{flowfram}[2025/08/23 v1.18 (NLCT)]
+// \ProvidesPackage{flowfram}[2014/09/30 v1.17 (NLCT)]
+// \ProvidesPackage{flowframtkutils}[2026/02/23 v2.1 (NLCT)]
+// \ProvidesPackage{flowfram}[2026/02/23 v2.1 (NLCT)]
+// \ProvidesPackage{nodepthtext}[2024/11/11 0.1.0 Raise small texts for "no depth" letters]
+// \ProvidesPackage{exercisesheets}[\exsh@date\space\exsh@version\space Typesetting of exercise sheets]
+// \ProvidesPackage{beamerthemenirma}
+// \ProvidesPackage{dtk-url}[2024/06/26 v1.9 Urls (qrcode) for DTK (HO,hv,rn)]
+// \ProvidesPackage{bxpdfver}[2025/02/18 v0.8a]
+// \ProvidesPackage{xpicture}[2012/12/17 v.1.2a picture environment extensions]
+// \ProvidesPackage{jvlisting}[2011/11/17 v0.7 Formatted Program Listings]
+// \ProvidesPackage{paralist}%
+// \ProvidesPackage{totpages}
+// \ProvidesPackage{sdapslayout}
+// \ProvidesPackage{sdapspdf}
+// \ProvidesPackage{sdapsarray}
+// \ProvidesPackage{sdapsbase}
+// \ProvidesPackage{vgrid}
+// \ProvidesPackage{cmap}[2021/02/06 v1.0j CMap support: searchable PDF]
+// \ProvidesPackage{relsize}[2013/03/29 ver 4.1]
+// \ProvidesPackage{guit}[2020/07/03 v1.0.0-alpha.4 Logo del GuIT]
+// \ProvidesPackage{sesstime}[2025/03/25 v1.1.3 session timing marks]
+// \ProvidesPackage{pxfonts}
+// \ProvidesPackage{keystroke}[2010/04/23 v1.6 3D keystrokes (SuSE GmbH/RN)]
+// \ProvidesPackage{grabbox}
+// \ProvidesPackage{callouts-box-colors}[2025/03/14 v1.1 Predefined colors for callouts-box]
+// \ProvidesPackage{callouts-box}[2025/03/14 v1.1 Styled callout boxes]
+// \ProvidesPackage{labelschanged}
+// \ProvidesPackage{versonotes}[2023/12/31 v0.5]
+// \ProvidesPackage{mailing}
+// \ProvidesPackage{xellipsis}[2015/11/01 v2.0 support for highly configurable ellipses of arbitrary symbol, number, and distance]
+// \ProvidesPackage{tkz-orm}[2016/01/15 v0.1.4 Object-Role Modeling]
+// \ProvidesPackage{handin}[2018/07/22 v0.1.1 Creates a setup that is ideal for handing in hard-science school papers that are divided in exercises.]
+// \ProvidesPackage{smartunits}[2016/02/05 \smart@version\space- Smart conversion between metric and Imperial units]
+// \ProvidesPackage{aurl}[2016/08/12]
+// \ProvidesPackage{textcsc}
+// \ProvidesPackage{mmap}[2008/08/11 v1.03 CMAP support for math in PDF]
+// \ProvidesPackage{xifthen}%
+// \ProvidesPackage{movie15}[2012/05/16]
+// \ProvidesPackage{grayhints}
+// \ProvidesPackage{harpoon}[1994/11/02 Harpoon drawing package by Tobias Kuipers]
+// \ProvidesPackage{lcd}[\filedate\space
+// \ProvidesPackage{egpeirce}[2023/03/20 v1.0.0, Package for drawing existential graphs with PostScript]
+// \ProvidesPackage{coordsys}[2006/02/03 version 1.4]
+// \ProvidesPackage{logsys}[2006/02/03 version 1.4]
+// \ProvidesPackage{fitbox}
+// \ProvidesPackage{linop}
+// \ProvidesPackage{vexillology}
+//   \ProvidesPackage{pl}[\filedate\space gene (\fileversion)]
+// \ProvidesPackage{zwpagelayout}[2022/04/18 ZW Page Layout]
+// \ProvidesPackage{docshots}
+// \ProvidesPackage{multibbl}[2007/07/27\space v1.1]
+// \ProvidesPackage{nopageno}[1989/01/01 no page numbers (DPC)]
+// \ProvidesPackage{cntperchap}[2015/06/01 v0.3 -- store counter values per chapter]%
+// \ProvidesPackage{dotlessi}[1999/10/12 v1.1 Dotless i/j for Math]
+// \ProvidesPackage{variablelm}[2021/05/16 v1.2 to control the scaling for Latin Modern Fonts by Yuwsuke KIEDA]
+// \ProvidesPackage{dynblocks}[2014/18/09 v0.2b A simple way to create dynamic blocks.]
+// \ProvidesPackage{listparskip}[2024/12/17 v. 1.0 Package listparskip]
+// \ProvidesPackage{modref}[\revisiondate {} {v\revision} {\writtenby}]
+// \ProvidesPackage{isorot}[2000/02/15 v2.1 ISO rotation package]
+// \ProvidesPackage{assign}[2015/09/23 v1.01 University assignments package]
+// \ProvidesPackage{type1cm}
+// \ProvidesPackage{actuarialsymbol}[2019/06/13 v1.1 Actuarial symbols]
+// \ProvidesPackage{datetime2-it-fulltext}[2015/08/06 v1.6]
+// \ProvidesPackage{binarytree}
+// \ProvidesPackage{resmes}[2022/12/27 v1.0 Restriction of measures symbol in LaTeX]
+// \ProvidesPackage{texmate}[2005/06/31 v2 Chess typesetting (Federico Garcia)]
+// \ProvidesPackage{fancypar}[2021/04/17 v1.3 fancy paragraphs]
+// \ProvidesPackage{tikz-trackschematic}[2022-06-02 v0.7.1 tikz-trackschematic]%
+// \ProvidesPackage{substr}[2009/10/20  v1.2  Handle substrings]
+// \ProvidesPackage{dpfloat}[2006/10/05]
+// \ProvidesPackage{tipx}[2003/01/01 TIPX version 1.2]
+// \ProvidesPackage{vowel}[2002/08/08 VOWEL Package version 1.1]
+// \ProvidesPackage{exaccent}[1996/06/10 extended accent Version 1.0]
+// \ProvidesPackage{tipa}[2002/08/08 TIPA version 1.1]
+// \ProvidesPackage{setdeck}
+// \ProvidesPackage{bondgraph}[2010/06/04 v1.0]
+// \ProvidesPackage{istgame}[2022/03/22 v2.1 Draw Game Trees with TikZ]
+// \ProvidesPackage{decorule}[2020/04/01 v0.7
+// \ProvidesPackage{dprogress}
+// \ProvidesPackage{termcal}[\filedate\space\fileversion\space
+// \ProvidesPackage{lucide-icons}[2025/12/26 v0.1.1 lucide-icons (source v0.562.0)]
+// \ProvidesPackage{lastpackage}[2014/06/27 v0.1 Empty package used for executing code after this package]
+// \ProvidesPackage{PPRtroispoints}[2000/04/17]
+// \ProvidesPackage{PPRwj}[2001/04/03]
+// \ProvidesPackage{PPRazure}[2000/04/18]
+// \ProvidesPackage{PPRfyma}[2002/12/03]
+// \ProvidesPackage{PPRnuancegris}[2000/04/18]
+// \ProvidesPackage{PPRlignesbleues}[2000/04/18]
+// \ProvidesPackage{PPRprettybox}[2002/11/29]
+// \ProvidesPackage{PPRframes}[2000/04/18]
+// \ProvidesPackage{PPRrico}[2000/09/08]
+// \ProvidesPackage{PPRcontemporain}[2000/04/18]
+// \ProvidesPackage{PPRmancini}[2002/06/11]
+// \ProvidesPackage{PPRalienglow}[2000/10/18]
+// \ProvidesPackage{PPRcapsules}[2003/01/30]
+// \ProvidesPackage{PPRthomasd}
+// \ProvidesPackage{PPRautumn}[2000/11/24]
+// \ProvidesPackage{PPRwinter}[2002/12/01]
+// \ProvidesPackage{PPRblends}[2001/11/15]
+// \ProvidesPackage{PPRalcatel}[2000/06/30]
+// \ProvidesPackage{PPRserpaggi}[2001/11/13]
+// \ProvidesPackage{PPRwhitecross}[2003/01/24]
+// \ProvidesPackage{PPRcorners}[2002/02/18]
+// \ProvidesPackage{PPRgyom}[2000/04/17]
+// \ProvidesPackage{PPRdarkblue}[2000/10/18]
+// \ProvidesPackage{PPRdefault}[2000/11/30]
+// \ProvidesPackage{tikz-decofonts}[2026/01/17 0.1.7 Custom fonts, made with TikZ, with effects]
+// \ProvidesPackage{translations}[%
+// \ProvidesPackage{fullwidth}[\fwddate \fwdversion: \fwdpackagename]
+// \ProvidesPackage{tracklang-scripts}[2025/03/11 v1.6.6 (NLCT) Track
+// \ProvidesPackage{tracklang}[2025/03/11 v1.6.6 (NLCT) Track Languages]
+// \ProvidesPackage{coseoul}
+// \ProvidesPackage{pdfslide}
+// \ProvidesPackage{labels}[2003/05/22 v.13]
+// \ProvidesPackage{hep-math}[2025/09/01 v1.4 Math and physics macros]
+// \ProvidesPackage{fixfoot}[2007/12/12 v0.3a fixed-text footnotes]
+// \ProvidesPackage{bookmark}%
+// \ProvidesPackage{contour}
+// \ProvidesPackage{savesym}[2013/09/02 v1.2 Saves and restores symbols (JG)]
+// \ProvidesPackage{xmpincl}
+// \ProvidesPackage{envelope-letter}[2025/08/28 Package allowing to fold a letter into its own envelope.]
+// \ProvidesPackage{pdfcol}%
+// \ProvidesPackage{versions}[\filedate\space v\fileversion\space 
+// \ProvidesPackage{autopdf}[2013/12/10 v1.1 Automatically convert between graphics file formats]
+// \ProvidesPackage{vwcol}
+// \ProvidesPackage{uri}[2018/09/06 v2.0b
+// \ProvidesPackage{colorwav}
+// \ProvidesPackage{makebase}[2016/05/10 v0.2
+// \ProvidesPackage{assoccnt}[2015/09/29 v\assoccntpackageversion -- Associate counters stepping]%
+// \ProvidesPackage{skeycommand}[\StyleFileInfo]
+// \ProvidesPackage{filecontentsdef}
+// \ProvidesPackage{scanpages}[\filedate\space v\fileversion]
+// \ProvidesPackage{tikz2d-fr}[2023/05/28 0.1.1 Petites aides pour l'utilisation de TikZ 2D]
+// \ProvidesPackage{bxdpx-beamer}[2016/08/06 v0.3]
+// \ProvidesPackage{wallpaper}[2005/01/18, v1.01 easy wallpaper formatting (MHFW)]
+// \ProvidesPackage{gmutils}
+// \ProvidesPackage{gmampulex}
+// \ProvidesPackage{gmrelsize}
+// \ProvidesPackage{gmcommand}
+// \ProvidesPackage{gmlogos}
+// \ProvidesPackage{gmenvir}
+// \ProvidesPackage{gmnotonlypream}
+// \ProvidesPackage{gmparts}
+// \ProvidesPackage{gmmw}
+// \ProvidesPackage{gmmeta}
+// \ProvidesPackage{gmurl}
+// \ProvidesPackage{gmtypos}
+// \ProvidesPackage{gmRCS}
+// \ProvidesPackage{gmbase}
+// \ProvidesPackage{cleveref}
+// \ProvidesPackage{chkfloat}[2012/08/19 v0.1 chkfloat: check for moved floats]
+// \ProvidesPackage{beamersubframe}[\filedate\space
+// \ProvidesPackage{pagerange}%
+// \ProvidesPackage{robust-externalize}[2025/04/08 v3.0 Cache anything (tikz, latex, python) in a robust, efficient and pure way.]
+// \ProvidesPackage{scale}
+// \ProvidesPackage{edmargin}
+// \ProvidesPackage{gitlog}[2015/11/22 0.0.beta typeset git change log]
+//  \ProvidesPackage{docutils}
+// \ProvidesPackage{catchfilebetweentags}
+// \ProvidesPackage{stabular}
+// \ProvidesPackage{cuted}
+// \ProvidesPackage{stfloats}
+// \ProvidesPackage{flushend}
+// \ProvidesPackage{floatpag}
+// \ProvidesPackage{suppose}[2021/05/20 1.2.2 supposition symbols]
+// \ProvidesPackage{ucs}[2023/11/09 v2.4 UCS: Unicode input support]%
+// \ProvidesPackage{ucshyper}[2002/03/05
+// \ProvidesPackage{ucsutils}[2002/04/23 UCS: Auxiliary macros]%
+// \ProvidesPackage{autofe}[2002/12/17 Automatic switching of fontencodings]
+// \ProvidesPackage{basicarith}[2015/01/01 v1.1 support for typesetting basic arithmetic in the American fashion]
+// \ProvidesPackage{crbox}[2013/04/04 typesetting boxes with crossing lines in the four corners]
+// \ProvidesPackage{ucharcat}
+// \ProvidesPackage{dtxdescribe}
+// \ProvidesPackage{fullminipage}
+// \ProvidesPackage{xhfill}[\filedate\ v \fileversion\ modify width and color of hrulefill]
+// \ProvidesPackage{refstyle}[\RefstyleFileDate\space
+// \ProvidesPackage{datetime}[2015/03/20 v2.60 Date Time Package]
+// \ProvidesPackage{datetime-defaults}[2013/09/10]
+// \ProvidesPackage{amstext}[2024/11/17 v2.01 AMS text]
+// \ProvidesPackage{amsmath}[2018/12/01 v2.17b AMS math features (updated for rollback)]
+// \ProvidesPackage{amscd}[2017/04/14 v2.1 AMS Commutative Diagrams]
+// \ProvidesPackage{amsbsy}[1999/11/29 v1.2d Bold Symbols]
+// \ProvidesPackage{amsopn}[2022/04/08 v2.04 operator names]
+// \ProvidesPackage{amstex}[1999/11/15 v1.2f AMS extra math features]
+// \ProvidesPackage{amsxtra}[1999/11/15 v1.2c AMS extra commands]
+// \ProvidesPackage{amsmath}[2025/07/09 v2.17z AMS math features]
+// \ProvidesPackage{footnotebackref}%
+// \ProvidesPackage{undolabl}[2025-01-28 v1.0o Overriding labels (HMM)]
+// \ProvidesPackage{memexsupp}[2008/03/20 v0.1 by daleif]
+// \ProvidesPackage{coolstr}
+// \ProvidesPackage{lscapeenhanced}
+//   \ProvidesPackage{\filename}[\Vmargin]
+// \ProvidesPackage{turnthepage}[2024/11/15 v2.0a Indicating to turn the page (LM; MvD; HMM)]
+// \ProvidesPackage{turnpagewoetex}[2024/11/15 v2.0a Indicating to turn the page w/o etex (LM; MvD; HMM)]
+// \ProvidesPackage{turnthepage}[2024/11/15 v2.0a Indicating to turn the page with eTeX (LM; MvD; HMM)]
+// \ProvidesPackage{etoc}[2023/10/29 v1.2d Completely customisable TOCs (JFB)]
+// \ProvidesPackage{cachepic}[2009/05/31]
+// \ProvidesPackage{msc}[\mscdate, v\mscversion]
+// \ProvidesPackage{rectopma}[2024/04/04]
+// \ProvidesPackage{ifplatform}
+// \def\ProvidesPackage{\let\ZW@ProvidesWhat\ZW@ProvidesPackage \zw@provides}
+// \ProvidesPackage{zwgetfdate}[2008/07/14 Get File/Package Date]
+// \ProvidesPackage{properties}[%
+// \ProvidesPackage{sfmath}[2007/08/27 v0.8 sans serif maths]
+// \ProvidesPackage{vscodeicons}[2025/11/23 v0.1.0 LaTeX vscodeicons (source v12.15.0)]
+// \ProvidesPackage{mathpazo}%
+// \ProvidesPackage{mathptmx}%
+// \ProvidesPackage{helvet}%
+// \ProvidesPackage{pifont}%
+// \ProvidesPackage{bookman}%
+// \ProvidesPackage{mathptm}%
+// \ProvidesPackage{utopia}%
+// \ProvidesPackage{avant}%
+// \ProvidesPackage{newcent}%
+// \ProvidesPackage{times}%
+// \ProvidesPackage{courier}%
+// \ProvidesPackage{chancery}%
+// \ProvidesPackage{mathpple}%
+// \ProvidesPackage{charter}%
+// \ProvidesPackage{palatino}%
+// \ProvidesPackage{ellipse}
+// \ProvidesPackage{elzcards}[2019/08/16 v1.60 ELZ cards]
+// \ProvidesPackage{wasysym}
+// \ProvidesPackage{simpleinvoice}[2017/11/03 package simpleinvoice]
+// \ProvidesPackage{tikz-imagelabels}
+// \ProvidesPackage{romannum}[2009/09/03 v1.0b roman numerals]
+// \ProvidesPackage{ffcode}
+// \ProvidesPackage{synthslant}
+// \ProvidesPackage{multitoc}
+// \ProvidesPackage{exam-randomizechoices}[\filedate\space \fileversion\space
+// \ProvidesPackage{NumericPlots}%
+// \ProvidesPackage{vhistory}
+// \ProvidesPackage{sets}
+// \ProvidesPackage{beamerouterthemepureminimalistic}[v2.0.0]
+// \ProvidesPackage{beamerthemepureminimalistic}[v2.0.0]
+// \ProvidesPackage{beamerinnerthemepureminimalistic}[v2.0.0]
+// \ProvidesPackage{beamerfontthemepureminimalistic}[v2.0.0]
+// \ProvidesPackage{beamercolorthemepureminimalistic}[v2.0.0]
+// \ProvidesPackage{isosigns}
+// \ProvidesPackage{romanbar}[2025-01-28 v1.0g Roman numbers with bars (HMM)]
+// \ProvidesPackage{volumes}
+// \ProvidesPackage{nowtoaux}[2004/06/14 v1.0 write to the aux file immediately]
+// \ProvidesPackage{endfloat}[\filedate\space\fileversion\space
+// \ProvidesPackage{hypdoc}%
+// \ProvidesPackage{inputtrc}[2012/10/10 v0.3 input tracing (UL)]
+// \ProvidesPackage{gmdoc-enhance}[2009/02/20 v0.2 Verbesserungen fuer gmdoc.]%
+// \ProvidesPackage{termlist}[2010/06/12 v1.1 Minor layout corrections]
+// \ProvidesPackage{float}
+// \ProvidesPackage{handout}[2017/04/21 1.6.0 Handout package]
+// \ProvidesPackage{tkz-berge}[2011/06/01 2.00  tkz-berge for named graphs]
+// \ProvidesPackage{rustex}[2025/11/11]
+// \ProvidesPackage{beamerthemesTeX}
+// \ProvidesPackage{tcldoc}
+// \ProvidesPackage{tclldoc}
+// \ProvidesPackage{mpostinl}[2025/12/27 v1.5.3 metapost inline figures]
+// \ProvidesPackage{clrdblpg}[2018/04/21 v1.0 Control page style of blank pages]
+// \ProvidesPackage{standalone}[%
+// \ProvidesPackage{coollist}
+// \ProvidesPackage{chngcntr}[2018/04/09 v1.1a change counter resetting]
+// \ProvidesPackage{logbox}
+// \ProvidesPackage{subfigure}[2002/03/15 v2.1.5 subfigure package]
+// \ProvidesPackage{beamertools}[2025/01/09 v0.1 A collection of programming tools for beamer]
+// \ProvidesPackage{hyperref-patches}[2021-06-29 v0.9 old hyperref patches]
+// \ProvidesPackage{hyperref}
+// \ProvidesPackage{ntheorem-hyper}[2021/02/07]
+// \ProvidesPackage{nohyperref}
+// \ProvidesPackage{nameref}
+// \ProvidesPackage{xr-hyper}
+// \ProvidesPackage{minitoc-hyper}[2020/01/14]
+// \ProvidesPackage{backref}
+// \ProvidesPackage{ocr}[2006/09/18 LaTeX support for the various OCR
+// \ProvidesPackage{blkarray}[2015/02/27 v0.07 Block array (dpc)]\relax
+// \ProvidesPackage{authorarchive}
+// \ProvidesPackage{nox}[2013/06/09 v1.0 Tabellengebastel (ctansearch/rais)]
+// \ProvidesPackage{tablvar}
+// \ProvidesPackage{fillpages}[version 1.1.0]
+// \ProvidesPackage{ProfMaquette}[\filedate\space v\fileversion\space Maquettage de documents]%
+//     \ProvidesPackage{ProfMaquette}[Mode CAN (CP)]%
+//     \ProvidesPackage{ProfMaquette}[Mode Revision (CP)]%
+// \ProvidesPackage{wtref}
+// \ProvidesPackage{macrolist}[2021/07/31 v2.1.0 Create lists of macros and perform operations on them]
+// \ProvidesPackage{responsive}
+// \ProvidesPackage{maritime}[2025/02/15 v1.0 International Maritime Signal Flags with TikZ]
+// \ProvidesPackage{calcage}
+// \ProvidesPackage{needspace}[2025/03/13 v1.3e reserve vertical space]
+// \ProvidesPackage{iexec}
+// \ProvidesPackage{orcidlink}
+// \ProvidesPackage{movement-arrows}[2023/06/02 v \MVA@version]
+// \ProvidesPackage{robotarm}
+// \ProvidesPackage{monofill}[2012/10/29 v0.2 monospace alignment (UL)]
+// \ProvidesPackage{fcprefix}[2012/09/28]
+// \ProvidesPackage{fmtcount}[2025/12/02 v3.12 Displaying the values of LaTeX counters (NT,VB,NE)]
+// \ProvidesPackage{fcnumparser}[2017/06/15]
+// \ProvidesPackage{underscore}[2006/09/13]
+// \ProvidesPackage{hereapplies}[2023/10/24 Here Applies]
+// \ProvidesPackage{subeqn}
+// \ProvidesPackage{optidef}[2019/04/23 - version=3.1,  Package for defining optimization problems]
+// \ProvidesPackage{vcell}[2021/04/30 v1.0.2]
+// \ProvidesPackage{nccbbb}
+// \ProvidesPackage{extdash}
+// \ProvidesPackage{mboxfill}
+// \ProvidesPackage{tocenter}
+// \ProvidesPackage{nccboxes}
+// \ProvidesPackage{afterpackage}
+// \ProvidesPackage{nccparskip}
+// \ProvidesPackage{nccsect}
+// \ProvidesPackage{textarea}
+// \ProvidesPackage{nccmath}
+// \ProvidesPackage{ncccropmark}
+// \ProvidesPackage{watermark}
+// \ProvidesPackage{nccfancyhdr}
+// \ProvidesPackage{nccrules}
+// \ProvidesPackage{topsection}
+// \ProvidesPackage{ncccomma}
+// \ProvidesPackage{nccfloats}
+// \ProvidesPackage{nccpic}
+// \ProvidesPackage{nccthm}
+// \ProvidesPackage{desclist}
+// \ProvidesPackage{manyfoot}
+// \ProvidesPackage{nccfoots}
+// \ProvidesPackage{nccstretch}
+// \ProvidesPackage{ncccropbox}
+// \ProvidesPackage{dcounter}
+// \ProvidesPackage{tikz-truchet}[2019/02/12 tikz-truchet]
+// \ProvidesPackage{a4}
+// \ProvidesPackage{gtrlib.largetrees}
+// \ProvidesPackage{lstlinebgrd}[%
+// \ProvidesPackage{lstautogobble}[%
+// \ProvidesPackage{shadow}[2003/02/19 v1.3 shadow boxes (M.O.)]
+// \ProvidesPackage{sseq}[2009/04/09 ver 2.0]
+// \ProvidesPackage{delimtxt}[\filedate]
+// \ProvidesPackage{conditext}[2020/06/01 Extension personnelle, V1.5%
+// \ProvidesPackage{kvoptions-patch}%
+// \ProvidesPackage{kvoptions}%
+// \ProvidesPackage{futharksymb} [2025/10/03 v1.0.1 Adds macros for the younger- and elder futhark runes provided by allrunes]
+// \ProvidesPackage{patchcmd}[2016/06/03 v1.05]
+// \ProvidesPackage{eq-pin2corr}
+// \ProvidesPackage{bewerbung-cv-casual} %
+// \ProvidesPackage{bewerbung-cv-classic} %
+// \ProvidesPackage{bewerbung-cv} %
+// \ProvidesPackage{bewerbung-cv-oldstyle} %
+// \ProvidesPackage{bewerbung}
+// \ProvidesPackage{cmdstring}%
+// \ProvidesPackage{pdfannotations}[2023/11/22 v3.1 PDF Annotations Package]
+// \ProvidesPackage{genmpage}[2006/09/16 Generalized minipage environment (Thomas Lotze)]
+// \ProvidesPackage{reflectgraphics}
+// \ProvidesPackage{blox}%
+// \ProvidesPackage{options}[2015/03/01, Daan Leijen, Provides convenient path-value (or key-value) options]
+// \ProvidesPackage{sansmath}[2007/02/28 \space ver 1.1  Donald Arseneau]
+// \ProvidesPackage{tkzexample}[2022/07/14 v1.45c (code and graphic)]
+// \ProvidesPackage{noitcrul}
+// \ProvidesPackage{spectralsequences}[2023/01/28 v1.3.3]
+// \ProvidesPackage{ptolemaicastronomy}
+// \ProvidesPackage{tikz-mirror-lens}[2023-01-08 Custom Package for drawing spherical mirrors and lens -- FHZ -- Version 1.0.2]
+// \ProvidesPackage{subdocs}[2009/06/12 v0.1 Subdocuments]
+// \ProvidesPackage{psfrag}[1998/04/11 v3.04 PSfrag (MCG)]
+// \ProvidesPackage{hyper}[\filedate\space HyperLaTeX2e extension]
+// \ProvidesPackage{hxt-bc}%
+// \ProvidesPackage{hvqrurl}[%
+// \ProvidesPackage{tikz-feynhand}[\tikzfeynhand@date v\tikzfeynhand@version Feynman diagrams with TikZ (LaTex manual version)]
+// \ProvidesPackage{pmboxdraw}%
+// \ProvidesPackage{repeatindex}[2001/10/13 v0.01 Repeats index entries]
+// \ProvidesPackage{textualicomma}%
+// \ProvidesPackage{typogrid}
+// \ProvidesPackage{getfiledate}
+// \ProvidesPackage{longfigure}[2014/1/06 v1.0]
+// \ProvidesPackage{longfigure}[2014/01/06 longfigure]
+// \ProvidesPackage{KKran}[2026/02/20, Version 1.1.6]
+// \ProvidesPackage{snotez}[\snotez@date\space \snotez@version\space \snotez@description]
+// \ProvidesPackage{milsymb}[2023-03-27 v1.03]
+// \ProvidesPackage{hyperxmp}
+// \ProvidesPackage{accessibility}[2019/11/02 v. 2.0.3]
+// \ProvidesPackage{fgruler}[2026/01/11 v1.7 Package for drawing rulers on the foreground or in the text]
+// \ProvidesPackage{listlbls}
+// \ProvidesPackage{qcircuit}[2018/08/14]
+// \ProvidesPackage{codep}[2005/01/01 v0.01 typeset Source and Sample, dump to file]
+// \ProvidesPackage{verbfwr}[2003/09/25 v0.02 Verbatim file write]
+// \ProvidesPackage{examplep}[2010/02/03 v0.04 Verbatim and typeset TeX code]
+// \ProvidesPackage{pgfmorepages}[2020/04/16 v1.20 multiple page manipulation]
+// \ProvidesPackage{circularglyphs}[2023/10/06 0.1.1 Circular glyphs Alphabet]
+// \ProvidesPackage{beamercolorthemeMedStarColors}
+// \ProvidesPackage{ltxtools-environ}[\StyleFileInfo]
+// \ProvidesPackage{ltxtools-doc}[\StyleFileInfo]
+// \ProvidesPackage{ltxtools-incluput}[\StyleFileInfo]
+// \ProvidesPackage{ltxtools-base}[\StyleFileInfo]
+// \ProvidesPackage{ltxtools-trace}[2011/12/12 v0.0.1 Tracing LaTeX code]
+// \ProvidesPackage{ltxtools}[\StyleFileInfo]
+// \ProvidesPackage{ltxtools-index}[\StyleFileInfo]
+// \ProvidesPackage{arydshln}}
+// \ProvidesPackage{Tabbing}[1997/12/18 v1.0 Tabbing environment (JPFD)]
+// \ProvidesPackage{glossary-long}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries}[2022/11/03 v4.52 (NLCT)]
+// \ProvidesPackage{glossaries-compatible-207}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-list}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-inline}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries}[2024/04/03 v4.54 (NLCT)]
+// \ProvidesPackage{glossary-inline}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-longragged}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossaries-polyglossia}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries-babel}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-long}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-superragged}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-super}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-longbooktabs}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries-polyglossia}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossaries-prefix}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-mcols}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-longragged}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries-accsupp}[2021/11/01 v4.49 (NLCT)
+// \ProvidesPackage{glossary-superragged}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-hypernav}[2022/11/03 v4.52 (NLCT)]
+// \ProvidesPackage{glossaries}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries-compatible-207}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossaries}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossaries-prefix}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossaries-compatible-307}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossaries}[2025/03/19 v4.58 (NLCT)]
+// \ProvidesPackage{glossary-tree}[2025/03/19 v4.58 (NLCT)]
+// \ProvidesPackage{glossaries-compatible-307}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-longbooktabs}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-tree}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-mcols}[2025/03/19 v4.58 (NLCT)]
+// \ProvidesPackage{glossary-mcols}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-tree}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-hypernav}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossary-super}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossary-hypernav}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries-babel}[2021/11/01 v4.49 (NLCT)]
+// \ProvidesPackage{glossaries-accsupp}[2020/03/19 v4.46 (NLCT)
+// \ProvidesPackage{glossary-list}[2020/03/19 v4.46 (NLCT)]
+// \ProvidesPackage{glossaries-accsupp}[2025/11/09 v4.9 (NLCT)
+// \ProvidesPackage{glossary-hypernav}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-mcols}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-longbooktabs}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-longragged}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-superragged}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-inline}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-list}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-tree}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-super}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossary-long}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossaries-prefix}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossaries}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossaries-babel}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossaries-compatible-207}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossaries-polyglossia}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{glossaries-compatible-307}[2025/11/09 v4.9 (NLCT)]
+// \ProvidesPackage{modroman}
+// \ProvidesPackage{dynkin-diagrams}[2024/12/04 Dynkin diagrams]
+// \ProvidesPackage{beamer-varbox}
+// \ProvidesPackage{jslectureplanner}
+// \ProvidesPackage{jsmembertable}
+// \ProvidesPackage{spot}
+// \ProvidesPackage{commonunicode}[2022/04/03 v1.0.0]
+// \ProvidesPackage{oldgerm}
+// \ProvidesPackage{pandora}
+// \ProvidesPackage{telprint}%
+// \ProvidesPackage{terminalcode}[2025/11/01 v0.9.0 Terminal-style code boxes]
+// \ProvidesPackage{beamertheme-light}[2024/12/09 v1.2]
+// \ProvidesPackage{smartdiagram}[2016/12/23 v0.3b Automatic creation of smart diagrams from lists of items.]
+// \ProvidesPackage{fn2end}[1995/05/31 Convert footnotes into end notes.]
+// \ProvidesPackage{boxdims}
+// \ProvidesPackage{cancel}[2013/04/12 v2.2 Cancel math terms]
+// \ProvidesPackage{inlinelabel}[2022/07/08 v1.2.1]
+// \ProvidesPackage{tikz-among-us-fancyhdr}[2020-10-23 Custom Package for my AmongUs PageNumbering base configuration -- FHZ  -- Version 1.0.1]
+// \ProvidesPackage{tikz-among-us}[2020-10-23 Custom Package for my AmongUs sketch -- FHZ -- Version 1.1.0]
+// \ProvidesPackage{tikz-among-us-watermark-eso-pic}[2020-10-23 Custom Package for watermark with eso-pic configurations for AmongUs -- FHZ  -- Version 1.0.1]
+// \ProvidesPackage{esint}
+// \ProvidesPackage{labels4easylist}
+// \ProvidesPackage{ed}[2012/01/29 v1.8 Editorial Notes]
+// \ProvidesPackage{ladder}[2017/05/17]
+// \ProvidesPackage{python}[2021/08/03 v0.22 Python in LaTeX]
+// \ProvidesPackage{studenthandouts}[2017/03/15 Handouts Package]
+// \ProvidesPackage{xltabular}[2025/02/28 v0.2i `xltabular' package (hv,RN)]
+// \ProvidesPackage{enumitem}[2025/02/06 v3.11 Customized lists]
+// \ProvidesPackage{catppuccinpalette}
+// \ProvidesPackage{beamercolorthemecatppuccin}
+// \ProvidesPackage{menus}[1994/11/08 v0.9x]
+// \ProvidesPackage{dialog}[1994/11/08 v0.9y]
+// \ProvidesPackage{grabhedr}[1994/11/08 v0.9j]
+// \ProvidesPackage{regstats}[2025/01/28 v1.1b Counting used registers (HMM)]
+// \ProvidesPackage{plantslabels}[2010/04/05 Writing plant labels]
+// \ProvidesPackage{beameraudience}[\filedate\space
+// \ProvidesPackage{DotArrow}[2007/02/12 draw dotted arrows]
+// \ProvidesPackage{beamerthemeSaintPetersburg}[2017/11/20 SaintPetersburg Beamer theme]
+// \ProvidesPackage{beamerfontthemeSaintPetersburg}[2017/11/20 Saint Petersburg font theme]
+// \ProvidesPackage{beamercolorthemeSaintPetersburg}[2017/11/20 Saint Petersburg color theme]
+// \ProvidesPackage{metastr}[2025/03/25 v1.1.3 Metadata Strings Storage]
+// \ProvidesPackage{currfile}[%
+// \ProvidesPackage{currfile-abspath}[%
+// \ProvidesPackage{cybercic}
+// \ProvidesPackage{fnumprint}
+// \ProvidesPackage{adigraph}
+// \ProvidesPackage{ntheorem}[\filedate \space\fileversion]
+// \ProvidesPackage{froufrou}[2021/05/06 1.4.0 Visual section separator]
+// \ProvidesPackage{nlctuserguide}[2025/11/24 v1.16 (NLCT)]
+// \ProvidesPackage{hang}[2017/02/18 v2.1 Hanging paragraphs and list items]
+// \ProvidesPackage{decimalcomma}
+// \NeedsTeXFormat{LaTeX2e} \ProvidesPackage{noconflict}[2013/04/23
+// \ProvidesPackage{geometry}
+// \ProvidesPackage{fnbreak}
+// \ProvidesPackage{ktorcid}[2025/05/29 v0.0.1 KTBox framework: ORCID author utilities]
+// \ProvidesPackage{ktcolor}[2025/05/29 v0.0.1 KTBox framework: semantic color palettes]
+// \ProvidesPackage{ktbox}[2025/05/29 v0.0.1 KTBox framework prompt-response styling]
+// \ProvidesPackage{fcolumn}
+// \ProvidesPackage{ppt-slides}
+// \ProvidesPackage{dataref}[2022/03/25 v0.7 dataref]
+// \ProvidesPackage{spacingtricks}
+// \ProvidesPackage{boxedminipage2e}
+// \ProvidesPackage{boxedminipage}
+// \ProvidesPackage{tabularcalc}[2009/04/20 v0.2 Compute formulas in tables]
+// \ProvidesPackage{opencolor}[2023/03/05 Open Color]
+// \ProvidesPackage{alertmessage}
+// \ProvidesPackage{addfont}%
+// \ProvidesPackage{srbook-mem}
+// \ProvidesPackage{ifthenx}
+// \ProvidesPackage{hvindex}[\filedate~Index macros (hv)]
+// \ProvidesPackage{skills}[2020/10/21 Easing the making of proficiency tests]
+// \ProvidesPackage{filemod-expmin}[%
+// \ProvidesPackage{filemod}[%
+// \ProvidesPackage{\TF@PACKAGENAME}
+// \ProvidesPackage{tikzpfeile}[2012/03/28 v1.0 A LaTeX package for drawing arrows using PGF/TikZ]
+// \ProvidesPackage{exercises}[2000/05/17 v1.1 .dtx exercises file]
+// \ProvidesPackage{competences}
+// \ProvidesPackage{sacsymb}[2023/02/06 Symbols for Objective reduction Theory]
+// \ProvidesPackage{newenviron}[\StyleFileInfo]
+// \ProvidesPackage{txgreeks}
+// \ProvidesPackage{euflag}[2020/05/22 v0.8
+// \ProvidesPackage{to-be-determined}
+// \ProvidesPackage{rcs-multi}
+// \ProvidesPackage{hep-title}[2025/09/01 v1.4 Extend title page macros]
+// \AtEndOfPackage{\ProvidesPackage{listings}
+// \ProvidesPackage{lstdoc}
+// \ProvidesPackage{rmpage}
+// \ProvidesPackage{tikzviolinplots}[2025/09/29 v0.10.0 Violin plot creation in pgfplots]
+// \ProvidesPackage{atenddvi}%
+// \ProvidesPackage{atenddvi}%
+// \ProvidesPackage{snapshot}[2020/06/17 v2.14]
+// \ProvidesPackage{diagbox}
+// \ProvidesPackage{gensymb}
+// \ProvidesPackage{attachfile2}%
+// \ProvidesPackage{pstfp}[2003/05/10]
+// \ProvidesPackage{bardiag}[2003/12/10 version 0.5] 
+// \ProvidesPackage{dnaseq}[2002/05/20 v0.01 dna sequence setter]
+// \ProvidesPackage{semantic-markup}[2020/01/29
+// \ProvidesPackage{scrletter}[%
+// \ProvidesPackage{scrlogo}[%
+// \ProvidesPackage{typearea}[%
+// \ProvidesPackage{scrtime}[%
+// \ProvidesPackage{tocbasic}[%
+// \ProvidesPackage{scrlfile-hook}[%
+// \ProvidesPackage{scrfontsizes}[%
+// \ProvidesPackage{scrlfile-patcholdlatex}[%
+// \ProvidesPackage{scrlayer}[%
+// \ProvidesPackage{%
+// \ProvidesPackage{%
+// \ProvidesPackage{scrjura}[%
+// \ProvidesPackage{scrextend}[%
+// \ProvidesPackage{scrlayer-notecolumn}[%
+// \ProvidesPackage{scrlfile-hook-3.34}[%
+// \ProvidesPackage{scraddr}
+// \ProvidesPackage{scrdate}[%
+// \ProvidesPackage{scrlfile}[%
+// \ProvidesPackage{scrlayer-scrpage}[%
+// \ProvidesPackage{syntrace}[2006/08/17 v1.1 Package for dealing with trace in syntaxic tree]
+// \ProvidesPackage{pdflscape-nometadata}%
+// \ProvidesPackage{empheq}%
+// \ProvidesPackage{mhsetup}%
+// \ProvidesPackage{mathtools}%
+// \ProvidesPackage{elpresbluelightgrayscheme}[2021/08/10 elpres layout scheme blue lightgray]
+// \ProvidesPackage{elpreswhitetealscheme}[2021/08/10 elpres layout scheme white teal]
+// \ProvidesPackage{elpresgrayscheme}[2021/08/10 elpres layout scheme gray]
+// \ProvidesPackage{elpreswhitebluescheme}[2021/08/10 elpres layout scheme white blue]
+// \ProvidesPackage{elpreswhiteredscheme}[2021/08/10 elpres layout white red]
+// \ProvidesPackage{ginpenc}
+// \ProvidesPackage{refcheck}[2025/06/20 v1.9.2]
+// \ProvidesPackage{typog}
+//  \ProvidesPackage{continue}[2018/12/09 v0.2 Continues on the following page]
+// \ProvidesPackage{beamerthemetrigon}[2023/02/20 v0.7.0 Trigon Beamer theme]
+// \ProvidesPackage{beamercolorthemetrigon}[2023/02/20 v0.7.0 Trigon color theme]
+// \ProvidesPackage{beamerfontthemetrigon}[2023/02/20 v0.7.0 Trigon font theme]
+// \ProvidesPackage{beamerouterthemetrigon}[2023/02/20 v0.7.0 Trigon outer theme]
+// \ProvidesPackage{beamerinnerthemetrigon}[2023/02/20 v0.7.0 Trigon inner theme]
+// \ProvidesPackage{memory}
+// \ProvidesPackage{fetchcls}
+// \ProvidesPackage{picture}%
+// \ProvidesPackage{addrset}
+// \ProvidesPackage{setdim}
+// \ProvidesPackage{repltext}
+// \ProvidesPackage{qrcode}
+// \ProvidesPackage{foilhtml}
+// \ProvidesPackage{dot2texi}[2008/05/07 v3.0p1 Run dot2tex from LaTeX]
+// \ProvidesPackage{apptools}
+// \ProvidesPackage{mftinc}
+// \ProvidesPackage{CoverPage}%
+// \ProvidesPackage{logoetalab}[2023/11/19 0.1.1 Logo vectoriel ou tikz de la licence 'Licence Ouverte Etalab 2.0']
+// \ProvidesPackage{selinput}
+// \ProvidesPackage{pagegrid}%
+// \ProvidesPackage{doibanner}
+// \ProvidesPackage{multidef}[2016/04/20 v1.10  definition of multiple commands]
+// \ProvidesPackage{flexipage}
+// \ProvidesPackage{sanitize-umlaut}[2026/02/10 version 1.4.0 sanitize umlauts]
+// \ProvidesPackage{hep-float}[2025/09/01 v1.4 Float adjustments]
+// \ProvidesPackage{tikzmarmots}[2024/12/11 version v2.2 Drawing marmots in TikZ]
+// \ProvidesPackage{tikzmarmots}
+// \ProvidesPackage{cite}[2015/02/27 \space v 5.5]
+//   \ProvidesPackage{drftcite}[1995/01/23 \space  v 3.5]
+// \ProvidesPackage{chapterbib}[2010/09/18 \space v 1.17]
+//   \ProvidesPackage{overcite}[2003/05/27 \space  v 4.0]
+// \ProvidesPackage{changes}[2021/07/15 v4.2.1 changes package]
+// \ProvidesPackage{stdclsdv}[2009/09/04 v1.1a Sectional divisions]
+// \ProvidesPackage{hypcap}%
+// \ProvidesPackage{qcm}[2004/11/27 v2.1
+// \ProvidesPackage{foliono}[2021/03/25 Folio numbering]
+//  \ProvidesPackage{altsubsup}
+// \ProvidesPackage{altsubsup}[2022/03/15, v1.1, Alternative and customisable
+// \ProvidesPackage{flipbook}[2011/12/05 Standard LaTeX class]
+// \ProvidesPackage{beamerthemeI6pd} % this style was created by Philippe Dreuw
+// \ProvidesPackage{beamerthemeI6dv} % this style was created by David Vilar
+// \ProvidesPackage{beamerthemeAachen}  % this style was created by Philippe Dreuw and Thomas Deselaers
+// \ProvidesPackage{beamerthemeI6pd2}  % this style was created by Thomas Deselaers an Philippe Dreuw
+// \ProvidesPackage{beamerthemeI6td} % this style was created by Thomas Deselaers
+// \ProvidesPackage{beamerthemeZH}
+// \ProvidesPackage{\beamerposter@name}[\beamerposter@releaseinfo]
+// \ProvidesPackage{sidecap}[2023/01/24 v1.7a SideCap Package (RN/HjG)]
+// \ProvidesPackage{collcell}[%
+// \ProvidesPackage{coffeestains}[2021/05/07 coffeestains version 0.5]
+// \ProvidesPackage{blowup}[2023/07/15 2.2.0 Page scaling (RN)]
+// \ProvidesPackage{sctkzsym-base}
+// \ProvidesPackage{scsnowman}[2023/02/23 v1.3c Snowman variants using TikZ]
+// \ProvidesPackage{rorlink}
+// \ProvidesPackage{subfloat}
+// \ProvidesPackage{cmdtrack}[2012/12/18 v1.06]
+// \ProvidesPackage{epspdfconversion}%
+// \ProvidesPackage{catechis}[2021/07/17 v2.6 Support for writing catechism questions and answers]
+// \ProvidesPackage{swfigure}%
+// \ProvidesPackage{circledsteps}[2023/08/11 v1.3.3 Circled steps that you can reference]
+// \ProvidesPackage{cclicenses}[2005/05/20 v0.4 CC licenses typesetting]
+// \ProvidesPackage{cistercian}[2025/10/08 version v0.6 Cistercian numerals]
+// \ProvidesPackage{colorpalette}
+// \ProvidesPackage{symbolpalette}
+// \ProvidesPackage{codesection}
+// \ProvidesPackage{progress}[2003/29/06 v1.10 progress package]
+// \ProvidesPackage{register} [2020/03/22 v2.0 Register macros with
+// \ProvidesPackage{dashrule}
+// \ProvidesPackage{pauldoc}
+// \ProvidesPackage{ted}
+// \ProvidesPackage{hanging}[2009/09/02 v1.2b hanging paragraphs and punctuation]
+// \ProvidesPackage{eqparbox}
+// \ProvidesPackage{everysel}
+// \ProvidesPackage{byname}[\filedate\space\fileversion\space Increase
+// \ProvidesPackage{smartref}[\filedate\space\fileversion\space Increase
+// \ProvidesPackage{ellipsis}%
+// \ProvidesPackage{tccompat}[2003/09/25 v 1.2 (JKn)]
+// \ProvidesPackage{smartmn}[1999/06/01 v 1.1b Intelligent hyphen/minus (jk)]
+// \ProvidesPackage{parboxx}[2003/09/27 New alignment options for parboxen (JKn)]
+// \ProvidesPackage{semtrans}%
+// \ProvidesPackage{mathrsfs}[1996/01/01 Math RSFS package v1.0 (jk)]
+// \ProvidesPackage{mathbbol}[1995/01/01]
+// \ProvidesPackage{sgmlcmpt}[1999/06/01]
+// \ProvidesPackage{greekctr}[1999/02/14 Greek Counterstyle v3.0 (jk)]
+// \ProvidesPackage{enumsub}
+// \ProvidesPackage{minutes}[\minfiledate\space\minfileversion\space
+// \ProvidesPackage{panda}[2026/02/12 version v0.3 Estimating blackness of fonts]
+// \ProvidesPackage{CleverPanda}[2026/02/12 version v0.3 Estimating blackness of fonts]
+// \ProvidesPackage{BusyPanda}[2026/02/12 version v0.3 Estimating blackness of fonts]
+// \ProvidesPackage{dry}
+// \ProvidesPackage{papermas}[2023-04-12 v1.1a Computes paper mass of a printout (HMM)]
+// \ProvidesPackage{nl-interval} % Version 1.0
+// \ProvidesPackage{KKsymbols}[2026/02/19, Version 2.1.2]
+// \ProvidesPackage{pgf-spectra}[07/07/2024 pgf-spectra v3.0.1a]%
+// \ProvidesPackage{m-pictex}[2023/03/25 legacy package m-pictex]
+// \ProvidesPackage{answers}
+// \ProvidesPackage{pgfgantt}[2024/06/19 v5.0a Draw Gantt diagrams with TikZ]
+// \ProvidesPackage{beamerthemeepyt}[2016/05/25 v1.0]
+// \ProvidesPackage{savetrees}
+// \ProvidesPackage{srcltx}[2006/11/12 v1.6 Source specials for inverse search in DVI files]
+// \ProvidesPackage{rotpages}[2002/05/30 R3.0 Rotated Pages (SC)]
+//   \ProvidesPackage{autoarea}[2008/08/12 v0.3a 
+// \ProvidesPackage{graphicxpsd}
+// \ProvidesPackage{reotex}[2014/08/13 A Tex way to draw reo circuits!]
+// \ProvidesPackage{graphicx-psmin}
+// \ProvidesPackage{HA-prosper}[2004/08/20 \HAP@Version\space Patch for prosper]
+// \ProvidesPackage{HAPLakar}[2004/05/16]
+// \ProvidesPackage{HAPcapsules}[2004/06/10]
+// \ProvidesPackage{HAPFyma}[2004/05/16]
+// \ProvidesPackage{HAPTCS}[2004/05/16]
+// \ProvidesPackage{HAPTCSgrad}[2004/05/16]
+// \ProvidesPackage{HAPTCSTealBlue}[2004/05/16]
+// \ProvidesPackage{HAPsimple}[2004/05/16]
+// \ProvidesPackage{HAPAggie}[2004/05/16]
+// \ProvidesPackage{HAPTycja}[2004/05/16]
+// \ProvidesPackage{HAPHA}[2004/05/16]
+// \ProvidesPackage{HAPciment}[2004/06/17]
+// \ProvidesPackage{eqlist}[2002/08/15 v2.1]
+// \ProvidesPackage{fancyref}[%
+// \ProvidesPackage{keyindex}
+// \ProvidesPackage{mtcpatchmem}%
+// \ProvidesPackage{mtcmess}[2006/03/14]%
+// \ProvidesPackage{mtcoff}[2018/07/12 v62 The mtcoff package]
+// \ProvidesPackage{minitoc}%
+// \ProvidesPackage{prettyref}[1998/07/09 v3.0]
+// \ProvidesPackage{jumplines}[2015/06/02 v0.2 -- Teaser/Continued articles with hyperlinks]
+// \ProvidesPackage{trfsigns}
+// \ProvidesPackage{totalcount}[2018/01/21 v1.0a Total values of counters (AR)]
+// \ProvidesPackage{boolexpr}
+// \ProvidesPackage{ebezier}
+// \ProvidesPackage{exp-testopt}[2009/03/06 v0.3  (PE)]
+// \ProvidesPackage{esk}[\filedate\space\fileversion\space
+// \ProvidesPackage{epigraph}[2020/01/02 v1.5e typesetting epigraphs]
+// \ProvidesPackage{slantsc}
+// \ProvidesPackage{enumitem-zref}[2011/02/18 v1.8 - Extended references for enumitem pkg]
+// \ProvidesPackage{scratch3}[\scrdate\space v\scrver\space Draw scratch3 instructions (CT)]
+// \ProvidesPackage{didactic}
+// \ProvidesPackage{progressbar}[2014/05/04 v1.0b~4: progressbar]%
+// \ProvidesPackage{pronunciation}[2025/2/2,Ver1.0.2]%
+// \ProvidesPackage{tocdata}
+// \ProvidesPackage{fbox}[2023/12/04 v. 0.07 allow parts of the frame (hv)]
+// \ProvidesPackage{tikzbricks}[2024/12/16 version v0.6 Drawing bricks with TikZ]
+// \ProvidesPackage{grfext}%
+// \ProvidesPackage{ltxkeys}[\StyleFileInfo]
+// \ProvidesPackage{csvmerge}
+// \ProvidesPackage{ragged2e}
+// \ProvidesPackage{ifoddpage}[%
+// \ProvidesPackage{cals}
+// \ProvidesPackage{catoptions}
+// \ProvidesPackage{href-ul}
+// \ProvidesPackage{xstix2}[2026/02/28]
+// \ProvidesPackage{beamerinnerthememetropolis}[2017/01/23 Metropolis inner theme]
+// \ProvidesPackage{beamerthememetropolis}
+// \ProvidesPackage{beamercolorthememetropolis}[2017/01/23 Metropolis color theme]
+// \ProvidesPackage{beamerouterthememetropolis}[2017/01/23 Metropolis outer theme]
+// \ProvidesPackage{beamercolorthememetropolis-highcontrast}[2017/01/23 Metropolis color theme]
+// \ProvidesPackage{beamerfontthememetropolis}[2017/01/23 Metropolis font theme]
+// \ProvidesPackage{pgfplotsthemetol}
+// \ProvidesPackage{manuscript}
+// \ProvidesPackage{titling}[2009/09/04 v2.1d maketitle typesetting]
+// \ProvidesPackage{quoting}
+// \ProvidesPackage{minipage-marginpar}
+// \ProvidesPackage{mpgmpar}
+// \ProvidesPackage{tkz-euclide}[ 2026/01/25 5.13c for pure  Euclidean Geometry ]
+// \ProvidesPackage{subeqnarray}
+// \ProvidesPackage{tikz-network}[2019/08/15  tikz-network v1.1]
+// \ProvidesPackage{tikz-opm}[2014/01/23 v0.1.1 OPM Digrams]
+// \ProvidesPackage{attachfile}
+// \ProvidesPackage{optikz}[2026/02/16 optikz]
+// \ProvidesPackage{accsupp}%
+// \ProvidesPackage{crossreference}[\filedate\space\fileversion\space
+// \ProvidesPackage{overpic}[2026/01/06 2.2 picture overlays (RN)]
+// \ProvidesPackage{tkz-base}[2024/01/16  4.21c  tkz-base]
+// \ProvidesPackage{askincv1}[1995/05/31 Interactive include package]
+// \ProvidesPackage{clrstrip}
+// \ProvidesPackage{opcit}[2006/09/20 Footnote references (Federico Garcia) Version 2]
+// \ProvidesPackage{pslatex}[2021/01/13 v1.3 pslatex emulation (DPC)]
+// \ProvidesPackage{familytree}%
+//  \ProvidesPackage{color-edits}[2020/09/18 v1.1 Class for annotating authors' edits in color]
+// \ProvidesPackage{makecell}
+// \ProvidesPackage{footnotehyper}%
+// \ProvidesPackage{atendofenv}[2022/02/24 v0.2 Prevent an infinite loop]
+// \ProvidesPackage{silence}[2012/07/02 v1.5b Selective filtering of warnings and error messages]
+// \ProvidesPackage{gcard}[2007/08/21 simple greeting card package]
+// \ProvidesPackage{tikzorbital}[2012/12/05 draw atomic orbitals and molecular diagrams with tikz]
+// \ProvidesPackage{pdfmarginpar}[2011/08/05 Version 0.92]
+// \ProvidesPackage{crop}[2017/11/19 1.10 crop marks (mf)]
+// \ProvidesPackage{colorframed}
+// \ProvidesPackage{tucv}
+// \ProvidesPackage{hvfloat}[\filedate\space v\fileversion\space special floating objects (hv)]
+// \ProvidesPackage{hvfloat-fps}[\filedate\space v\fileversion\space global float position setting (hv)]
+// \ProvidesPackage{proofread}
+// \ProvidesPackage{essaykit}
+// \ProvidesPackage{hypdestopt}%
+// \ProvidesPackage{bxdvidriver}[2017/02/13 v0.2a]
+// \ProvidesPackage{combelow}[2010/05/02 v0.99f comma below command]
+// \ProvidesPackage{todo}[2010/03/31 v2.4142 To-do list (Federico Garcia)]
+// \ProvidesPackage{type1ec}[2002/09/07 v1.1 Type1 EC font definitions (for CM-Super fonts)]
+//   \ProvidesPackage{toolbox}[2004/04/29 v5.1]
+// \ProvidesPackage{graphbox}[2025/03/25 v1.1.1 extension for graphicx to adjust containing box]
+// \ProvidesPackage{probsoln}[2017/07/10 v3.05 (NLCT)]
+// \ProvidesPackage{lroundrect}[2015/09/01 v1.0 LaTeX macros utilizing the Metapost roundrect code]
+// \ProvidesPackage{tabularew}
+// \ProvidesPackage{beamerthemeAlbi}[\BTA@date\space\BTA@version\space Albi beamer theme]
+// \ProvidesPackage{fancytabs}
+// \ProvidesPackage{fancytabs}
+// \ProvidesPackage{association-matrix}[2022/10/29 v1.1 Association matrix generator]
+// \ProvidesPackage{trimspaces}[2009/09/17 v1.1
+// \ProvidesPackage{threeparttablex}[2013/07/23 v0.3 by daleif]
+// \ProvidesPackage{bizcard}%
+// \ProvidesPackage{ran-toks}
+// \ProvidesPackage{ran_toks}
+// \ProvidesPackage{pxpic}[2023-08-16 v1.5 draw pixel pictures]
+// \ProvidesPackage{markdown}[\markdownLastModified\markdownVersionSpace v%
+// \ProvidesPackage{shdoc}[2016/09/04 v2.1b Package for documenting shell operations]
+// \ProvidesPackage{changebar}
+// \ProvidesPackage{lapdf}[2006/04/09 v1.0 Drawing with pdfTeX]
+// \ProvidesPackage{ltxnew}
+// \ProvidesPackage{addlines}
+// \ProvidesPackage{layouts}[2009/09/02 v2.6d graphical depiction of document elements]
+// \ProvidesPackage{kalendarium}[2018/06/14 1.0 Format dates using the Roman calendar]
+// \ProvidesPackage{worksheet}[2018/08/08 by Benjamin Zoellner (c)2018 v1.1 This Package provides macros and an environment for easy worksheet creation]
+// \ProvidesPackage{calculator}[2022/09/15 v.2.1]
+// \ProvidesPackage{calculus}[2014/02/20 v.2.0]
+// \ProvidesPackage{tkz-graph}[2021/01/20 2.00   base for graphs]
+// \ProvidesPackage{neuralnetwork}[2013/07/18 v1.0 Neural network diagrams, Mark Kuckian Cowan, mark@battlesnake.co.uk]
+// \ProvidesPackage{fonttable}
+// \ProvidesPackage{cool}
+// \ProvidesPackage{pstool}[2018/01/20 v1.5e Wrapper for processing PostScript/psfrag figures]
+// \ProvidesPackage{extract}
+// \ProvidesPackage{limap}[\filedate\space Gerd Neugebauer]
+// \ProvidesPackage{exercisebank}[2019/03/18 v0.3.0 Creates a setup that gives freedom in making sets and exercises.]
+// \ProvidesPackage{version}[2009/09/15 \space v 2.0]
+// \ProvidesPackage{beamerthemespectrum}[2026/02/12 version v0.6 Spectrum beamer theme]
+// \ProvidesPackage{talkthemespectrum}[2026/02/12 version v0.6 Spectrum beamer theme]
+// \ProvidesPackage{beamerinnerthemesimplelines}[2020/08/10 v1.02a Beamer supplementary inner themes]
+// \ProvidesPackage{beamerouterthemesplitwithminiframes}[2020/08/10 v1.02a Beamer supplementary outer themes]
+// \ProvidesPackage{beamerouterthemesidebarwithminiframes}[2020/08/10 v1.02a Beamer supplementary outer themes]
+// \ProvidesPackage{beamerouterthemetwolines}[2020/08/10 v1.02a Beamer supplementary outer themes]
+// \ProvidesPackage{notespages}[\filedate\space
+// \ProvidesPackage{gradientframe}[2011/02/13 v0.2 simple gradient frames around objects]
+// \ProvidesPackage{phfquotetext}
+// \ProvidesPackage{tikz-dimline}[2013/03/13 v1.0 initial version]
+// \ProvidesPackage{marginfit}[2018/06/08 v1.1 Fit Margin Paragraphs]
+// \ProvidesPackage{noindentafter}
+// \ProvidesPackage{forarray}
+// \ProvidesPackage{pdfx}
+// \ProvidesPackage{emo}
+// \ProvidesPackage{emo}
+// \ProvidesPackage{scrambledenvs}[2021/09/26 v1.1.0 Create and print scrambled environments]
+// \ProvidesPackage{pdfrender}%
+// \ProvidesPackage{calculatoritems}[2025/08/12 0.1.4 Menus from classic calculators]
+// \ProvidesPackage{boites}[2013/11/21 v1.1 Colored, framed and breakable across pages boxes]
+// \ProvidesPackage{boites_exemples}
+// \ProvidesPackage{footmisc}%
+// \ProvidesPackage{footmisc}%
+// \ProvidesPackage{footmisc}%
+// \ProvidesPackage{debate}
+// \ProvidesPackage{cmsd}[1997/10/26 v1.0 beta (WaS)]
+// \ProvidesPackage{tikzcodeblocks}[2018/04/03 v.0.12 - TikZ Styles and macros for typesetting blockwise graphic programming languages like scratch, nepo or pxt]
+// \ProvidesPackage{umoline}}
+// \ProvidesPackage{gurmukhidigits}
+// \ProvidesPackage{nkonumbers}
+// \ProvidesPackage{arabicnumbers}
+// \ProvidesPackage{farsical}
+// \ProvidesPackage{xpg-cyrillicnumbers}
+// \ProvidesPackage{bengalidigits}
+// \ProvidesPackage{hijrical}
+// \ProvidesPackage{odiadigits}
+// \ProvidesPackage{devanagaridigits}
+// \ProvidesPackage{hebrewcal}
+// \ProvidesPackage{abraces}% http://ctan.org/pkg/abraces
+// \ProvidesPackage{nicefilelist}[2025/04/21 v0.9c
+// \ProvidesPackage{lisp-on-tex}[2015/06/22 v2.0]
+// \ProvidesPackage{ullrcorners}
+// \ProvidesPackage{glossary-longextra}[2021/11/22 v1.48 (NLCT)]
+// \ProvidesPackage{glossary-bookindex}[2025/11/03 v1.9 (NLCT)]
+// \ProvidesPackage{glossaries-extra-stylemods}[2021/11/22 v1.48 (NLCT)]
+// \ProvidesPackage{glossary-topic}[2025/11/03 v1.9 (NLCT)]
+// \ProvidesPackage{glossaries-extra-bib2gls}[2021/11/22 v1.48 (NLCT)]
+// \ProvidesPackage{glossaries-extra-stylemods}[2025/11/03 v1.9 (NLCT)]
+// \ProvidesPackage{glossary-longextra}[2025/11/03 v1.9 (NLCT)]
+// \ProvidesPackage{glossary-bookindex}[2021/11/22 v1.48 (NLCT)]
+// \ProvidesPackage{glossaries-extra-bib2gls}[2025/11/03 v1.9 (NLCT)]
+// \ProvidesPackage{glossaries-extra}[2025/11/03 v1.9 (NLCT)]
+// \ProvidesPackage{glossary-table}[2025/11/03 v1.9 (NLCT)]
+// \ProvidesPackage{glossary-topic}[2021/11/22 v1.48 (NLCT)]
+// \ProvidesPackage{glossaries-extra}[2021/11/22 v1.48 (NLCT)]
+// \ProvidesPackage{traffic-light-protocol}[2025/04/08 v0.2]
+// \ProvidesPackage{unifront}[2023/05/07 v1.0 Unique front structure]
+// \ProvidesPackage{etoolbox}
+//  \ProvidesPackage{dottex}
+// \ProvidesPackage{outline}[2002/08/23 Simple Outline Package]
+// \ProvidesPackage{etaremune}[2005/06/01 v1.2 Reversed enumerate (HA)]
+// \ProvidesPackage{isonums}[2007/12/31 v1.0 Ziffer for automated ISO number format]
+// \ProvidesPackage{fontdoc}
+// \ProvidesPackage{mfirstuc-english}[2025/04/03 v2.09 (NLCT)]
+// \ProvidesPackage{mfirstuc}[2025/04/03 v2.09 (NLCT)]
+// \ProvidesPackage{mfirstuc}[2021/10/15 v2.07 (NLCT)]
+// \ProvidesPackage{sdrt}[2008/04/02 Package for typesetting Discourse Representation Theory and formal semantics in general]
+// \ProvidesPackage{argumentation}[2025/07/31 Argumentation]
+// \ProvidesPackage{askmaps}[\askmapsdate\space Version \askmapsversion\space
+// \ProvidesPackage{byo-twemojis}[2021/04/19 v1.0 byo-twemojis]
+// \ProvidesPackage{epstopdf-base}%
+// \ProvidesPackage{epstopdf}%
+// \ProvidesPackage{gitinfo2}[2015/11/22 v2.0.7 git revision information]
+// \ProvidesPackage{gitexinfo}[2015/11/22 v2.0.7 Auxiliary package for gitinfo2]
+// \ProvidesPackage{xfor}[2009/02/05 v1.05 (NLCT)]
+// \ProvidesPackage{locality}
+// \ProvidesPackage{pdfpc-movie}%
+// \ProvidesPackage{libgreek-legacy}
+// \ProvidesPackage{libgreek}
+// \ProvidesPackage{typed-checklist}
+// \ProvidesPackage{pax}%
+// \ProvidesPackage{xcolor-2022-06-12}
+// \ProvidesPackage{xcolor}
+// \ProvidesPackage{clicks}
+// \ProvidesPackage{widetable}%
+// \ProvidesPackage{colortbl}
+// \ProvidesPackage{filehook-memoir}[2020/02/02 v0.2 filehook patch for memoir class]
+// \ProvidesPackage{filehook-scrlfile}[2020/02/02 v0.2 filehook patch for scrlfile package]
+// \ProvidesPackage{filehook-2020}[% filehook subpackage, do not load directly
+// \ProvidesPackage{filehook-listings}[2011/01/02 v0.1 Patch for listings to avoid hooks for verbatim input files]
+// \ProvidesPackage{pgf-filehook}[2010/01/07 v1.0 PGF keys for the filehook package]
+// \ProvidesPackage{filehook}[%
+// \ProvidesPackage{filehook-fink}[011/01/03 v0.1 filehook compatibility code for fink package]
+// \ProvidesPackage{filehook-2019}[% filehook subpackage, do not load directly
+// \ProvidesPackage{tikz-inet}[2008/06/02 v0.1 tikz interaction nets library]
+// \ProvidesPackage{dlfltxbtocconfig}[2010/03/04 v0.7 by Lars Madsen]
+// \ProvidesPackage{dlfltxbcodetips}[2010/03/04 v0.5 by Lars 'daleif' Madsen]
+// \ProvidesPackage{dlfltxbmarkup}[2008/08/05 v0.70 by daleif]
+// \ProvidesPackage{dlfltxbmarkupbookkeys}[20101/03/04 by Lars madsen]
+// \ProvidesPackage{dlfltxbmisc}[2010/03/04 v0.3 by Lars Madsen]
+// \ProvidesPackage{edichokey}[2020/08/31 v2.01y package edichokey]
+// \ProvidesPackage{pictochrono}[2025/06/25 0.1.1 Inline chronometer, made with tikz]
+// \ProvidesPackage{lccaps}
+// \ProvidesPackage{mi-solns}
+// \ProvidesPackage{diabetes-logbook}[2018-07-22 a tryhard logbook for diabetes]
+// \ProvidesPackage{finstrut}[2011/03/14 v0.5 vmode final strut (DA/UL)]
+// \ProvidesPackage{antree}[1994/06/22]
+// \ProvidesPackage{alterqcm}[2021/05/17 v4.42c]
+//  \ProvidesPackage{gnuplottex}
+// \ProvidesPackage{namespc}
+// \ProvidesPackage{colorinfo}
+// \ProvidesPackage{lsc}[2005/12/30 Typesetting LSCs]
+// \ProvidesPackage{underscore-ltx}[2023/09/20 LaTeX firstaid to make underscore protected ]
+// \ProvidesPackage{auxhook}%
+// \ProvidesPackage{adjmulticol}
+// \ProvidesPackage{multiaudience}
+// \ProvidesPackage{pdfpc}[2023/10/21 v0.7.1 PDFPC]
+// \ProvidesPackage{splitidx}[%
+// \ProvidesPackage{menukeys}
+// \ProvidesPackage{menukeys}
+// \ProvidesPackage{colophon}[2018/04/01 v1.1 Support for highly configurable colophons]
+// \ProvidesPackage{ditaa}
+// \ProvidesPackage{cooltooltips}
+// \ProvidesPackage{elocalloc}
+//   \noexpand\ProvidesPackage{svn}[\svn@date\space r\svn@revision\space
+// \ProvidesPackage{minted-code}[2025/10/08 v0.01 predefined environments for code sources]
+// \ProvidesPackage{gmiflink}
+// \ProvidesPackage{keyfloat}
+// \ProvidesPackage{lstfiracode}[%
+// \ProvidesPackage{hrefhide}[2025-01-27 v1.1b %
+// \ProvidesPackage{time}
+// \ProvidesPackage{newproof}
+// \ProvidesPackage{onepagem}
+// \ProvidesPackage{duplicat}           
+// \ProvidesPackage{bootstrapicons}
+// \ProvidesPackage{texshade}[2025/10/16 LaTeX TeXshade (v1.29)]
+// \ProvidesPackage{epigraph-keys}[2020/04/22 v1.0 Epigraphs using key values]
+// \ProvidesPackage{tipauni}[2023/02/13 v0.7a
+// \ProvidesPackage{lnavicol}[2011/10/13
+// \ProvidesPackage{blogligs}[2012/11/29 v0.2 
+// \ProvidesPackage{blog}[2013/01/21 v0.81a simple fast HTML (UL)] 
+// \ProvidesPackage{blogdot}[2013/01/22 v0.41b HTML presentations (UL)]
+// \ProvidesPackage{texlinks}[2015/07/20 v0.83 TeX-related links (UL)] 
+// \ProvidesPackage{blogexec}[2012/12/20 v0.21
+// \ProvidesPackage{markblog}[2012/11/29 v0.2 
+// \ProvidesPackage{hypertoc}[2011/01/23 v0.1 pretty TOC links (UL)]
+// \ProvidesPackage{inversepath}
+// \ProvidesPackage{tabto}[2018/12/28 \space v 1.4 \space 
+// \ProvidesPackage{scrhack}[%
+// \ProvidesPackage{scrhack}
+// \ProvidesPackage{perpage}[2014/10/25 2.0 Reset/sort counters per page]
+// \ProvidesPackage{bigfoot}[2015/08/30 2.1 makes footnotes work]
+// \ProvidesPackage{suffix}[2006/07/15 1.5a Variant command support]
+// \ProvidesPackage{gradient-text}[2023/1/17]
+// \ProvidesPackage{DPcircling}[2020/04/15 v1.0 circling letters with circ/rect/jag/fan using TikZ]
+// \ProvidesPackage{rerunfilecheck}%
+// \ProvidesPackage{tocloft}[2017/08/31 v2.3i parameterised ToC, etc., typesetting]
+// \ProvidesPackage{tex-locale}[2018/08/26 v1.0 (NLCT) localisation support]
+// \ProvidesPackage{storecmd}[\StyleFileInfo]
+// \ProvidesPackage{breakurl}
+// \ProvidesPackage{ctibmantra}[2004/01/22 V0.0.2 Tibetan Mantra Stacks for ctib]
+// \ProvidesPackage{asciilist}
+// \ProvidesPackage{coloring}[2016/05/11 v0.2]
+// \ProvidesPackage{xsipa}[2025/05/16 v1.0 XSAMPA-inspired input to IPA transcription]
+// \ProvidesPackage{fewerfloatpages}
+// \ProvidesPackage{seqsplit}
+// \ProvidesPackage{wordcloud}[\filedate\space\fileversion]%
+// \ProvidesPackage{pdfsync}[2008/01/26 v1.1]%
+// \ProvidesPackage{twemojis}[2022/03/30 v1.3.1 LaTeX twemojis (twemoji v14.0.1)]
+// \ProvidesPackage{book-of-common-prayer}[2022/02/26 Liturgical documents in the style of the Book of Common Prayer]
+// \ProvidesPackage{hycolor}%
+// \ProvidesPackage{xcolor-patch}[2020/01/27 v1.10 xcolor patch]
+// \ProvidesPackage{showexpl}
+// \ProvidesPackage{milestonetimeline}
+// \ProvidesPackage{milestonetimeline}
+// \ProvidesPackage{export}
+// \ProvidesPackage{nolbreaks}[2012/05/31 \space v 1.2 \space 
+//  \ProvidesPackage{placeins}[2005/04/18 \space  v 2.2]
+// \ProvidesPackage{asyalign}
+// \ProvidesPackage{asyprocess}
+// \ProvidesPackage{asyfig}[2010/03/20 v0.1c
+// \ProvidesPackage{pdfreview}[2019/02/22 v1.20]
+// \ProvidesPackage{ltxdockit}
+// \ProvidesPackage{btxdockit}
+// \ProvidesPackage{uspace}
+// \ProvidesPackage{anonchap}[2009/08/03 v1.1a typeset chapter like section]
+// \ProvidesPackage{normalcolor}[%
+// \ProvidesPackage{leipzig}%
+// \ProvidesPackage{marvosym}
+// \ProvidesPackage{frege}[2012/08/04 v1.3]%
+// 	\ProvidesPackage{#1}[\date\space\id\space #2]%
+// \ProvidesPackage{tkz-bernoulli}[2023/11/05 0.1.3 Draw Bernoulli tree with tikz]
+//  \ProvidesPackage{rjlpshap}
+// \ProvidesPackage{ESIEEcv}[1997/12/29 v2.0a Style ESIEEcv]
+// \ProvidesPackage{theoremref}
+// \ProvidesPackage{graphics}
+// \ProvidesPackage{trig}
+// \ProvidesPackage{epsfig}
+// \ProvidesPackage{graphicx}
+// \ProvidesPackage{lscape}
+// \ProvidesPackage{rotating}%
+// \ProvidesPackage{color}
+// \ProvidesPackage{keyval}
+// \ProvidesPackage{graphics}
+// \ProvidesPackage{mwe}[%
+// \ProvidesPackage{hypdvips}
+// \ProvidesPackage{snaptodo}[2024/03/16]
+// \ProvidesPackage{skb}[2011/06/03 Sven's Knowledge Base - SKB for LaTeX v0.52]
+// \ProvidesPackage{coolfn}
+// \ProvidesPackage{smalltableof}
+// \ProvidesPackage{filedate}[2013/03/26 v0.41 check file dates (UL)]
+// \ProvidesPackage{psfont}%
+// \ProvidesPackage{altfont}%
+// \ProvidesPackage{dateiliste}[%
+// \ProvidesPackage{leading}
+// \ProvidesPackage{documentation}%
+// \ProvidesPackage{quotmark}[2007/12/10 v1.0]
+// \ProvidesPackage{etex}
+// \ProvidesPackage{loops}[2013/05/15 v1.3 Loops and list processors (AM)]
+// \AtEndOfPackage{\ProvidesPackage{vdmlisting}
+// \NeedsTeXFormat{LaTeX2e} \ProvidesPackage{listofsymbols}
+// \ProvidesPackage{moreenum}[2011/11/03 v1.03]
+// \ProvidesPackage{bxtexlogo}[2022/05/05 v0.6]
+// \ProvidesPackage{idxlayout}[2012/03/30 v0.4d Configurable index layout]
+// \ProvidesPackage{colordoc}[2010/04/18 Documentation in TeXnicolor (Federico Garcia)]
+// \ProvidesPackage{pdfswitch}%
+// \ProvidesPackage{texdepends}%
+// \ProvidesPackage{figlatex}%
+//  \ProvidesPackage{texgraphicx}%
+// \ProvidesPackage{europasscv-bibliography}
+// \ProvidesPackage{scrwfile}
+// \ProvidesPackage{upmethodology-backpage}[\upm@package@bp@ver]
+// \ProvidesPackage{upmethodology-code}[\upm@package@code@ver]
+// \ProvidesPackage{upmethodology-task}[\upm@package@task@ver]
+// \ProvidesPackage{upmethodology-p-common}[\upm@package@private@doctype@ver]
+// \ProvidesPackage{upmethodology-fmt}[\upm@package@fmt@ver]
+// \ProvidesPackage{upmethodology-extension}[\upm@package@ext@ver]
+// \ProvidesPackage{upmethodology-frontpage}[\upm@package@fp@ver]
+// \ProvidesPackage{upmethodology-version}[\upm@package@version@ver]
+// \ProvidesPackage{upmethodology-document}[\upm@package@doc@ver]
+// \ProvidesPackage{upmethodology-spec}[\upm@package@spec@ver]
+// \ProvidesPackage{customenvs-tikzpictos}[2025/11/19 0.20c Small pictograms, made with tikz]
+// \ProvidesPackage{customenvs-macros}[2025/12/22 0.1.2 Small macros, for several usages]
+// \ProvidesPackage{customenvs}[2026/01/17 0.42f Custom classic environments]
+// \ProvidesPackage{customenvs-icons}[2025/11/08 v0.1.5 Subpackage customenvs-icons]
+// \ProvidesPackage{customenvs-exams}[2025/11/08 0.1.5 customenvs for exam documents]
+// \ProvidesPackage{postage}[2018/05/29 v1.0 Franking letters with »Deutsche Post«'s online postage service »Internetmarke«]
+// \ProvidesPackage{gitinfo}[2011/08/10 v1.00 git revision information]
+// \ProvidesPackage{gitsetinfo}[2011/08/10 v1.00 Auxiliary package for gitinfo]
+// \ProvidesPackage{beamertheme-bilkent-econ}[2025/09/21 v0.0.1 Bilkent Economics Beamer Theme]
+// \ProvidesPackage{\@globalvalsPkgName}
+// \ProvidesPackage{crumbs}
+// \ProvidesPackage{curves}
+// \ProvidesPackage{curvesls}
+// \ProvidesPackage{moresize}[1999/07/26 v1.9 (more font sizes)]
+// \ProvidesPackage{spark-otf}[%
+// \ProvidesPackage{grfpaste}
+// \ProvidesPackage{easyReview}
+// \ProvidesPackage{easyReview}[2013/12/09 Package for Easy Review on LaTeX documents]
+// \ProvidesPackage{grffile}%
+// \ProvidesPackage{grffile}%
+// \ProvidesPackage{dry}
+// \ProvidesPackage{pixelart}[2023/02/20 v1.0.2 A package to draw pixel-art pictures]
+// \ProvidesPackage{pixelart0}
+// \ProvidesPackage{hhtensor}
+// \ProvidesPackage{keycommand}
+// \ProvidesPackage{commalists-tools}[2026/02/20 0.20a Basic operations for numeral comma separated lists]
+// \ProvidesPackage{hopatch}%
+// \ProvidesPackage{hopatch}%
+// \ProvidesPackage{myfilist}
+// \ProvidesPackage{readprov}
+// \ProvidesPackage{euler}[\filedate\space\fileversion]
+// \ProvidesPackage{texsurgery}[2021/07/09 TeXsurgery package v0.6.0]
+// \ProvidesPackage{texvc}
+// \ProvidesPackage{timeop}[2025/05/05 0.1.1 Calculates and displays arithmetic operations with durations.]
+// \ProvidesPackage{ean13isbn}[2021/01/24 EAN13 with ISBN]
+// \ProvidesPackage{fail-fast}
+// \ProvidesPackage{realboxes}[2011/08/08 v0.2 Change box commands to read there content as real boxes]
+// \ProvidesPackage{tagging}[2019/09/09 v1.1.0.1]
+// \ProvidesPackage{arraycols}
+// \ProvidesPackage{verifiche} [2025/12/02 v9.1 .dtx verifiche file]
+// \ProvidesPackage{tzplot-v2.12}[2025/12/25 v2.12 Plot Graphs with TikZ Abbreviations]
+// \ProvidesPackage{nomentbl}
+// \ProvidesPackage{mathalpha}[\mathalphaDate\space-\space\mathalphaVersion
+// \ProvidesPackage{prerex}[2019/11/15 v6.8.0 LaTeX style for prerequisite charts, pgf version]
+// \ProvidesPackage{technics}[2001/09/30]
+// \ProvidesPackage{fancytooltips}
+// \ProvidesPackage{semantic}
+// \ProvidesPackage{translator}
+// \ProvidesPackage{wordlike}
+// \ProvidesPackage{makebox}
+// \ProvidesPackage{logreq}
+// \ProvidesPackage{showlabels}[2025/08/20\space v1.9.3]
+// \ProvidesPackage{tikz-lake-fig}%
+// \ProvidesPackage{tpslifonts}
+// \ProvidesPackage{flagderiv}
+// \ProvidesPackage{logpap}[\filedate\space
+// \ProvidesPackage{metalogox}
+// \ProvidesPackage{stack}[2002/01/20 v1.0 Multi-stack system]
+// \ProvidesPackage{relinput}[2002/01/20 v1.00 Relative input]
+// \ProvidesPackage{tikz-cd}[2021/05/04 v1.0 Commutative diagrams with TikZ]
+// \ProvidesPackage{contracard}[2019/03/03 Package for typesetting called dances]
+// \ProvidesPackage{floatrowbytocbasic}
+// \ProvidesPackage{pagecolor}[2025-01-28 v1.2d Provides thepagecolor (HMM)]
+// \ProvidesPackage{dashbox}
+// \ProvidesPackage{msg}[\themsg]% Issue that message in log file with
+// \ProvidesPackage{xbmks}
+// \ProvidesPackage{cooking}[%
+// \ProvidesPackage{floatbytocbasic}
+// \ProvidesPackage{tkz-fct}[2022/01/27 1.7c function ] 
+// \ProvidesPackage{spverbatim}
+// \ProvidesPackage{phfnote}
+// \ProvidesPackage{fadingimage}[2024/05/06/ v0.3a Package provides macros for inputting full width picture at the edges of pages quickly.]
+// \ProvidesPackage{forest-compat}[2016/12/31]
+// \ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]
+//   \ProvidesPackage{forest-lib-#1}[#2]%
+// \ProvidesPackage{forest-index}
+// \ProvidesPackage{forest-doc}
+// \ProvidesPackage{beamerthemeMirage}
+// \ProvidesPackage{easy-todo}[2014/01/01]
+// \ProvidesPackage{envlab}
+// \ProvidesPackage{minorrevision}
+// \ProvidesPackage{todonotes}
+// \ProvidesPackage{todonotes}[2024/01/05]
+// \ProvidesPackage{cwebarray}
+//         \ProvidesPackage{#1}[\date\space\id\space #2]%
+// \ProvidesPackage{keyvald}
+// \ProvidesPackage{gloss}[\filedate\space\fileversion\space Gloss package]
+// \ProvidesPackage{isodateo}[\filedate]
+// \ProvidesPackage{isodate}
+// \ProvidesPackage{latexgit}[2020/04/20]
+// \ProvidesPackage{auto-pst-pdf-lua}[2023/03/21 v0.03a using auto-pst-pdf for LuaLaTeX]
+// \ProvidesPackage{grid}[2009/06/16 v1.0 Grid Layout]
+// \ProvidesPackage{titlecaps}
+// \ProvidesPackage{sidenotesplus}
+// \ProvidesPackage{datenumber}[\filedate \fileversion]
+// \ProvidesPackage{kinematikz}[2021/12/21 kinematikz definitions Package]
+// \ProvidesPackage{tipfr}[%
+// \ProvidesPackage{subfigmat}[1999/02/27 v1.0 Subfigure Matrix Package]
+// \ProvidesPackage{booktabs}
+// \ProvidesPackage{xtab}
+// \ProvidesPackage{regcount}
+// \ProvidesPackage{phfqit}
+// \ProvidesPackage{imakeidx}%
+// \ProvidesPackage{cnltx-tools}[\cnltx@@date\space \cnltx@@version\space \cnltx@@info]
+// \ProvidesPackage{cnltx}[\cnltx@@date\space \cnltx@@version\space \cnltx@@info]
+// \ProvidesPackage{cnltx-listings}[\cnltx@@date\space \cnltx@@version\space \cnltx@@info]
+// \ProvidesPackage{cnltx-translations}[\cnltx@@date\space \cnltx@@version\space \cnltx@@info]
+// \ProvidesPackage{cnltx-base}[\cnltx@@date\space \cnltx@@version\space \cnltx@@info]
+// \ProvidesPackage{cnltx-example}[\cnltx@@date\space \cnltx@@version\space \cnltx@@info]
+// \ProvidesPackage{cnltx-names}[\cnltx@@date\space \cnltx@@version\space \cnltx@@info]
+// \ProvidesPackage{count1to}
+// \ProvidesPackage{tameflts}[\filedate\space\fileversion\space 
+// \ProvidesPackage{tikz-page}[\pkgfiledate\space (v\pkgfileversion)]
+// \ProvidesPackage{outlining}
+// \ProvidesPackage{dcwrtbib}[2007/04/12 dcwrtbib.sty v1.0adev - Josef Kleber (C) 2007]%
+// \ProvidesPackage{pdfnotiz}[2008/04/21 v1.2a PDF tooltips - Josef Kleber (C) 2007-2008]%
+// \ProvidesPackage{fncychap}
+// \ProvidesPackage{fink}[2011/10/19 v2.2.1 Keep track of the current filename]
+// \ProvidesPackage{marginnote}[%
+// \ProvidesPackage{simplecd}
+// \ProvidesPackage{tplists}
+// \ProvidesPackage{tppstcol}
+// \ProvidesPackage{texpower}
+// \ProvidesPackage{issuulinks}
+// \ProvidesPackage{babelbib}
+// \ProvidesPackage{tabulary}
+// \ProvidesPackage{tabulary}
+// \ProvidesPackage{callouts}[2017/07/27 Callouts]
+// \ProvidesPackage{multinotes}
+// \ProvidesPackage{tsemlines}[2011/06/23 v1.0 line support for emTeX's TeXcad]
+// \NeedsTeXFormat{LaTeX2e} \ProvidesPackage{esami}
+// \ProvidesPackage{gender}
+// \ProvidesPackage{inputenx}%
+// \ProvidesPackage{mVersion}
+// \ProvidesPackage{bxnewfont}[2017/05/01 v0.2b]
+// \ProvidesPackage{duotenzor}
+// \ProvidesPackage{typehtml}
+//  \ProvidesPackage{tokenizer}[2003/05/26]
+// \ProvidesPackage{pgfplotsthemebeamer}[2024/08/02 version v0.2 PGFplots colours based the colours of the current beamer theme]
+// \ProvidesPackage{subfiles}[2020/11/14 v2.2 Multi-file projects (package)]
+// \ProvidesPackage{varvbtm}}
+// \ProvidesPackage{newvbtm}}
+// \ProvidesPackage{pdfprivacy}
+// \ProvidesPackage{ticket}[\filedate\space\fileversion]
+// \ProvidesPackage{pas-cv}[2013/11/26]
+// \ProvidesPackage{footnoterange}[2026-01-19 v1.1c %
+// \ProvidesPackage{txfonts}
+// \ProvidesPackage{easyfig}[%
+// \ProvidesPackage{eukdate}[2009/03/18 v1.04 UK format date (Hart's Rules) with weekday]
+// \ProvidesPackage{tabu}[2019/01/11 v2.9 - flexible LaTeX tabulars (FC+tabu-fixed)]
+// \ProvidesPackage{morefloats}[2025/01/28 v1.1a Raise limit of unprocessed floats (HMM)]
+// \ProvidesPackage{ifmslide}
+// \ProvidesPackage{nag}[2011/11/25 0.7 warning about old commands (ulmi)]
+// \ProvidesPackage{swungdash}
+// \ProvidesPackage{tikzscale}[2013/05/22 v0.2.6 tikzscale LaTeX package]
+// \ProvidesPackage{tangocolors}
+// \ProvidesPackage{tangocolors}[2023/03/20 v0.3 Tango colors for LaTeX]
+// \ProvidesPackage{nndraw}
+// \ProvidesPackage{nndraw}[2021/06/20 Neural Networks Draw LaTeX package]
+// \ProvidesPackage{talk-sidebars}
+// \ProvidesPackage{talk-simple}
+// \ProvidesPackage{clock}[2001/04/10 v0.1 TeXclock]
+// \ProvidesPackage{multiply}[1998/10/14 v1.1 Multiplication of lengths without overflow]
+// \ProvidesPackage{bez123}[2009/09/02 v1.1b Bezier curves]
+// \ProvidesPackage{pgfkeyx}[2012/04/13 v0.0.1 Patch for pgfkeys (AM)]
+// \ProvidesPackage{interactiveworkbook}[1999/06/04]
+// \ProvidesPackage{interactiveworkbook}[1999/06/04]
+// \ProvidesPackage{tkz-elements}[2026/02/20 v5.02c Graphic Object Library]
+// \ProvidesPackage{fixcmex}
+// \ProvidesPackage{endnotes}[2020-01-02 endnotes package]
+// \ProvidesPackage{stringstrings}
+// \ProvidesPackage{novabeamer}[2025/04/01 v1.0 NovaBeamer Theme]
+// \ProvidesPackage{knitting}[2019/04/03]
+// \ProvidesPackage{atveryend}%
+// \ProvidesPackage{flippdf}%
+// \ProvidesPackage{flippdf-1x}%
+// \ProvidesPackage{exercise}
+// \ProvidesPackage{mtgreek}
+// \ProvidesPackage{\tikzpingus@filename}[2026/02/27 version v1.4 Penguins in TikZ]
+// \ProvidesPackage{qrcodetikz}[2025-05-28 v1.0 Prettier qrcodes]
+// \ProvidesPackage{bigdelim}
+// \ProvidesPackage{multirow}%
+// \ProvidesPackage{bigstrut}
+// \ProvidesPackage{asypictureB}
+// \ProvidesPackage{classpack}[2020/05/19 v1.19
+// \ProvidesPackage{threeparttable}[2003/06/13 \space v 3.0]
+// \ProvidesPackage{lmodern}[2015/05/01 v1.6.1 Latin Modern Fonts]
+// \ProvidesPackage{emptypage}
+// \ProvidesPackage{graphviz}
+// \ProvidesPackage{phfthm}
+// \ProvidesPackage{xcomment}[%
+// \ProvidesPackage{robustglossary}
+// \ProvidesPackage{robustindex}
+// \ProvidesPackage{vertbars}[2018/12/16 v1.0c vertical bars in the margin]
+// \ProvidesPackage{bigints}[2010/02/15 Writing big integrals]
+// \ProvidesPackage{bilingual}[2021/06/19 Bilingual facing pages.]
+// \ProvidesPackage{practicalreports}[071/10/2019  v2.0.3 Practical Report Package]
+// \ProvidesPackage{invoice}[2018/08/06]
+// \ProvidesPackage{ifallfalse}[2021/07/22 v2.0.0 Compare string against set of other strings]
+// \ProvidesPackage{listingsutf8}%
+// \ProvidesPackage{bibentry}
+// \ProvidesPackage{natbib}
+// \ProvidesPackage{ehhline}
+// \ProvidesPackage{hwemoji}[2022/11/10 v1.0 Unicode emoji with sequence support]
+// \ProvidesPackage{pst-xkey}
+// \ProvidesPackage{xkvltxp}[2014/05/25 v1.3 LaTeX2e kernel patch (HA)]
+// \ProvidesPackage{xkeyval}
+// \ProvidesPackage{xkvview}%
+// \ProvidesPackage{stealcaps}
+// \ProvidesPackage{schemabloc}[version 1.9]
+// \ProvidesPackage{isopt}[2017/10/09 v 0.01  print a TeX length in ISO style]
+// \ProvidesPackage{tqft}[2017/06/01 v2.1 Tikz/PGF commands for drawing TQFT diagrams]
+// \ProvidesPackage{polyhedra}[2023/10/31 v.0.3 Polyhedra LaTeX package]
+// \ProvidesPackage{uebungsblatt}[2006/10/24 by Igor Akkerman (c)2000,2001,2002,2003,2004,2005,2006 v3.2.1 Package zum Setzen von Uebungsblaettern]
+// \ProvidesPackage{xkcdcolors}[2023/08/11 v1.0.2 Provide names for xkcd colors]
+// \ProvidesPackage{eqnalign}[2017/02/19 v1.0a Make eqnarray(*) behave like align(*).]
+// \ProvidesPackage{zref-base}%
+// \ProvidesPackage{zref-dotfill}%
+// \ProvidesPackage{zref-pagelayout}%
+// \ProvidesPackage{zref}
+// \ProvidesPackage{zref-thepage}%
+// \ProvidesPackage{zref-titleref}%
+// \ProvidesPackage{zref-lastpage}%
+// \ProvidesPackage{zref-perpage}%
+// \ProvidesPackage{zref-abspage}%
+// \ProvidesPackage{zref-xr}%
+// \ProvidesPackage{zref-totpages}%
+// \ProvidesPackage{zref-env}%
+// \ProvidesPackage{zref-counter}%
+// \ProvidesPackage{zref-marks}%
+// \ProvidesPackage{zref-nextpage}%
+// \ProvidesPackage{zref-user}%
+// \ProvidesPackage{zref-abspos}%
+// \ProvidesPackage{zref-pageattr}%
+// \ProvidesPackage{zref-runs}%
+// \ProvidesPackage{zref-hyperref}%
+// \ProvidesPackage{zref-savepos}%
+// \ProvidesPackage{printlen}[2009/09/03 v1.1a print lengths with units]
+// \ProvidesPackage{askinclude}%
+// \ProvidesPackage{powerdot-ciment}[2005/12/10 v1.3 ciment style (HA)]
+// \ProvidesPackage{powerdot-ikeda}[2005/12/10 v1.4 ikeda style (CE,HA)]
+// \ProvidesPackage{powerdot-jefka}[2005/12/10 v1.1 jefka style (CE,HA)]
+// \ProvidesPackage{powerdot-husky}[2005/12/10 v1.3 husky style (JS,HA)]
+// \ProvidesPackage{powerdot-horatio}[2005/12/10 v1.1 horatio style (ML,HA)]
+// \ProvidesPackage{powerdot-elcolors}[2005/12/10 v1.3 elcolors style (HA)]
+// \ProvidesPackage{powerdot-fyma}[2005/12/10 v1.3 fyma style (SA,HA)]
+// \ProvidesPackage{powerdot-sailor}[2005/12/10 v1.3 sailor style (MH,HA)]
+// \ProvidesPackage{powerdot-pazik}[2005/12/10 v1.1 pazik style (CE,HA)]
+// \ProvidesPackage{powerdot-bframe}[2005/12/10 v1.2 bframe style (PRU,HA)]
+// \ProvidesPackage{powerdot-default}[2014/01/01 v1.5 default style (HA)]
+// \ProvidesPackage{powerdot-upen}[2005/12/10 v1.3 upen style (PRU,HA)]
+// \ProvidesPackage{powerdot-paintings}[2005/12/10 v1.1 paintings (TDK,HA)]
+// \ProvidesPackage{powerdot-aggie}[2005/12/10 v1.3 aggie style (JS,HA)]
+// \ProvidesPackage{powerdot-klope}[2005/12/10 v1.1 klope style (CE,HA)]
+// \ProvidesPackage{powerdot-simple}[2005/12/10 v1.3 simple style (HA)]
+// \ProvidesPackage{powerdot-tycja}[2005/12/10 v1.4 tycja style (HA)]
+// \ProvidesPackage{advdate}[1996/10/20 Advance Date Package]
+// \ProvidesPackage{bashful}[\date@bashful{} \signature@bashful:
+// \ProvidesPackage{tableof}
+// \ProvidesPackage{pygmentex}[2022/08/15 v0.11 A Pygmentex layer for LaTeX]
+// \ProvidesPackage{mparhack}
+// \ProvidesPackage{clipboard}[2016/05/18 v0.3 Copy and paste into and across documents]
+// \ProvidesPackage{units}[1998/08/04 v0.9b Typesetting units]
+// \ProvidesPackage{nicefrac}[1998/08/04 v0.9b Nice fractions]
+// \ProvidesPackage{showdim}[2012/12/18 v1.2]
+// \ProvidesPackage{sf298}[2016/07/07 Standard Form 298]
+// \ProvidesPackage{fontaxes}[2020/07/21 v1.0e Font selection axes]
+// \ProvidesPackage{fontaxes}[2026-01-02 v2.0.2 Font selection axes (deprecated)]
+// \ProvidesPackage{everypage-1x}%
+// \ProvidesPackage{everypage}%
+// \ProvidesPackage{mnotes}[%
+// \ProvidesPackage{alchemist}[2023/02/26 v1.00 access to alchemist symbols]
+//   \ProvidesPackage{ushort}[2001/06/13 v2.2]
+// \ProvidesPackage{metacapture}[\METAC@filedate]
+// \ProvidesPackage{ydoc-desc}[%
+// \ProvidesPackage{ydoc}[%
+// \ProvidesPackage{ydoc-doc}[%
+// \ProvidesPackage{ydoc-code}[%
+// \ProvidesPackage{ydoc-expl}[%
+// \ProvidesPackage{optional}[2005/01/26 ver 2.2b; \space 
+// \ProvidesPackage{ifmtarg}[2018/04/16 v1.2b check for an empty argument]
+// \ProvidesPackage{bibletext}
+// \ProvidesPackage{beamerthemeAmurmaple}[2024/02/07 v.1.3 Theme for the Beamer
+// \ProvidesPackage{creatdtx}[2005/02/11 v0.9b (N.L.C. Talbot)]
+// \ProvidesPackage{counterz}[%
+// \ProvidesPackage{strands}[2021/07/11 v1.1 Strands]
+//  \ProvidesPackage{beamerappendixnote}
+// \ProvidesPackage{keyvaltable}
+// \ProvidesPackage{framed}[2011/10/22 v 0.96: 
+// \ProvidesPackage{phfcc}
+// \ProvidesPackage{testhyphens}[%
+// \ProvidesPackage{schedule}[2019/7/31 v1.20 schedule package]
+// \ProvidesPackage{stys/beautybook-cover-en}[2024/07/01,v2.0]
+// \ProvidesPackage{stys/beautybook-cover-birkar}[2024/07/01,v2.0]
+// \ProvidesPackage{stys/beautybook-cover-cn}[2024/07/01,v2.0]
+// \ProvidesPackage{stys/beautybook-cover-enfig}[2024/07/01,v2.0]
+// \ProvidesPackage{stys/beautybook-bottompage}[2024/07/01,v2.0]
+// \ProvidesPackage{sectsty}[2002/02/25 v2.0.2 Commands to change all
+// \ProvidesPackage{simplenodes}[2022/03/31 A package that provides simple nodes in four colors.]
+// \ProvidesPackage{idxcmds}[\idxcmds@date\space \idxcmds@version\space
+// \ProvidesPackage{coop-writing}[2022/01/13 \cw@version dtx version of coop-writing]
+// \ProvidesPackage{nameauth}
+// \ProvidesPackage{beamerthemeJLTree}
+// \ProvidesPackage{halloweenmath}
+// \ProvidesPackage{zennote}[2023/01/10 Version 1.0.0]
+// \ProvidesPackage{keisennote}[2025/12/30, v1.2.0]
+// \ProvidesPackage{lt3graph-dry}
+// \ProvidesPackage{captdef}[1998/12/17 non-floating captions]
+// \ProvidesPackage{xcolor-material}
+// \ProvidesPackage{chronology}[2023/08/20 v2.0 - Horizontal Timeline]%
+// \ProvidesPackage{flabels}
+// \ProvidesPackage{subdepth}
+// \ProvidesPackage{chapterfolder}[2005/11/24 v2.0 Package for dealing with folder]
+// \ProvidesPackage{pgfpages}[2011/01/05 ver 0.02]
+// \ProvidesPackage{xxcolor}[2003/10/24 ver 0.1]
+// \ProvidesPackage{pgfpict2e}[2004/11/28 ver 0.01]
+// \ProvidesPackage{pgfmanual}[2009/10/15]
+// \ProvidesPackage{mcexam}[2021/09/12 v0.5 LaTeX package for creating randomized Multiple Choice questions]
+// \ProvidesPackage{acronym}[2025/01/17
+// \ProvidesPackage{adjustbox}[%
+// \ProvidesPackage{trimclip}[%
+// \ProvidesPackage{adjcalc}[%
+// \ProvidesPackage{figchild}[2025/06/04 Package for creating activities for children version 3.1.1]
+// \ProvidesPackage{fullblck}
+// \ProvidesPackage{roundbox}[2013/04/04 v0.2 round boxes in LaTeX]
+// \ProvidesPackage{spelatex}
+// \ProvidesPackage{vtable}
+// \ProvidesPackage{hvpygmentex}[%
+// \ProvidesPackage{mindflow}
+// \ProvidesPackage{currvita}[%
+// \ProvidesPackage{subfig}[2005/06/28 ver: 1.3 subfig package]
+// \ProvidesPackage{stdpage}
+// \ProvidesPackage{oldstyle}%
+// \ProvidesPackage{ifdraft}%
+// \ProvidesPackage{bmpsize}%
+// \ProvidesPackage{scrindex}
+// \ProvidesPackage{enparen}
+// \ProvidesPackage{tabularht}%
+// \ProvidesPackage{hypbmsec}%
+// \ProvidesPackage{resizegather}%
+// \ProvidesPackage{tabularkv}%
+// \ProvidesPackage{dvipscol}%
+// \ProvidesPackage{colonequals}%
+// \ProvidesPackage{flags}%
+// \ProvidesPackage{pdfcolparallel}%
+// \ProvidesPackage{aliascnt}%
+// \ProvidesPackage{stackrel}
+// \ProvidesPackage{settobox}%
+// \ProvidesPackage{classlist}%
+// \ProvidesPackage{hypgotoe}%
+// \ProvidesPackage{chemarr}%
+// \ProvidesPackage{stampinclude}
+// \ProvidesPackage{twoopt}
+// \ProvidesPackage{centernot}
+// \ProvidesPackage{pdfcolparcolumns}%
+// \ProvidesPackage{holtxdoc}%
+// \ProvidesPackage{bmpsize-base}%
+// \ProvidesPackage{awesomebox}[2019/07/27 v0.6]
+// \ProvidesPackage{dblfloatfix}[2012/12/31 v1.0a (JAW)]
+// \ProvidesPackage{modular}[2016/12/27 Modular document design]
+// \ProvidesPackage{spotcolor}
+// \ProvidesPackage{datetime2-en-fulltext}[2015/04/01 v1.0]
+// \ProvidesPackage{ecgdraw}[2016/06/29 v.1.0 Draw ECG]
+// \ProvidesPackage{eurosym}
+// \ProvidesPackage{niceframe}[\filedate\space v\fileversion\space niceframe package (MO)]
+// \ProvidesPackage{calctab}[2009/07/12 v0.6.1 Autocalc table environments]
+// \ProvidesPackage{multicap}[2002/05/04 
+// \ProvidesPackage{yagusylo}
+// \ProvidesPackage{everyshi}
+// \ProvidesPackage{everyshi-2001-05-15}
+// \ProvidesPackage{PapierGurvan}[2023/09/11 0.1.0 Travailler avec des papiers type Gurvan]
+// \ProvidesPackage{philex}
+// \ProvidesPackage{openmoji}[2025/12/26 v0.1.1 LaTeX openmoji (source v16.0)]
+// \ProvidesPackage{timing-diagrams}[2013/08/21 Draw timing diagrams in TikZ]
+// \ProvidesPackage{tikzlings-addons}[2025/12/11 version v2.5 Draw additional items for the tikzlings]
+// \ProvidesPackage{tikzlings-bats}[2025/12/11 version v2.5 Drawing bats in TikZ]
+// \ProvidesPackage{tikzlings-pandas}[2025/12/11 version v2.5 Drawing pandas in TikZ]
+// \ProvidesPackage{tikzlings-marmots}[2025/12/11 version v2.5 Drawing marmots in TikZ]
+// \ProvidesPackage{tikzlings-list}[2025/12/11 version v2.5 Helper package for the tikzlings]
+// \ProvidesPackage{tikzlings-penguins}[2025/12/11 version v2.5 Draw penguins in TikZ]
+// \ProvidesPackage{tikzlings-rhinos}[2025/12/11 version v2.5 Drawing rhinos in TikZ]
+// \ProvidesPackage{tikzlings-apes}[2025/12/11 version v2.5 Drawing apes in TikZ]
+// \ProvidesPackage{tikzlings-snowmen}[2025/12/11 version v2.5 Draw snowmen in TikZ]
+// \ProvidesPackage{tikzlings-squirrels}[2025/12/11 version v2.5 Drawing squirrels in TikZ]
+// \ProvidesPackage{tikzlings-sloths}[2025/12/11 version v2.5 Drawing sloths in TikZ]
+// \ProvidesPackage{tikzlings-owls}[2025/12/11 version v2.5 Draw owls in TikZ]
+// \ProvidesPackage{tikzlings-koalas}[2025/12/11 version v2.5 Drawing koalas in TikZ]
+// \ProvidesPackage{tikzlings-coatis}[2025/12/11 version v2.5 Drawing coatis in TikZ]
+// \ProvidesPackage{tikzlings-moles}[2025/12/11 version v2.5 Drawing moles in TikZ]
+// \ProvidesPackage{tikzlings-cats}[2025/12/11 version v2.5 Drawing cats in TikZ]
+// \ProvidesPackage{tikzlings-turkeys}[2025/12/11 version v2.5 Draw turkeys in TikZ]
+// \ProvidesPackage{tikzlings}[2025/12/11 version v2.5 Collection of packages to draw animals and other beings in TikZ]
+// \ProvidesPackage{tikzlings-anteaters}[2025/12/11 version v2.5 Drawing anteaters in TikZ]
+// \ProvidesPackage{tikzlings-bears}[2025/12/11 version v2.5 Draw teddy bears in TikZ]
+// \ProvidesPackage{tikzlings-mice}[2025/12/11 version v2.5 Drawing mice in TikZ]
+// \ProvidesPackage{tikzlings-bees}[2025/12/11 version v2.5 Drawing bees in TikZ]
+// \ProvidesPackage{tikzlings-wolves}[2025/12/11 version v2.5 Drawing wolves in TikZ]
+// \ProvidesPackage{tikzlings-meerkats}[2025/12/11 version v2.5 Drawing meerkats in TikZ]
+// \ProvidesPackage{tikzlings-elephants}[2025/12/11 version v2.5 Draw teddy elephants in TikZ]
+// \ProvidesPackage{tikzlings-chickens}[2025/12/11 version v2.5 Draw chickens in TikZ]
+// \ProvidesPackage{tikzlings-hippos}[2025/12/11 version v2.5 Drawing hippos in TikZ]
+// \ProvidesPackage{tikzlings-dogs}[2025/12/11 version v2.5 Drawing dogs in TikZ]
+// \ProvidesPackage{tikzlings-pigs}[2025/12/11 version v2.5 Drawing pigs in TikZ]
+// \ProvidesPackage{tikzlings-sheep}[2025/12/11 version v2.5 Drawing sheep in TikZ]
+// \ProvidesPackage{tikzlings-bugs}[2025/12/11 version v2.5 Drawing bugs in TikZ]
+// \ProvidesPackage{spreadtab}[\STdate\space v\STver\space Spreadsheet features for table environments (CT)]
+// \ProvidesPackage{tikz-bagua}[2022/08/04 v1.01 draw Bagua in Yijing via tikz package]
+// \ProvidesPackage{texments}
+// \ProvidesPackage{sunpath}[2024/10/20 v0.5 Draw Sun Path]
+// \ProvidesPackage{xkeymask}[v1.0 An extension of xkeyval with a mask]
+// \ProvidesPackage{verbments}[2011/08/20 v1.2 Pygments/fancyvrb source code highlighting for LaTeX]
+// \ProvidesPackage{pxpgfmark}[2013/02/18 v0.1]
+// \ProvidesPackage{bold-extra}[2001/11/13 v0.1 Use fonts from cm/mf-extra/bold]
+// \ProvidesPackage{tikz-cookingsymbols}[2025/03/15 2.0 Draw cookingsymbols with tikz]
+// \ProvidesPackage{xreview}[2024/08/29 Reviewing LaTeX documents made easy]
+// \ProvidesPackage{trivfloat}
+// \ProvidesPackage{tikzinclude}
+// \ProvidesPackage{textcase}
+// \ProvidesPackage{checkend}[2002/04/20 v1.0 Environment checking]
+// \ProvidesPackage{curve2e}%
+// \ProvidesPackage{curve2e-v161}%
+// \ProvidesPackage{pgf-umlcd}[2022/05/22 v0.3 Some LaTeX macros for UML Class Diagrams.]
+// \ProvidesPackage{nccsections}
+// \ProvidesPackage{ncctitle}
+// \ProvidesPackage{nccltrus}
+// \ProvidesPackage{ncctheorems}
+// \ProvidesPackage{nccindex}
+// \ProvidesPackage{nccold}
+// \ProvidesPackage{ncclatex}
+// \ProvidesPackage{ncctitlepage}
+// \ProvidesPackage{nccheadings}
+// \ProvidesPackage{nccdefaults}
+// \ProvidesPackage{nccbiblist}
+// \ProvidesPackage{ncchdr}
+// \ProvidesPackage{pagenote}[2009/09/03 v1.1a page/end notes]
+// \ProvidesPackage{mathexam}
+// \ProvidesPackage{axessibility}
+// \ProvidesPackage{longbox}[2015/12/01, Daan Leijen, Provides basic longbox that can break over pages]
+// \ProvidesPackage{longfbox}[2015/12/01, Daan Leijen, Provides long fbox that can break over pages]
+// \ProvidesPackage{concepts}[2012/12/29 0.0.6
+// \ProvidesPackage{fancynum}
+// \ProvidesPackage{simpleoptics}[2019/09/07  v1.1.1 Simple Optics Package]
+// \ProvidesPackage{pdfwin}%
+// \ProvidesPackage{css-colors}[2017/04/20 v1.02 named colors for web-safe design]
+// \ProvidesPackage{byrne}[2025/12/05 Byrne]
+// \ProvidesPackage{permute}[1999/11/10 v0.12 (aeio)(cdt)(knm)]
+// \ProvidesPackage{realhats}[2022/06/13 realhats 6.0]
+// \ProvidesPackage{ecclesiastic}%
+// \ProvidesPackage{bxpapersize}[2022/04/28 v0.6]
+// \ProvidesPackage{capt-of}%
+// \ProvidesPackage{mweights}
+// \ProvidesPackage{showcharinbox}
+// \ProvidesPackage{enverb}
+// \ProvidesPackage{tocbibind}[2010/10/13 v1.5k extra ToC listings]
+// \ProvidesPackage{warpcol}
+// \ProvidesPackage{listliketab}
+// \ProvidesPackage{authorindex}[2005/03/22 make index of authors cited in a work]
+// \ProvidesPackage{inlinedef}%
+// \ProvidesPackage{ocgx}[2012/11/14 v\ocgxversion{} manage OCG in PDF document]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-fss}[2021/04/24]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-phil}[2021/04/24]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-econ}[2024/03/06]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-med}[2024/03/06]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-pharm}[2018/06/11]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-fi}[2021/04/24]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-law}[2024/03/06]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-base}[2024/03/06]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-sci}[2024/03/06]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-ped}[2021/10/17]
+// \ProvidesPackage{fithesis/style/mu/fithesis-mu-fsps}[2024/03/06]
+// \ProvidesPackage{fithesis/style/fithesis-base}[2018/02/11]
+// \ProvidesPackage{gitstatus}
+// \ProvidesPackage{xdoc2}[2003/07/06 prot2.5 doc reimplementation package]
+// \ProvidesPackage{chappg}%
+// \ProvidesPackage{maybemath}[2005/2/22]
+// \ProvidesPackage{booklet}[2009/09/02 v0.7b booklet printing]
+// \ProvidesPackage{bkltprnt}[2009/09/02 v0.7b support for booklet printing]
+// \ProvidesPackage{ctable}
+// \ProvidesPackage{readarray}
+// \ProvidesPackage{interfaces-base}
+// \ProvidesPackage{interfaces-etoolbox}
+// \ProvidesPackage{interfaces-hypbmsec}
+// \ProvidesPackage{interfaces-bookmark}
+// \ProvidesPackage{interfaces-LaTeX}
+// \ProvidesPackage{interfaces-marks}
+// \ProvidesPackage{interfaces-truncate}
+// \ProvidesPackage{interfaces-makecell}
+// \ProvidesPackage{interfaces-environ}
+// \ProvidesPackage{interfaces-tikz}
+// \ProvidesPackage{interfaces-hyperref}
+// \ProvidesPackage{interfaces-umrand}
+// \ProvidesPackage{interfaces-tocloft}
+// \ProvidesPackage{interfaces-embedfile}
+// \ProvidesPackage{interfaces-enumitem}
+// \ProvidesPackage{interfaces-fancyhdr}
+// \ProvidesPackage{interfaces-titlesec}
+// \ProvidesPackage{interfaces}
+// \ProvidesPackage{interfaces-pgfkeys}
+// \ProvidesPackage{interfaces-scrlfile}
+// \ProvidesPackage{interfaces-appendix}
+// \ProvidesPackage{biochemistry-colors}[2017/04/20 v1.00 named standard colors for biochemistry]
+// \ProvidesPackage{hf-tikz}[2014/07/25 v0.3a A simple way to highlight formulas and formula parts.]
+// \ProvidesPackage{blochsphere}
+// \ProvidesPackage{blochsphere}[2015/08/17]
+// \ProvidesPackage{easyfloats}[2024/10/28 v1.1.0]
+// \ProvidesPackage{dynamicnumber}
+// \ProvidesPackage{OutilsGeomTikz}[2025/08/04 v0.1.7 Outils geometriques en TikZ]
+// \ProvidesPackage{cases}[2020/03/29 ver 3.2]
+// \ProvidesPackage{rcsinfo}[2005/02/20 v1.10]
+// \ProvidesPackage{cdpbabel}
+// \ProvidesPackage{cdpaddon}
+// \ProvidesPackage{minidocument}[2017/04/11 v1.0 Mini Documents]
+// \ProvidesPackage{refenums}
+// \ProvidesPackage{highlightx}[2025/12/26 0.1.8 Macros pour surligner du texte, meme en mode paragraphe]
+// \ProvidesPackage{gitfile-info}
+// \ProvidesPackage{soulpos}[2021/10/15 v1.2 Fancy underlining]
+// 	\ProvidesPackage{#1}[\date\space\id\space #2]%
+// \ProvidesPackage{verbatimcopy}[2008/11/17 v0.06 by Lars Madsen and Ulrich Diez]
+// \ProvidesPackage{syntaxdi}[2020/10/16 v0.8.2 %
+// \ProvidesPackage{luacolor}%
+// \ProvidesPackage{lhelp}
+// \ProvidesPackage{pynotebook}[2025/06/21 0.1.4 Present codes like in jupyter notebook]
+// \ProvidesPackage{graph35}
+// \ProvidesPackage{multiple-choice}[\choicesdate\space v\choicesversion^^JMultiple-choice question with automatic adjustment of the choices based on their widths]
+// \ProvidesPackage{authoraftertitle}[2020/07/20 v1.0 package for Author after Titlepage]
+// \ProvidesPackage{PixelArtTikz}[2025/12/07 v0.20a PixelArts with csv and TikZ]
+// \ProvidesPackage{show2e}
+// \ProvidesPackage{runcode}[2025/01/17 runcode v2.4]
+// \ProvidesPackage{tcolorbox}[2025/11/28 version 6.9.0 text color boxes]
+// \ProvidesPackage{pictex2}	% this package
+// \ProvidesPackage{rviewport}
+// \ProvidesPackage{sa-tikz}[2014/1/29 v0.7a Switching architectures design library.]
+// \ProvidesPackage{fix2col}
+// \ProvidesPackage{schooldocs}
+// \ProvidesPackage{planets}[2020/04/19 v1.0.2 celestial mechanics with Tikz]
+// \ProvidesPackage{xytree}[2006/8/15 Pacakge for drawing trees]
+// \ProvidesPackage{mcite}[\filedate\space multiple citations]
+// \ProvidesPackage{hcolor}[\filedate]
+// \ProvidesPackage{fancyvrb}[\filedate\space \fileversion\space verbatim text (tvz,hv)]
+// \ProvidesPackage{fancyvrb-ex}[\filedate]
+// \ProvidesPackage{hbaw}[\filedate]
+// \ProvidesPackage{rterface}[2013/04/19 interface to the R computational program from within LaTeX]
+// \ProvidesPackage{latexcolors}
+// \ProvidesPackage{docmute}[2012/03/22 v1.4 Input stand-alone documents]
+// \ProvidesPackage{exsol}
+// \ProvidesPackage{fontsetup}[2024/11/01 v2.3.0 For easily using font families with mathematics]
+// \ProvidesPackage{tikz-layers}[2018/02/15 v0.9 Installs basic layers via TikZ]
+// \ProvidesPackage{topcapt}[2004/12/11 v1.2 Caption at top of float]
+// \ProvidesPackage{bibcheck}
+// \ProvidesPackage{concrete}[1996/10/08]
+// \ProvidesPackage{titlefoot}[1999/03/02]
+// \ProvidesPackage{scalebar}%
+// \ProvidesPackage{flowchart}
+// \ProvidesPackage{polynomial}
+// \ProvidesPackage{utf8add}[2021/11/16 Palle Jorgensen]
+// \ProvidesPackage{utf8hax}[2020/05/26 Palle Jorgensen]
+// \ProvidesPackage{datagidx}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{datapie}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{datatool}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{person}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{databib}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{datatool-base}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{person}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{dataplot}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{datatool-fp}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{datapie}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{databar}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{datatool-pgfmath}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{datatool-base}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{databar}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{datatool}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{databib}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{dataplot}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{datagidx}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{datatool-pgfmath}[2019/09/27 v2.32 (NLCT)]
+// \ProvidesPackage{datatool-fp}[2025/12/04 v3.4.3 (NLCT)]
+// \ProvidesPackage{beamerthemeCelestia}[2026/02/22 v1.2.0]
+// \ProvidesPackage{ecvNLS}[\filedate %
+// \ProvidesPackage{conv-xkv}
+// \ProvidesPackage{colorspace}[2019/03/25 v1.3 PDF color spaces]
+// \ProvidesPackage{sectionbox}[2005/10/13, v1.01 section boxes for posters (MHFW)]
+// \ProvidesPackage{orientation}[orientation 1.0]
+// \ProvidesPackage{preview}[\pr@date\space \pr@version\space (AUCTeX/preview-latex)]
+// \ProvidesPackage{moderntimeline}
+// \ProvidesPackage{moderntimeline}
+// \ProvidesPackage{doctools}[2012/12/01 v0.1 commands and packages for documenting LaTeX Code]
+// \ProvidesPackage{psfragx}
+// \ProvidesPackage{bxeepic}[2013/04/28 v0.2]
+// \ProvidesPackage{tex-label}
+// \ProvidesPackage{paramcalc}[2026/01/27 v1.0 compute params to fit conditions]
+// \ProvidesPackage{errata}[2006/11/121v0.3 Errata Management]
+// \ProvidesPackage{ticollege}[%
+// \ProvidesPackage{\@gitVerPkgName}
+// \ProvidesPackage{makeshape}
+// \ProvidesPackage{titlesec}[2025/01/04 v2.17 Sectioning titles]
+// \ProvidesPackage{titletoc}[2025/01/04 v2.17 TOC entries]
+// \ProvidesPackage{titleps}[2025/01/04 v2.17 Page styles]
+// \ProvidesPackage{mdframed}%
+// \ProvidesPackage{tile-graphic}
+// \ProvidesPackage{productbox}[\filedate Another type of boxes...]
+// \ProvidesPackage{hvlogos}[2025/10/29 v. 0.16 Logos (hv)]
+// \ProvidesPackage{forloop}
+// \ProvidesPackage{newverbs}[%
+// \ProvidesPackage{gindex}[2019/10/07 v0.2 Formatting indexes]
+// \ProvidesPackage{longnamefilelist}[2012/09/30 v0.2
+// \ProvidesPackage{\thispackage}[2022/03/01 \thispackage]
+// \ProvidesPackage{wrapfig}[2003/01/31 \space  v 3.6]
+// \ProvidesPackage{moreverb}
+// \ProvidesPackage{pgf-PeriodicTable}[10/02/2025 pgf-PeriodicTable v2.1.5]%%
+// \ProvidesPackage{beamerthemedurham}[2026/02/23 v1.1.0 Durham Beamer Theme]
+// \ProvidesPackage{tikzducks}[2025/12/11 version v2.2 Draw rubber ducks in TikZ]
+// \ProvidesPackage{pagecont}%
+// \ProvidesPackage{vpe}%
+// \ProvidesPackage{midpage}[2009/09/03 v1.1a vertical centering]
+// \ProvidesPackage{papercdcase}[\filedate v.\fileversion{} Paper CD Case Style (TD)]
+// \ProvidesPackage{getitems}
+// \ProvidesPackage{uni-titlepage%
+// \ProvidesPackage{fifinddo}[\filedate\space v\fileversion\space
+// \ProvidesPackage{wiki}[2008/07/02 v0.2 LaTeX through Wiki markup]
+// \ProvidesPackage{niceverb}[2015/11/21 v0.62
+// \ProvidesPackage{makedoc}[\filedate\space v\fileversion\space
+// \ProvidesPackage{fddial0g}[2011/09/13 v0.2 dialogues with fifinddo (UL)] 
+// \ProvidesPackage{sim-os-menus}[2025/08/04 0.1.9 Present 'context menu'/'terminal'/'windows', with TikZ or tcolorbox (en or fr commands)]
+// \ProvidesPackage{tocvsec2}
+// \ProvidesPackage{table-fct}[%
+// \ProvidesPackage{xint-regression}[2026/02/17 0.1.3 Some classic regressions, with xint]
+// \ProvidesPackage{makecmds}[2009/09/03 v1.0a extra command making commands]
+// \ProvidesPackage{titlepic}[2017/03/14 1.2 Package to display a picture on the title page]
+// \ProvidesPackage{tikz-palattice}[2017/03/09 v2.3]
+// \ProvidesPackage{tdclock} [2014/02/21 v2.5 clock accessory]
+// \ProvidesPackage{captcont}[2002/02/14 v2.0 captcont package]
+// \ProvidesPackage{marginfix}%
+// \ProvidesPackage{eemeir}[2007/02/19 v1.1 E-Em-Eir package]
+// \ProvidesPackage{fvextra}
+// \ProvidesPackage{canoniclayout}%
+// \ProvidesPackage{rtkinenc}
+// \ProvidesPackage{fltrace}
+// \ProvidesPackage{exscale}
+// \ProvidesPackage{latexrelease}
+// \ProvidesPackage{atbegshi-ltx}
+// \ProvidesPackage{alltt}
+// \ProvidesPackage{fixltx2e}
+// \ProvidesPackage{shortvrb}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{t1enc}[1994/06/01 Standard LaTeX package]
+// \ProvidesPackage{tracefnt}
+// \ProvidesPackage{inputenc}
+// \ProvidesPackage{fontenc}
+// \ProvidesPackage{latexsym}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{ifthen}
+// \ProvidesPackage{fix-cm}
+// \ProvidesPackage{oldlfont}
+// \ProvidesPackage{flafter}
+// \ProvidesPackage{atveryend-ltx}
+// \ProvidesPackage{doc}
+// \ProvidesPackage{graphpap}
+// \ProvidesPackage{makeidx}
+// \ProvidesPackage{syntonly}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{newlfont}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{showidx}
+// \ProvidesPackage{tikzfill-common}[2023/08/08 v1.0.1 Auxiliary code for tikzfill]
+// \ProvidesPackage{tikzfill.rhombus}[2023/08/08 v1.0.1 Rhombus pattern library for TikZ]
+// \ProvidesPackage{tikzfill.hexagon}[2023/08/08 v1.0.1 Hexagon pattern library for TikZ]
+// \ProvidesPackage{tikzfill}[2023/08/08 v1.0.1 Image and pattern libraries for TikZ]
+// \ProvidesPackage{tikzfill.image}[2023/08/08 v1.0.1 Image filling library for TikZ]
+// \ProvidesPackage{lastbib}[\filedate\space\fileversion\space
+// \ProvidesPackage{mcaption}
+// \ProvidesPackage{extramarks}
+// \ProvidesPackage{fancyhdr}%
+// \ProvidesPackage{fancyheadings}
+// \ProvidesPackage{extramarks}
+// \ProvidesPackage{multienv}[%
+// \ProvidesPackage{comma}
+// \ProvidesPackage{leftidx}[\filedate\space v\fileversion\space Left indices]
+// \ProvidesPackage{cmmib57}[2009/06/22 v3.00 %
+// \ProvidesPackage{amsfonts}[2013/01/14 v3.01 Basic AMSFonts support]
+// \ProvidesPackage{amssymb}[2013/01/14 v3.01 AMS font symbols]
+// \ProvidesPackage{euscript}[2009/06/22 v3.00 Euler Script fonts]
+// \ProvidesPackage{eufrak}[2009/06/22 v3.00 Euler Fraktur fonts]
+// \ProvidesPackage{eucal}[2009/06/22 v3.00 Euler Script fonts]
+// \ProvidesPackage{dox}[2017/12/06 v2.4 Extensions to the doc package]
+// \ProvidesPackage{testidx-glossaries}[2019/09/29 v1.2 (NLCT)]
+// \ProvidesPackage{testidx}[2019/09/29 v1.2 (NLCT)]
+// \ProvidesPackage{shorttoc}
+// \ProvidesPackage{bxcalcux}[2020/09/25 v1.1]
+// \ProvidesPackage{bxcalc}[2020/09/25 v1.1]
+// \ProvidesPackage{bxcalcize}[2020/09/25 v1.1]
+// \ProvidesPackage{beamerthemeNPBT}[2018/08/15 v4.1 Main Beamer Theme of NPBT]
+// \ProvidesPackage{beamercolorthemeNPBT_EUFOM}[2018/08/15 v4.1 Beamer Color Theme EUFOM]
+// \ProvidesPackage{beamercolorthemeNPBT_FOM}[2017/09/06 v4.1 Beamer Color Theme FOM]
+// \ProvidesPackage{beamercolorthemePBT_SC}[2018/08/15 v4.^1 Beamer Color Theme SC]
+// \ProvidesPackage{beamerouterthemeNPBT_FOM}[2018/08/15 v4.1 Beamer Outer Theme FOM]
+// \ProvidesPackage{beamercolorthemeNPBT_FOM_ifes}[2018/08/155 v4.1 Beamer Color Theme FOM ifes-Version]
+// \ProvidesPackage{beamerouterthemeNPBT_FOM_ifes}[2018/08/15 v4.1 Beamer Outer Theme FOM ifes-Version]
+// \ProvidesPackage{stubs}[2005/12/16 Stubs 0.1.1 by N. Stuhrmann]
+// \ProvidesPackage{lastpage2e}[2025/08/14 v2.1h %
+// \ProvidesPackage{lastpagemodern}[2025-08-14 v2.1h %
+// \def\loadlastpage{\ProvidesPackage{lastpage}[2025/08/14 v2.1h lastpage: 2.09 or 2e? (HMM)]\relax\RequirePackage{lastpage2e}}
+// \ProvidesPackage{lastpageclassic}[2025/08/14 v2.1h %
+// \ProvidesPackage{mciteplus}[2013/09/13 v1.2 enhanced mcite]
+// \ProvidesPackage{fast-diagram}[2013/02/27]
+// \ProvidesPackage{newunicodechar}
+// \ProvidesPackage{gmoldcomm}
+// \ProvidesPackage{truncate}[2001/08/20 \space ver 3.6]
+// \ProvidesPackage{venndiagram}[2018/06/07 v1.2 (NLCT) Venn diagrams]
+// \ProvidesPackage{perltex}
+// \ProvidesPackage{efbox}
+// \ProvidesPackage{efbox}[2014/03/19 v1.0 An enhanced fbox command]
+// \ProvidesPackage{easyvector}[\filedate\space\fileversion]
+// \ProvidesPackage{easytable}[\filedate \fileversion]
+// \ProvidesPackage{easybib}[\filedate\space\fileversion]
+// \ProvidesPackage{easybmat}[\filedate\space\fileversion]
+// \ProvidesPackage{easymat}[\filedate\space\fileversion]
+// \ProvidesPackage{easy}[\filedate\space\fileversion]
+// \ProvidesPackage{easyeqn}[\filedate\space\fileversion]
+// \ProvidesPackage{open-everyday-symbols}[2025/05/05 v1.1 The OPEN Everyday Symbols Library]
+// \ProvidesPackage{combinedgraphics}
+// \ProvidesPackage{dotseqn}
+// \ProvidesPackage{verifycommand}
+// \ProvidesPackage{multimediasymbols}[2004/04/10 ver 0.01]
+// \ProvidesPackage{beamerarticle}
+// \ProvidesPackage{multimedia}[2012/05/02 ver 0.02]
+// \ProvidesPackage{manfnt}[\filedate \fileversion LaTeX2e manfnt package]
+// \ProvidesPackage{bophook}
+// \ProvidesPackage{latexbug}[2025/04/20 v1.0q Bug-classification]
+// \ProvidesPackage{pbox}[2011/12/07 v1.2 Dynamic parboxes]
+// \ProvidesPackage{menucard}
+// \ProvidesPackage{robustcommand}
+// \ProvidesPackage{mlist}
+// \ProvidesPackage{keyval2e}[\StyleFileInfo]
+// \ProvidesPackage{quotchap}
+// \ProvidesPackage{tikzbrickfigurines}[2025/08/18 0.1.1 Small brickfigurines, made with tikz]
+// \ProvidesPackage{esindex}[2024/04/27 v1.8 Spanish indexes (and more)]
+// \ProvidesPackage{acro-examples}[\csname c_acro_date_tl\endcsname\space v0.1
+// \ProvidesPackage{pagesel}
+// \ProvidesPackage{pagesel}
+// \ProvidesPackage{fmp}
+// \ProvidesPackage{carbohydrates}[%
+// \ProvidesPackage{gridset}
+//   \ProvidesPackage{#1}[#3/#4/#5 1.#2 QuinScape Unit Test Package]
+//   \ProvidesPackage{#2}[#4/#5/#6 1.#3 Pattern matching with
+// \ProvidesPackage{latex2pydata}
+// \ProvidesPackage{fr-fancy}
+// \ProvidesPackage{listpen}
+// \ProvidesPackage{fr-subfig}
+// \ProvidesPackage{fr-longtable}
+// \ProvidesPackage{floatrow}
+// \ProvidesPackage{floatpagestyle}
+// \ProvidesPackage{tikzrput}[2020/04/04 v1.1 rput for tikz]%
+// \ProvidesPackage{pgfornament}[2024/08/14 v1.3 vector ornaments]
+// \ProvidesPackage{pdfpages}
+//   \svnprov@generic\ProvidesPackage{\svnprov@filebase@}%
+// \ProvidesPackage{elements}[%
+// \ProvidesPackage{pfnote}}
+// \ProvidesPackage{fnpos}}
+// \ProvidesPackage{dblfnote}}
+// \ProvidesPackage{formular}[\filedate \space \fileversion]
+// \ProvidesPackage{menu}[
+// \ProvidesPackage{biblatex}
+// \ProvidesPackage{blx-case-latex2e}
+// \ProvidesPackage{ensps-colorscheme}
+// \ProvidesPackage{moderncvcompatibility}[2026-01-31 v2.5.1 modern curriculum vitae and letter compatibility patches]
+// \ProvidesPackage{moderncvfooti}[2026-01-31 v2.5.1 modern curriculum vitae and letter footer variant: 1]
+// \ProvidesPackage{moderncvheadvi}[2026-01-31 v2.5.1 modern curriculum vitae and letter header: 6]
+// \ProvidesPackage{moderncvstylebanking}[2026-01-31 v2.5.1 modern curriculum vitae and letter style scheme: banking]
+// \ProvidesPackage{moderncvheadv}[2026-01-31 v2.5.1 modern curriculum vitae and letter header variant: 5]
+// \ProvidesPackage{moderncvcolorgreen}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: green]
+// \ProvidesPackage{moderncvcolorblue}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: blue]
+// \ProvidesPackage{moderncvstyleempty}[2026-01-31 v2.5.1 modern curriculum vitae scheme: empty]
+// \ProvidesPackage{moderncviconstikz}[2026-01-31 v2.5.1 modern curriculum vitae and letter icons: tickz]
+// \ProvidesPackage{moderncviconsawesome}[2026-01-31 v2.5.1 modern curriculum vitae icons: awesome]
+// \ProvidesPackage{moderncvcolorred}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: red]
+// \ProvidesPackage{moderncvbodyi}[2026-01-31 v2.5.1 modern curriculum vitae and letter body variant: 1]
+// \ProvidesPackage{moderncvskillmatrix}[2026-01-31 v2.5.1 modern curriculum vitae and letter skill matrix]
+// \ProvidesPackage{moderncvheadiii}[2026-01-31 v2.5.1 modern curriculum vitae and letter header variant: 3]
+// \ProvidesPackage{moderncvstylecontemporary}[2026-01-31 v2.5.1 modern curriculum vitae and letter style scheme: contemporary]
+// \ProvidesPackage{moderncvbodyiii}[2026-01-31 v2.5.1 modern curriculum vitae and letter body variant: 3]
+// \ProvidesPackage{moderncvcolororange}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: orange]
+// \ProvidesPackage{moderncvheadiv}[2026-01-31 v2.5.1 modern curriculum vitae and letter header variant: 4]
+// \ProvidesPackage{moderncvbodyi}[2026-01-31 v2.5.1 modern curriculum vitae and letter body variant: 1]
+// \ProvidesPackage{moderncvstylefancy}[2026-01-31 v2.5.1 modern curriculum vitae and letter style scheme: fancy]
+// \ProvidesPackage{moderncvcolorblack}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: black]
+// \ProvidesPackage{moderncviconsmarvosym}[2026-01-31 v2.5.1 modern curriculum vitae icons: marvosym]
+// \ProvidesPackage{moderncvcolorpurple}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: purple]
+// \ProvidesPackage{moderncvstyleoldstyle}[2026-01-31 v2.5.1 modern curriculum vitae and letter style scheme: oldstyle]
+// \ProvidesPackage{moderncvbodyvi}[2026-01-31 v2.5.1 modern curriculum vitae and letter body variant: 6]
+// \ProvidesPackage{moderncviconsletters}[2026-01-31 v2.5.1 modern curriculum vitae icons: letter]
+// \ProvidesPackage{moderncvdebugtools}[2026-01-31 v2.5.1 modern curriculum vitae and letter debug tools]
+// \ProvidesPackage{moderncvheadi}[2026-01-31 v2.5.1 modern curriculum vitae and letter header variant: 1]
+// \ProvidesPackage{moderncviconsacademic}[2026-01-31 v2.5.1 modern curriculum vitae icons: academicons]
+// \ProvidesPackage{moderncvcolorcerulean}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: cerulean]
+// \ProvidesPackage{moderncvcolorburgundy}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: burgundy]
+// \ProvidesPackage{moderncvbodyiv}[2026-01-31 v2.5.1 modern curriculum vitae and letter body variant: 4]
+// \ProvidesPackage{moderncvbodyv}[2026-01-31 v2.5.1 modern curriculum vitae and letter body variant: 5]
+// \ProvidesPackage{moderncvheadii}[2026-01-31 v2.5.1 modern curriculum vitae and letter header variant: 2]
+// \ProvidesPackage{moderncviconssymbols}[2026-01-31 v2.5.1 modern curriculum vitae icons selector]
+// \ProvidesPackage{moderncvcollection}[2026-01-31 v2.5.1 moderncv collections]
+// \ProvidesPackage{moderncvcolorgrey}[2026-01-31 v2.5.1 modern curriculum vitae and letter color scheme: grey]
+// \ProvidesPackage{moderncvverticaltimeline}[2026-01-31 v2.5.1 modern curriculum vitae vertical timeline]
+// \ProvidesPackage{moderncvcolors}[2026-01-31 v2.5.1 modern curriculum vitae and letter base colors]
+// \ProvidesPackage{moderncvstyleclassic}[2026-01-31 v2.5.1 modern curriculum vitae and letter style scheme: classic]
+// \ProvidesPackage{moderncvheadvii}[2026-01-31 v2.5.1 modern curriculum vitae and letter header variant: 7]
+// \ProvidesPackage{moderncvstylecasual}[2026-01-31 v2.5.1 modern curriculum vitae and letter style scheme: casual]
+// \ProvidesPackage{padcount}[2018/05/04 v1.0 Pad numbers with arbitrary characters]
+// \ProvidesPackage{rvwrite}
+// \ProvidesPackage{texlogos}[2006/01/09 ver.1.3.1 by Jacek Ruzyczka]
+// \ProvidesPackage{polynom}[2017/07/17 0.19 (CH,HA)]
+// \ProvidesPackage{isotope}
+// \ProvidesPackage{ezedits}[2024/11/13]
+// \ProvidesPackage{censor}
+// \ProvidesPackage{minted1}[2015/01/31 v1.0 minted 1.7 compatibility package]
+// \ProvidesPackage{minted}
+// \ProvidesPackage{minted2}
+// \ProvidesPackage{footmisx}%
+// \ProvidesPackage{endofproofwd}[2017/08/21]
+// \ProvidesPackage{fontsize}
+// \ProvidesPackage{engrec}
+// \ProvidesPackage{mflogo}
+// \ProvidesPackage{rgltxdoc}
+// \ProvidesPackage{bxenclose}[2016/04/01 v0.2]
+// \ProvidesPackage{textpos}[2022/07/23 v1.10.1]
+// \ProvidesPackage{realscripts}
+// \ProvidesPackage{ftnright}
+// \ProvidesPackage{showkeys}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{array}
+// \ProvidesPackage{longtable}
+// \ProvidesPackage{varioref}
+// \ProvidesPackage{longtable}
+// \ProvidesPackage{trace}
+// \ProvidesPackage{layout}
+// \ProvidesPackage{xr}
+// \ProvidesPackage{bm}
+// \ProvidesPackage{afterpage}
+// \ProvidesPackage{delarray}
+// \ProvidesPackage{showkeys}
+// \ProvidesPackage{hhline}
+// \ProvidesPackage{somedefs}[1994/06/01 v0.03 Toolkit for optional definitions]
+// \ProvidesPackage{verbatim}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{enumerate}
+// \ProvidesPackage{array}
+// \ProvidesPackage{theorem}
+// \ProvidesPackage{xspace}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{tabularx}
+// \ProvidesPackage{varioref}
+// \ProvidesPackage{fontsmpl}[1994/10/29 Font sample package]
+// \ProvidesPackage{calc}
+// \ProvidesPackage{rawfonts}
+// \ProvidesPackage{shellesc}
+// \ProvidesPackage{dcolumn}
+// \ProvidesPackage{array}
+// \ProvidesPackage{l3sys-query}
+// \ProvidesPackage{array}
+// \ProvidesPackage{xr}
+// \ProvidesPackage{indentfirst}
+// \ProvidesPackage{nextpage}[2009/09/03 v1.1a additional page commands]
+// \ProvidesPackage{FenetreCas}[2023/11/05 0.1.4 Simuler une fenetre CAS type Geogebra ou Xcas]
+// \ProvidesPackage{he-she}[2016/06/06 Semi-automatic pronoun switching with anaphora v1.3]
+// \ProvidesPackage{beamerinnerthemetcolorbox}[2026/01/16 version v1.4 Beamer blocks with tcolorboxes]
+// \ProvidesPackage{talkthemetcolorbox}[2026/01/16 version v1.4 Beamer blocks with tcolorboxes]
+// \ProvidesPackage{xcpdftips}
+// \ProvidesPackage{hyperbar}
+// \ProvidesPackage{appendix}[2020/02/08 v1.2c extra appendix facilities]
+// \ProvidesPackage{numspell}[2026/02/02 v1.9 Package for spelling cardinal and ordinal numbers]
+// \ProvidesPackage{numspell-magyar}[2026/02/02 v1.1 Hungarian language package for numspell]
+// \ProvidesPackage{numspell-latin}[2026/02/02 v1.1 Latin language package for numspell]
+// \ProvidesPackage{numspell-italian}[2026/02/02 v1.1 Italian language package for numspell]
+// \ProvidesPackage{numspell-german}[2026/02/02 v1.1 German language package for numspell]
+// \ProvidesPackage{numspell-french}[2026/02/02 v1.1 French language package for numspell]
+// \ProvidesPackage{numspell-english}[2026/02/02 v1.3 English language package for numspell]
+// \ProvidesPackage{varwidth}[2009/03/30 ver 0.92; \space 
+// \ProvidesPackage{dtx-attach}
+//   \ProvidesPackage{varindex}[2001/05/06 v2.3]
+// \ProvidesPackage{eqell}
+// \ProvidesPackage{linegoal}
+// \ProvidesPackage{WriteOnGrid}[2026/01/13 v0.1.9 package to write on grid lines]
+// \ProvidesPackage{randtext}[2004/12/20 Obfuscate text]
+// \ProvidesPackage{bondgraphs}[2015/03/23 v1.0.1 TikZ-based Bond graphs formatting package]
+// \ProvidesPackage{semioneside}
+// \ProvidesPackage{cyber}
+// \ProvidesPackage{xcookybooky}
+// \ProvidesPackage{lewis}[2006/05/22 v0.1 Draw Lewis Structures]
+// \ProvidesPackage{tikz-timing-counters}[%
+// \ProvidesPackage{tikz-timing-columntype}[%
+// \ProvidesPackage{tikz-timing-overlays}[%
+// \ProvidesPackage{tikz-timing-nicetabs}[%
+// \ProvidesPackage{tikz-timing-ifsym}[%
+// \ProvidesPackage{tikz-timing-beamer}[%
+// \ProvidesPackage{tikz-timing-arrows}[%
+// \ProvidesPackage{tikz-timing-interval}[%
+// \ProvidesPackage{tikz-timing}[%
+// \ProvidesPackage{tikz-timing-either}[%
+// \ProvidesPackage{tikz-timing-advnodes}[%
+// \ProvidesPackage{tikz-timing-clockarrows}[%
+// \ProvidesPackage{euro}[2003/02/19 v1.1 euro  (mf)]
+// \ProvidesPackage{mathfam256}
+// \ProvidesPackage{newpax}%
+// \ProvidesPackage{filecontents}
+// \ProvidesPackage{doclicense}
+// \ProvidesPackage{method}
+// \ProvidesPackage{esdiff}
+// \ProvidesPackage{lmake}
+// \ProvidesPackage{acroterm}
+// \ProvidesPackage{scalerel}
+// \ProvidesPackage{latexdemo}[2012/12/01 v0.1 typeset code and resulting output]
+// \ProvidesPackage{euromoney}[2024/09/07 0.1.1 Insert Euro coins and banknotes]
+// \ProvidesPackage{pdf14}[2010/03/26 v0.1  Generate PDF 1.4 documents (mpg)]
+// \ProvidesPackage{tabfigures}[2012/01/24 v1.1 Patches for using tabular figures]
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{uniquecounter}%
+// \ProvidesPackage{yax}[2010/01/22 v.1.03 Yet Another Key System.]
+// \ProvidesPackage{ltxcmds}%
+// \ProvidesPackage{gates}[2012/05/26 v.0.2 Modular architecture.]
+// \ProvidesPackage{bigintcalc}%
+// \ProvidesPackage{mleftright}%
+// \ProvidesPackage{frame}[2010/05/15 package wrapper for 
+// \ProvidesPackage{2up}[2010/05/15 package wrapper for 
+// \ProvidesPackage{luatex85}
+//   \ProvidesPackage{ifetex}[2019/10/25 v1.3 ifetex legacy package. Use iftex instead.]
+//   \ProvidesPackage{iftex}[2024/12/12 v1.0g TeX engine tests]
+//   \ProvidesPackage{ifxetex}[2019/10/25 v0.7 ifxetex legacy package. Use iftex instead.]
+//   \ProvidesPackage{ifpdf}[2019/10/25 v3.4 ifpdf legacy package. Use iftex instead.]
+//   \ProvidesPackage{ifvtex}[2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.]
+//   \ProvidesPackage{ifluatex}[2019/10/25 v1.5 ifluatex legacy package. Use iftex instead.]
+// \ProvidesPackage{colortab}[2010/05/13 package wrapper for 
+// \ProvidesPackage{infwarerr}%
+//   \ProvidesPackage{minifp}[\MFPfiledate\space v\MFPfileversion. %
+//   \ProvidesPackage{ulem}[2019/11/18]
+// \ProvidesPackage{alphalph}%
+// \ProvidesPackage{textmerg}[\filedate]
+//  \noexpand\ProvidesPackage{xy}[\xydate\space Xy-pic version \xyversion]}\next
+// \ProvidesPackage{xintfrac}%
+// \ProvidesPackage{xint}%
+// \ProvidesPackage{xintgcd}%
+//   \ProvidesPackage{xinttrig}%
+// \ProvidesPackage{xintbinhex}%
+// \ProvidesPackage{xintcfrac}%
+// \ProvidesPackage{xintexpr}%
+// \ProvidesPackage{xinttools}%
+// \ProvidesPackage{xintcore}%
+//              \ProvidesPackage{#1}[{#2}]%
+//   \ProvidesPackage{xintlog}%
+// \ProvidesPackage{xintseries}%
+// \ProvidesPackage{academicons}[2025/09/20 v1.9.6-2 Academicons Icons]
+// \ProvidesPackage{babel}%
+//  \ProvidesPackage{shapepar}[2013/03/26 v 2.2x, Shaped paragraphs]
+//     \ProvidesPackage{soul-ori}
+// \ProvidesPackage{soul}%
+// \ProvidesPackage{soulutf8}%
+// \ProvidesPackage{xstring}[\xstringdate\space v\xstringversion\space String manipulations (CT)]
+// \ProvidesPackage{bitset}%
+//       \def\x{\endgroup\ProvidesPackage{thumbpdf}}%
+// \ProvidesPackage{poster}[2010/05/13 package wrapper for 
+// \ProvidesPackage{colorprofiles}
+// \ProvidesPackage{pdfescape}%
+// \ProvidesPackage{atbegshi}%
+// \ProvidesPackage{hologo}%
+// \ProvidesPackage{intcalc}%
+// \ProvidesPackage{kvdefinekeys}%
+// \ProvidesPackage{filesdo}[2012/11/27 v0.1 iterate on files (UL)]
+// \ProvidesPackage{commado}[2012/11/30 v0.11 iterate on CSL (UL)]
+// \ProvidesPackage{pnets}
+// \ProvidesPackage{pntext}
+// \ProvidesPackage{pndraw}
+// \ProvidesPackage{librarian}[2010/03/01 v.1.0 Bibliographies all in TeX.]
+// \ProvidesPackage{engord}%
+// \ProvidesPackage{fibnum}%
+// \ProvidesPackage{eolgrab}%
+// \ProvidesPackage{setouterhbox}%
+// \ProvidesPackage{iflang}%
+// \ProvidesPackage{rotchiffre}%
+// \ProvidesPackage{protecteddef}%
+// \ProvidesPackage{hyphsubst}%
+//     \@ifnextchar[{\pc@ProvidesPackage{#1}}%
+//                  {\pc@ProvidesPackage{#1}[]}%
+// \ProvidesPackage{pdfcrypt}%
+// \ProvidesPackage{thepdfnumber}%
+// \ProvidesPackage{texdraw}[\TeXdrawId]
+// \ProvidesPackage{catchfile}%
+// \ProvidesPackage{gettitlestring}%
+// \ProvidesPackage{magicnum}%
+// \ProvidesPackage{etexcmds}%
+// \ProvidesPackage{dcpic}[2013/05/01 v5.0]
+// \ProvidesPackage{pdftexcmds}%
+// \ProvidesPackage{stringenc}%
+//   \ProvidesPackage{arrayjob}[2000/05/03 v1.03 Array management]
+//   \ProvidesPackage{arrayjobx}[2010/05/03 v1.04 Array management]
+// \ProvidesPackage{embedfile}%
+// \ProvidesPackage{latex-lab-kernel-changes}
+// \ProvidesPackage{latex-lab-testphase-new-or-2}
+// \ProvidesPackage{latex-lab-testphase-math}
+// \ProvidesPackage{latex-lab-testphase-latest}
+// \ProvidesPackage{latex-lab-testphase-new-or-1}
+// \ProvidesPackage{latex-lab-footmisc}%
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{expl3}
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{amstext}[2024/11/17 v2.01 AMS text]
+// \ProvidesPackage{amsmath}[2018/12/01 v2.17b AMS math features (updated for rollback)]
+// \ProvidesPackage{amscd}[2017/04/14 v2.1 AMS Commutative Diagrams]
+// \ProvidesPackage{amsbsy}[1999/11/29 v1.2d Bold Symbols]
+// \ProvidesPackage{amsopn}[2022/04/08 v2.04 operator names]
+// \ProvidesPackage{amstex}[1999/11/15 v1.2f AMS extra math features]
+// \ProvidesPackage{amsxtra}[1999/11/15 v1.2c AMS extra commands]
+// \ProvidesPackage{amsmath}[2025/11/03 v2.18a AMS math features]
+// \ProvidesPackage{underscore-ltx}[2023/09/20 LaTeX firstaid to make underscore protected ]
+// \ProvidesPackage{graphics}
+// \ProvidesPackage{trig}
+// \ProvidesPackage{epsfig}
+// \ProvidesPackage{graphicx}
+// \ProvidesPackage{lscape}
+// \ProvidesPackage{rotating}%
+// \ProvidesPackage{color}
+// \ProvidesPackage{keyval}
+// \ProvidesPackage{graphics}
+// \ProvidesPackage{fltrace}
+// \ProvidesPackage{exscale}
+// \ProvidesPackage{latexrelease}
+// \ProvidesPackage{atbegshi-ltx}
+// \ProvidesPackage{alltt}
+// \ProvidesPackage{fixltx2e}
+// \ProvidesPackage{shortvrb}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{t1enc}[1994/06/01 Standard LaTeX package]
+// \ProvidesPackage{tracefnt}
+// \ProvidesPackage{inputenc}
+// \ProvidesPackage{fontenc}
+// \ProvidesPackage{latexsym}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{ifthen}
+// \ProvidesPackage{fix-cm}
+// \ProvidesPackage{oldlfont}
+// \ProvidesPackage{flafter}
+// \ProvidesPackage{atveryend-ltx}
+// \ProvidesPackage{doc}
+// \ProvidesPackage{graphpap}
+// \ProvidesPackage{makeidx}
+// \ProvidesPackage{syntonly}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{newlfont}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{showidx}
+// \ProvidesPackage{ftnright}
+// \ProvidesPackage{showkeys}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{array}
+// \ProvidesPackage{longtable}
+// \ProvidesPackage{varioref}
+// \ProvidesPackage{longtable}
+// \ProvidesPackage{trace}
+// \ProvidesPackage{layout}
+// \ProvidesPackage{xr}
+// \ProvidesPackage{bm}
+// \ProvidesPackage{afterpage}
+// \ProvidesPackage{delarray}
+// \ProvidesPackage{showkeys}
+// \ProvidesPackage{hhline}
+// \ProvidesPackage{somedefs}[1994/06/01 v0.03 Toolkit for optional definitions]
+// \ProvidesPackage{verbatim}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{enumerate}
+// \ProvidesPackage{array}
+// \ProvidesPackage{theorem}
+// \ProvidesPackage{xspace}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{tabularx}
+// \ProvidesPackage{varioref}
+// \ProvidesPackage{fontsmpl}[1994/10/29 Font sample package]
+// \ProvidesPackage{calc}
+// \ProvidesPackage{rawfonts}
+// \ProvidesPackage{shellesc}
+// \ProvidesPackage{array}
+// \ProvidesPackage{dcolumn}
+// \ProvidesPackage{array}
+// \ProvidesPackage{varioref}
+// \ProvidesPackage{l3sys-query}
+// \ProvidesPackage{array}
+// \ProvidesPackage{xr}
+// \ProvidesPackage{indentfirst}

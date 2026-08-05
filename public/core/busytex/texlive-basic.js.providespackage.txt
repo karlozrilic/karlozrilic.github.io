@@ -1,0 +1,402 @@
+// \ProvidesPackage{placeat}%
+// \ProvidesPackage{luainputenc}
+// \ProvidesPackage{luahttp}[LuaHTTP Package, Version 1.0.1]
+// \ProvidesPackage{truthtable}[2023/09/16 0.1.0 Package for generating truth tables automatically using LuaTeX]
+// \ProvidesPackage{spacekern}[2023/07/08 v0.3 Kerning between words and against space]
+// \ProvidesPackage{yamlvars}[2025-02-11]
+// \ProvidesPackage{luahyphenrules}
+// \ProvidesPackage{pyluatex}[2024/01/10 v0.6.3 Execute Python code on the fly]
+// \ProvidesPackage{ideavault}[1.0.5]
+// \ProvidesPackage{luagcd}[1.1]
+// \ProvidesPackage{lua-widow-control}%
+// \ProvidesPackage{luamaths}[1.6]
+// \ProvidesPackage{luatruthtable}[1.3]
+// \ProvidesPackage{lualinalg}[1.9]
+// \ProvidesPackage{showkerning}[2023/07/08 v0.3 Showing kerns in a document]
+// \ProvidesPackage{KKluaverb}[2026/01/27 v2.1.2]
+// \ProvidesPackage{luaimageembed}[2017/08/12 luaimageembed alpha version 0.1]
+// \ProvidesPackage{addliga}[2019/04/30 addliga 1.0]
+// \ProvidesPackage{odsfile}[2025/10/31 v0.10 odsfile package to select cells from ODS sheets and
+// \ProvidesPackage{luacomplex}[1.4]
+// \ProvidesPackage{selnolig-german-hyphex}%
+// \ProvidesPackage{selnolig}[\selnoligpackagedate]
+// \ProvidesPackage{selnolig-english-hyphex}%
+// \ProvidesPackage{selnolig-german-patterns}%
+// \ProvidesPackage{selnolig-english-patterns}%
+// \ProvidesPackage{luaquotes}
+// \ProvidesPackage{bezierplot}[2024/11/02 bezierplot]
+// \ProvidesPackage{ekdosis}
+// \ProvidesPackage{luaset}[1.1]
+// \ProvidesPackage{SympyCalc}[2023/05/08 v0.1.1 Sympy commands with TeX printing]
+// \ProvidesPackage{luacensor}
+// \ProvidesPackage{\packagename}[\packagedate\space \packageversion\space
+// \ProvidesPackage{uninormalize}
+// \ProvidesPackage{luaoptions}[2022/10/30 v0.8]
+// \ProvidesPackage{luaplot}[1.5]
+// \ProvidesPackage{gitinfo-lua}[2024/09/14 1.2.0 Xerdi's Git Package]
+// \ProvidesPackage{typewriter}[2025-02-10 v1.3 typewriter package]
+// \ProvidesPackage{luarandom}[2023/11/12 v 0.02 package for random numbers]
+// \ProvidesPackage{fancymag}[2025/07/07 v1.0 Modern, stylish typography for academic magazines and scientific publications]
+// \ProvidesPackage{luatextra}[2010/10/10 v1.0 Loading usual LuaLaTeX packages]
+// \ProvidesPackage{showhyphenation}[2023/07/08 v0.3 Marking of hyphenation points]
+// \ProvidesPackage{innerscript}[2025/05/08 v. 1.4a]
+// \ProvidesPackage{plantuml}
+// \ProvidesPackage{scikgtex}[2022/11/13 v2.1.1]
+// \ProvidesPackage{linebreaker}
+// \ProvidesPackage{ligtype}[2023/07/08 v0.3 Comprehensive ligature suppression functionalities]
+// \ProvidesPackage{luamodulartables}[1.0]
+// \ProvidesPackage{luaindex}
+// \ProvidesPackage{longmath}[2024/07/04]
+// \ProvidesPackage{semesterplannerlua}
+// \ProvidesPackage{lualatex-truncate}%
+// \ProvidesPackage{luacode}[2012/01/23 v1.2a lua-in-tex helpers (mpg)]
+// \ProvidesPackage{cstypo}
+// \ProvidesPackage{lua-placeholders}[2024/04/02 1.0.3 Lua Placeholders Package]
+// \ProvidesPackage{luacas}
+// \ProvidesPackage{lua-typo}
+// \ProvidesPackage{lua-typo}
+// \ProvidesPackage{lua-typo}
+// \ProvidesPackage{minim-mp}[2025/02/12 Run MetaPost code from LaTeX]
+// \ProvidesPackage{barracuda}[2022/06/23 v0.0.12 a barcode typesetting package]%
+// \ProvidesPackage{interpreter}[2012/06/10 v.1.2 Preprocessing input files on the fly.]
+// \ProvidesPackage{lutabulartools}[2025-01-06]
+//   \ProvidesPackage{luamplib}
+// \ProvidesPackage{luatexbase-attr}
+// \ProvidesPackage{luatexbase-cctb}
+// \ProvidesPackage{luatexbase-mcb}
+// \ProvidesPackage{luatexbase}
+// \ProvidesPackage{luatexbase-compat}
+// \ProvidesPackage{luatexbase-loader}
+// \ProvidesPackage{luatexbase-regs}
+// \ProvidesPackage{luatexbase-modutils}
+//   \ProvidesPackage{luatexko}[2026/02/20 v5.7 typesetting Korean with LuaTeX]
+// \ProvidesPackage{spelling}
+// \ProvidesPackage{lparse}[2025/07/02 v0.3.0 Parse and scan macro arguments in Lua on LuaTeX using a xparse like argument specification]
+// \ProvidesPackage{ctablestack}
+// \ProvidesPackage{tsvtemplate} \RequirePackage{environ} \input tsvtemplate
+// \ProvidesPackage{nodetree-embed}
+// \ProvidesPackage{nodetree}
+// \ProvidesPackage{cloze}
+// \ProvidesPackage{penlight}[2024-09-15]
+//   \ProvidesPackage{lua-visual-debug}[2025-12-29 v1.0
+// \ProvidesPackage{luavlna}[2025-10-29 luavlna]
+// \ProvidesPackage{chickenize}%
+// \ProvidesPackage{pdfextra}
+// \ProvidesPackage{farbe}[2025/06/08 v0.2.0 Color management (conversion, names) for LuaTeX implemented in Lua.]
+// \ProvidesPackage{addtoluatexpath}[2025-01-11]
+// \ProvidesPackage{penlightplus}[2025-02-14]
+//   \ProvidesPackage{luaotfload}%
+//   \ProvidesPackage{luapackageloader}[\luapackageloaderpkgdate\space v\luapackageloaderversion\space Lua package searchers for LuaTeX]
+// \ProvidesPackage{luakeys}[2025/07/19 v0.17.0 Parsing key-value options using Lua.]
+// \ProvidesPackage{luakeys-debug}[2025/07/19 v0.17.0 Debug package for luakeys.]
+// \ProvidesPackage{xecyr}%
+// \ProvidesPackage{ucharclasses}[2022/10/20 v2.6.0 Unicode block character classes for XeLaTeX]
+// \ProvidesPackage{bidicontour}
+// \ProvidesPackage{unisugar}[\date@unisugar{} \signature@unisugar:
+// \ProvidesPackage{bidi-atbegshi}[2022/02/14 v0.2 bidi-aware shipout macros]
+// \ProvidesPackage{interchar}[2015/02/17 v0.2
+// \ProvidesPackage{xeindex}[2014/12/05 v.0.3 Automatic index for XeLaTeX.]
+// \ProvidesPackage{xevlna}[2016/09/05 vlna for both XeLaTeX and plain XeTeX]
+// \ProvidesPackage{arabxetex}
+// \ProvidesPackage{ptext}[2013/04/28 v1.1 A package similar to the lipsum 
+// \ProvidesPackage{bidishadowtext}
+// \ProvidesPackage{na-position}[2020/06/14 version1.2]
+// \ProvidesPackage{xechangebar}
+// \ProvidesPackage{unicode-bidi}[2016/11/09 v0.01
+// \ProvidesPackage{tetragonos}[2019/01/15 v1 package tetragonos]
+// \ProvidesPackage{fontwrap}
+// \ProvidesPackage{fontbook}
+// \ProvidesPackage{fontbook}
+// \ProvidesPackage{bidipagegrid}%
+// \ProvidesPackage{xespotcolor}
+// \ProvidesPackage{xecolor}[2013/04/04 v0.1 color in xelatex]
+//   \ProvidesPackage{xetexko}[2025/08/24 v4.6 typesetting Korean with XeTeX]
+//   \ProvidesPackage{xetexko-space}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-josa}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-font}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-vertical}[2025/02/24 v4.4 A deprecated addendum to XeTeX-ko]
+//   \ProvidesPackage{xetexko-hanging} [2025/02/24 v4.4 A depricated addendum to XeTeX-ko]
+//   \ProvidesPackage{xesearch}[2019/04/24  v.0.2  Searching documents.]
+// \ProvidesPackage{luatikz}[2024/12/04 2.12.0 Luatikz]
+// \ProvidesPackage{kvsetkeys}%
+// \ProvidesPackage{amsmidx}[2007/09/25 v2.02 multiple indexes for AMS classes]
+// \ProvidesPackage{upref}[2007/03/14 v2.04]
+// \ProvidesPackage{amsthm}[2020/05/29 v2.20.6]
+// \ProvidesPackage{amsbooka}[2014/07/11 v2.08 monograph part/chapter authors]
+// \ProvidesPackage{latex-lab-kernel-changes}
+// \ProvidesPackage{latex-lab-testphase-new-or-2}
+// \ProvidesPackage{latex-lab-testphase-math}
+// \ProvidesPackage{latex-lab-testphase-latest}
+// \ProvidesPackage{latex-lab-testphase-new-or-1}
+// \ProvidesPackage{latex-lab-footmisc}%
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{expl3}
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{letltxmacro}%
+// \ProvidesPackage{refcount}%
+// \ProvidesPackage{ae}[\filedate\space\fileversion\space
+// \ProvidesPackage{aecompl}[\filedate\space\fileversion\space
+// \ProvidesPackage{ltxtable}
+// \ProvidesPackage{slashed}
+// \ProvidesPackage{dotlessj}[1998/12/09 v0.03 dotless j package (DPC)]
+// \ProvidesPackage{plain}[1996/04/22 Plain TeX emulation (DPC)]
+// \ProvidesPackage{pspicture}
+// \ProvidesPackage{bookmark}%
+// \ProvidesPackage{amstext}[2024/11/17 v2.01 AMS text]
+// \ProvidesPackage{amsmath}[2018/12/01 v2.17b AMS math features (updated for rollback)]
+// \ProvidesPackage{amscd}[2017/04/14 v2.1 AMS Commutative Diagrams]
+// \ProvidesPackage{amsbsy}[1999/11/29 v1.2d Bold Symbols]
+// \ProvidesPackage{amsopn}[2022/04/08 v2.04 operator names]
+// \ProvidesPackage{amstex}[1999/11/15 v1.2f AMS extra math features]
+// \ProvidesPackage{amsxtra}[1999/11/15 v1.2c AMS extra commands]
+// \ProvidesPackage{amsmath}[2025/07/09 v2.17z AMS math features]
+// \ProvidesPackage{ifplatform}
+// \ProvidesPackage{mathpazo}%
+// \ProvidesPackage{mathptmx}%
+// \ProvidesPackage{helvet}%
+// \ProvidesPackage{pifont}%
+// \ProvidesPackage{bookman}%
+// \ProvidesPackage{mathptm}%
+// \ProvidesPackage{utopia}%
+// \ProvidesPackage{avant}%
+// \ProvidesPackage{newcent}%
+// \ProvidesPackage{times}%
+// \ProvidesPackage{courier}%
+// \ProvidesPackage{chancery}%
+// \ProvidesPackage{mathpple}%
+// \ProvidesPackage{charter}%
+// \ProvidesPackage{palatino}%
+// \ProvidesPackage{hyperref-patches}[2021-06-29 v0.9 old hyperref patches]
+// \ProvidesPackage{hyperref}
+// \ProvidesPackage{ntheorem-hyper}[2021/02/07]
+// \ProvidesPackage{nohyperref}
+// \ProvidesPackage{nameref}
+// \ProvidesPackage{xr-hyper}
+// \ProvidesPackage{minitoc-hyper}[2020/01/14]
+// \ProvidesPackage{backref}
+// \ProvidesPackage{kvoptions-patch}%
+// \ProvidesPackage{kvoptions}%
+// \ProvidesPackage{KKran}[2026/02/20, Version 1.1.6]
+// \ProvidesPackage{oldgerm}
+// \ProvidesPackage{pandora}
+// \ProvidesPackage{geometry}
+// \ProvidesPackage{hypcap}%
+// \ProvidesPackage{KKsymbols}[2026/02/19, Version 2.1.2]
+// \ProvidesPackage{grfext}%
+// \ProvidesPackage{pslatex}[2021/01/13 v1.3 pslatex emulation (DPC)]
+// \ProvidesPackage{etoolbox}
+// \ProvidesPackage{fontdoc}
+// \ProvidesPackage{epstopdf-base}%
+// \ProvidesPackage{epstopdf}%
+// \ProvidesPackage{colortbl}
+// \ProvidesPackage{filehook-memoir}[2020/02/02 v0.2 filehook patch for memoir class]
+// \ProvidesPackage{filehook-scrlfile}[2020/02/02 v0.2 filehook patch for scrlfile package]
+// \ProvidesPackage{filehook-2020}[% filehook subpackage, do not load directly
+// \ProvidesPackage{filehook-listings}[2011/01/02 v0.1 Patch for listings to avoid hooks for verbatim input files]
+// \ProvidesPackage{pgf-filehook}[2010/01/07 v1.0 PGF keys for the filehook package]
+// \ProvidesPackage{filehook}[%
+// \ProvidesPackage{filehook-fink}[011/01/03 v0.1 filehook compatibility code for fink package]
+// \ProvidesPackage{filehook-2019}[% filehook subpackage, do not load directly
+// \ProvidesPackage{underscore-ltx}[2023/09/20 LaTeX firstaid to make underscore protected ]
+// \ProvidesPackage{auxhook}%
+// \ProvidesPackage{rerunfilecheck}%
+// \ProvidesPackage{hycolor}%
+// \ProvidesPackage{xcolor-patch}[2020/01/27 v1.10 xcolor patch]
+// \ProvidesPackage{graphics}
+// \ProvidesPackage{trig}
+// \ProvidesPackage{epsfig}
+// \ProvidesPackage{graphicx}
+// \ProvidesPackage{lscape}
+// \ProvidesPackage{rotating}%
+// \ProvidesPackage{color}
+// \ProvidesPackage{keyval}
+// \ProvidesPackage{graphics}
+// \ProvidesPackage{etex}
+// \ProvidesPackage{grffile}%
+// \ProvidesPackage{grffile}%
+// \ProvidesPackage{hopatch}%
+// \ProvidesPackage{hopatch}%
+// \ProvidesPackage{auto-pst-pdf-lua}[2023/03/21 v0.03a using auto-pst-pdf for LuaLaTeX]
+// \ProvidesPackage{babelbib}
+// \ProvidesPackage{atveryend}%
+// \ProvidesPackage{lmodern}[2015/05/01 v1.6.1 Latin Modern Fonts]
+// \ProvidesPackage{bibentry}
+// \ProvidesPackage{natbib}
+// \ProvidesPackage{ifdraft}%
+// \ProvidesPackage{bmpsize}%
+// \ProvidesPackage{scrindex}
+// \ProvidesPackage{enparen}
+// \ProvidesPackage{tabularht}%
+// \ProvidesPackage{hypbmsec}%
+// \ProvidesPackage{resizegather}%
+// \ProvidesPackage{tabularkv}%
+// \ProvidesPackage{dvipscol}%
+// \ProvidesPackage{colonequals}%
+// \ProvidesPackage{flags}%
+// \ProvidesPackage{pdfcolparallel}%
+// \ProvidesPackage{aliascnt}%
+// \ProvidesPackage{stackrel}
+// \ProvidesPackage{settobox}%
+// \ProvidesPackage{classlist}%
+// \ProvidesPackage{hypgotoe}%
+// \ProvidesPackage{chemarr}%
+// \ProvidesPackage{stampinclude}
+// \ProvidesPackage{twoopt}
+// \ProvidesPackage{centernot}
+// \ProvidesPackage{pdfcolparcolumns}%
+// \ProvidesPackage{holtxdoc}%
+// \ProvidesPackage{bmpsize-base}%
+// \ProvidesPackage{luacolor}%
+// \ProvidesPackage{fix2col}
+// \ProvidesPackage{topcapt}[2004/12/11 v1.2 Caption at top of float]
+// \ProvidesPackage{bibcheck}
+// \ProvidesPackage{concrete}[1996/10/08]
+// \ProvidesPackage{fltrace}
+// \ProvidesPackage{exscale}
+// \ProvidesPackage{latexrelease}
+// \ProvidesPackage{atbegshi-ltx}
+// \ProvidesPackage{alltt}
+// \ProvidesPackage{fixltx2e}
+// \ProvidesPackage{shortvrb}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{t1enc}[1994/06/01 Standard LaTeX package]
+// \ProvidesPackage{tracefnt}
+// \ProvidesPackage{inputenc}
+// \ProvidesPackage{fontenc}
+// \ProvidesPackage{latexsym}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{ifthen}
+// \ProvidesPackage{fix-cm}
+// \ProvidesPackage{oldlfont}
+// \ProvidesPackage{flafter}
+// \ProvidesPackage{atveryend-ltx}
+// \ProvidesPackage{doc}
+// \ProvidesPackage{graphpap}
+// \ProvidesPackage{makeidx}
+// \ProvidesPackage{syntonly}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{newlfont}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{showidx}
+// \ProvidesPackage{extramarks}
+// \ProvidesPackage{fancyhdr}%
+// \ProvidesPackage{fancyheadings}
+// \ProvidesPackage{extramarks}
+// \ProvidesPackage{cmmib57}[2009/06/22 v3.00 %
+// \ProvidesPackage{amsfonts}[2013/01/14 v3.01 Basic AMSFonts support]
+// \ProvidesPackage{amssymb}[2013/01/14 v3.01 AMS font symbols]
+// \ProvidesPackage{euscript}[2009/06/22 v3.00 Euler Script fonts]
+// \ProvidesPackage{eufrak}[2009/06/22 v3.00 Euler Fraktur fonts]
+// \ProvidesPackage{eucal}[2009/06/22 v3.00 Euler Script fonts]
+// \ProvidesPackage{pagesel}
+// \ProvidesPackage{pagesel}
+// \ProvidesPackage{mflogo}
+// \ProvidesPackage{ftnright}
+// \ProvidesPackage{showkeys}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{array}
+// \ProvidesPackage{longtable}
+// \ProvidesPackage{varioref}
+// \ProvidesPackage{longtable}
+// \ProvidesPackage{trace}
+// \ProvidesPackage{layout}
+// \ProvidesPackage{xr}
+// \ProvidesPackage{bm}
+// \ProvidesPackage{afterpage}
+// \ProvidesPackage{delarray}
+// \ProvidesPackage{showkeys}
+// \ProvidesPackage{hhline}
+// \ProvidesPackage{somedefs}[1994/06/01 v0.03 Toolkit for optional definitions]
+// \ProvidesPackage{verbatim}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{enumerate}
+// \ProvidesPackage{array}
+// \ProvidesPackage{theorem}
+// \ProvidesPackage{xspace}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{multicol}
+// \ProvidesPackage{tabularx}
+// \ProvidesPackage{varioref}
+// \ProvidesPackage{fontsmpl}[1994/10/29 Font sample package]
+// \ProvidesPackage{calc}
+// \ProvidesPackage{rawfonts}
+// \ProvidesPackage{shellesc}
+// \ProvidesPackage{dcolumn}
+// \ProvidesPackage{array}
+// \ProvidesPackage{l3sys-query}
+// \ProvidesPackage{array}
+// \ProvidesPackage{xr}
+// \ProvidesPackage{indentfirst}
+// \ProvidesPackage{newpax}%
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{fontinst}
+// \ProvidesPackage{uniquecounter}%
+// \ProvidesPackage{yax}[2010/01/22 v.1.03 Yet Another Key System.]
+// \ProvidesPackage{ltxcmds}%
+// \ProvidesPackage{gates}[2012/05/26 v.0.2 Modular architecture.]
+// \ProvidesPackage{bigintcalc}%
+// \ProvidesPackage{luatex85}
+//   \ProvidesPackage{ifetex}[2019/10/25 v1.3 ifetex legacy package. Use iftex instead.]
+//   \ProvidesPackage{iftex}[2024/12/12 v1.0g TeX engine tests]
+//   \ProvidesPackage{ifxetex}[2019/10/25 v0.7 ifxetex legacy package. Use iftex instead.]
+//   \ProvidesPackage{ifpdf}[2019/10/25 v3.4 ifpdf legacy package. Use iftex instead.]
+//   \ProvidesPackage{ifvtex}[2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.]
+//   \ProvidesPackage{ifluatex}[2019/10/25 v1.5 ifluatex legacy package. Use iftex instead.]
+// \ProvidesPackage{infwarerr}%
+// \ProvidesPackage{babel}%
+// \ProvidesPackage{bitset}%
+// \ProvidesPackage{colorprofiles}
+// \ProvidesPackage{pdfescape}%
+// \ProvidesPackage{atbegshi}%
+// \ProvidesPackage{intcalc}%
+// \ProvidesPackage{kvdefinekeys}%
+// \ProvidesPackage{librarian}[2010/03/01 v.1.0 Bibliographies all in TeX.]
+// \ProvidesPackage{engord}%
+// \ProvidesPackage{fibnum}%
+// \ProvidesPackage{eolgrab}%
+// \ProvidesPackage{setouterhbox}%
+// \ProvidesPackage{iflang}%
+// \ProvidesPackage{rotchiffre}%
+// \ProvidesPackage{protecteddef}%
+// \ProvidesPackage{hyphsubst}%
+//     \@ifnextchar[{\pc@ProvidesPackage{#1}}%
+//                  {\pc@ProvidesPackage{#1}[]}%
+// \ProvidesPackage{pdfcrypt}%
+// \ProvidesPackage{thepdfnumber}%
+// \ProvidesPackage{gettitlestring}%
+// \ProvidesPackage{etexcmds}%
+// \ProvidesPackage{pdftexcmds}%
+// \ProvidesPackage{stringenc}%
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{expl3}
+//   {\@expl@provides@file@@Nnnnnn\ProvidesPackage{Package}}
+// \ProvidesPackage{underscore-ltx}[2023/09/20 LaTeX firstaid to make underscore protected ]
+// \ProvidesPackage{fltrace}
+// \ProvidesPackage{exscale}
+// \ProvidesPackage{latexrelease}
+// \ProvidesPackage{atbegshi-ltx}
+// \ProvidesPackage{alltt}
+// \ProvidesPackage{fixltx2e}
+// \ProvidesPackage{shortvrb}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{t1enc}[1994/06/01 Standard LaTeX package]
+// \ProvidesPackage{tracefnt}
+// \ProvidesPackage{inputenc}
+// \ProvidesPackage{fontenc}
+// \ProvidesPackage{latexsym}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{ifthen}
+// \ProvidesPackage{fix-cm}
+// \ProvidesPackage{oldlfont}
+// \ProvidesPackage{flafter}
+// \ProvidesPackage{atveryend-ltx}
+// \ProvidesPackage{doc}
+// \ProvidesPackage{graphpap}
+// \ProvidesPackage{makeidx}
+// \ProvidesPackage{syntonly}
+// \ProvidesPackage{textcomp}
+// \ProvidesPackage{newlfont}
+//  \ProvidesPackage{doc}
+// \ProvidesPackage{showidx}

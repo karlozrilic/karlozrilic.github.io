@@ -1,6 +1,6 @@
 const R2_BASE = "https://assets.zrilich.com/busytex";
 const PREFIX = "/core/busytex/";   // include your basePath
-const CACHE = "busytex-v1";
+const CACHE = "busytex-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
@@ -8,12 +8,16 @@ self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", (event) => {
     const url = new URL(event.request.url);
 
-    if (url.origin === self.location.origin && url.pathname.startsWith(PREFIX)) {
+    if (
+        url.origin === self.location.origin &&
+        url.pathname.startsWith(PREFIX) &&
+        (url.pathname.endsWith(".wasm") || url.pathname.endsWith(".data"))
+    ) {
         event.respondWith(proxyAsset(event.request, url));
         return;
     }
 
-    if (event.request.mode === "navigate") {
+    if (event.request.mode === "navigate" && url.origin === self.location.origin) {
         event.respondWith(withCoiHeaders(event.request));
     }
 });

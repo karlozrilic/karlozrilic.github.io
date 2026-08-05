@@ -13,6 +13,10 @@ const INITIAL = String.raw`\documentclass{article}
 export default function EditorPage() {
     const [source, setSource] = useState(INITIAL);
 
+    fetch("/core/busytex/busytex_worker.js").then(r =>
+        r.text().then(t => console.log('here', r.status, r.headers.get("content-type"), t.slice(0, 120)))
+    );
+
     return (
         <div className='grid h-screen grid-cols-1'>
             <LatexPdfPreview source={source} />
