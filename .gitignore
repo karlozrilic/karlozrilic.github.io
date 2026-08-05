@@ -44,3 +44,4 @@ public/core/*
 public/core/busytex/*
 !public/core/busytex/*.js
 !public/core/busytex/*.txt
+!public/core/busytex/*.profile
