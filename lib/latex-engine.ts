@@ -19,6 +19,8 @@ let runner: BusyTexRunner | null = null;
 let booting: Promise<BusyTexRunner> | null = null;
 let chain: Promise<unknown> = Promise.resolve();
 
+let lastProgress: BootProgress | null = null;
+let lastEmit = 0;
 const BINARIES = [
 	{ name: 'busytex.wasm', size: 32501975 },
   	{ name: 'texlive-basic.data', size: 90786746 },
@@ -26,13 +28,19 @@ const BINARIES = [
 const listeners = new Set<(progress: BootProgress) => void>();
 
 export function onBootProgress(fn: (progress: BootProgress) => void): () => void {
+	if (lastProgress) fn(lastProgress);
 	listeners.add(fn);
 	return () => listeners.delete(fn);
 }
 
-function emit(loaded: number, total: number) {
+function emit(loaded: number, total: number, force = false) {
+	const now = performance.now();
+  	if (!force && now - lastEmit < 100) return false;
+	lastEmit = now;
 	const progress = { loaded, total, pct: total ? Math.round((loaded / total) * 100) : 0 };
+	lastProgress = progress;
 	for (const fn of listeners) fn(progress);
+	return true;
 }
 
 async function prefetchBinaries() {
@@ -54,7 +62,9 @@ async function prefetchBinaries() {
 			const { done, value } = await reader.read();
 			if (done) break;
 			loaded += value.byteLength;
-			emit(loaded, total);
+			if (emit(Math.min(loaded, total), total)) {
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
     	}
   	}
 }
@@ -74,7 +84,7 @@ async function boot(): Promise<BusyTexRunner> {
 		});
 		await texRunner.initialize(true); // true = run in a Web Worker
 		runner = texRunner;
-		emit(1, 1);
+		emit(1, 1, true);
 		return texRunner;
 	})();
 
