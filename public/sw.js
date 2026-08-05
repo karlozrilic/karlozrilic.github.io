@@ -1,6 +1,6 @@
 const R2_BASE = "https://assets.zrilich.com/busytex";
 const PREFIX = "/core/busytex/";
-const CACHE = "busytex-v2";
+const CACHE = "busytex-v1";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
