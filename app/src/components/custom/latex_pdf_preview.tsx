@@ -6,7 +6,7 @@ import { BootProgress, onBootProgress } from '@/lib/latex-engine';
 export default function LatexPdfPreview({ source }: { source: string }) {
     const { url, log, status } = useLatexPreview(source);
     const [progress, setProgress] = useState<BootProgress | null>(null);
-    const [state, setState] = useState({
+    const [previewState, setPreviewState] = useState({
         statusMessage: 'Compiling…',
         class: 'text-neutral-500'
     });
@@ -17,28 +17,28 @@ export default function LatexPdfPreview({ source }: { source: string }) {
     useEffect(() => {
         switch (status) {
             case 'ok':
-                setState({
+                setPreviewState({
                     statusMessage: 'Up to date',
                     class: 'text-green-600'
                 });
                 break;
             
             case 'error':
-                setState({
+                setPreviewState({
                     statusMessage: 'Compilation failed',
                     class: 'text-red-600'
                 });
                 break;
 
             case 'compiling':
-                setState({
+                setPreviewState({
                     statusMessage: 'Compiling…',
                     class: 'text-neutral-500'
                 });
                 break;
         
             default:
-                setState({
+                setPreviewState({
                     statusMessage: 'Idle',
                     class: 'text-neutral-500'
                 });
@@ -57,9 +57,9 @@ export default function LatexPdfPreview({ source }: { source: string }) {
                     : null
                 }
                 <span
-                    className={state.class}
+                    className={previewState.class}
                 >
-                    {state.statusMessage}
+                    {previewState.statusMessage}
                 </span>
                 <button
                     onClick={() => setShowLog((v) => !v)}
