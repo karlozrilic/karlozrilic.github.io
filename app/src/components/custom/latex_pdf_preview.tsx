@@ -63,7 +63,7 @@ export default function LatexPdfPreview({ source }: { source: string }) {
                 </span>
                 <button
                     onClick={() => setShowLog((v) => !v)}
-                    className='ml-auto rounded border px-2 py-0.5 hover:bg-neutral-50'
+                    className='ml-auto rounded border px-2 py-0.5 text-neutral-500 hover:bg-neutral-50'
                 >
                     {showLog ? 'Hide log' : 'Log'}
                 </button>

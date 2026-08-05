@@ -1,6 +1,7 @@
 const R2_BASE = "https://assets.zrilich.com/busytex";
 const PREFIX = "/core/busytex/";
 const CACHE = "busytex-v1";
+const ISOLATED = ["/preview", "/admin/cv"];
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
@@ -49,11 +50,17 @@ async function proxyAsset(request, url) {
 
 async function withCoiHeaders(request) {
     const res = await fetch(request);
+    const url = new URL(request.url);
+    const isolate = ISOLATED.some((p) => url.pathname.startsWith(p));
+
     const headers = new Headers(res.headers);
     headers.set("Cross-Origin-Embedder-Policy", "require-corp");
     headers.set("Cross-Origin-Resource-Policy", "same-origin");
     if (request.mode === "navigate") {
-        headers.set("Cross-Origin-Opener-Policy", "same-origin");
+        headers.set(
+            "Cross-Origin-Opener-Policy",
+            isolate ? "same-origin" : "same-origin-allow-popups",
+        );
     }
     return new Response(res.body, {
         status: res.status,
