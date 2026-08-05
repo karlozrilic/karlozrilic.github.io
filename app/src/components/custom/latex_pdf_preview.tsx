@@ -1,31 +1,65 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLatexPreview } from '@/hooks/useLatexPreview';
+import { BootProgress, onBootProgress } from '@/lib/latex-engine';
 
 export default function LatexPdfPreview({ source }: { source: string }) {
     const { url, log, status } = useLatexPreview(source);
+    const [progress, setProgress] = useState<BootProgress | null>(null);
+    const [state, setState] = useState({
+        statusMessage: 'Compiling…',
+        class: 'text-neutral-500'
+    });
     const [showLog, setShowLog] = useState(false);
+
+    useEffect(() => onBootProgress(setProgress), []);
+
+    useEffect(() => {
+        switch (status) {
+            case 'ok':
+                setState({
+                    statusMessage: 'Up to date',
+                    class: 'text-green-600'
+                });
+                break;
+            
+            case 'error':
+                setState({
+                    statusMessage: 'Compilation failed',
+                    class: 'text-red-600'
+                });
+                break;
+
+            case 'compiling':
+                setState({
+                    statusMessage: 'Compiling…',
+                    class: 'text-neutral-500'
+                });
+                break;
+        
+            default:
+                setState({
+                    statusMessage: 'Idle',
+                    class: 'text-neutral-500'
+                });
+                break;
+        }
+    }, [status])
 
     return (
         <div className='relative flex h-full flex-col bg-neutral-100'>
             <div className='flex items-center gap-2 border-b bg-white px-3 py-1.5 text-xs'>
+                {
+                    status === 'compiling' && url === null ?
+                    <span className='text-neutral-500'>
+                        {progress ? progress?.pct : 0}%
+                    </span>
+                    : null
+                }
                 <span
-                    className={
-                        status === 'ok'
-                        ? 'text-green-600'
-                        : status === 'error'
-                            ? 'text-red-600'
-                            : 'text-neutral-500'
-                    }
+                    className={state.class}
                 >
-                    {status === 'compiling'
-                        ? 'Compiling…'
-                        : status === 'ok'
-                            ? 'Up to date'
-                            : status === 'error'
-                                ? 'Compilation failed'
-                                : 'Idle'
-                    }
+                    {state.statusMessage}
                 </span>
                 <button
                     onClick={() => setShowLog((v) => !v)}
