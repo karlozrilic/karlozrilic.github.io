@@ -4,7 +4,13 @@ const CACHE = "busytex-v1";
 const ISOLATED = ["/preview", "/admin/cv"];
 
 self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener("activate", (event) => 
+    event.waitUntil(
+        caches.keys()
+            .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+            .then(() => self.clients.claim()),
+    )
+);
 
 self.addEventListener("fetch", (event) => {
     const url = new URL(event.request.url);
@@ -35,7 +41,12 @@ async function proxyAsset(request, url) {
     if (hit) return hit;
 
     const rest = url.pathname.slice(PREFIX.length);
-    const upstream = await fetch(`${R2_BASE}/${rest}`);
+    const upstream = await fetch(`${R2_BASE}/${rest}`, { cache: "no-store" });
+    if (upstream.status === 304) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        return fetch(`${R2_BASE}/${rest}`, { cache: "reload" });
+    }
     if (!upstream.ok) return upstream;
 
     const headers = new Headers(upstream.headers);

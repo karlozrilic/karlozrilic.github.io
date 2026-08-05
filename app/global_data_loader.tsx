@@ -10,9 +10,11 @@ import { fetchExperiences } from '@/app/src/store/slices/experienceSlice';
 import { fetchVercelProjects } from '@/app/src/store/slices/vercelProjectsSlice';
 import { fetchCountries } from '@/app/src/store/slices/countriesSlice';
 import LoadingComponent from './src/layout_components/loading';
+import { fetchCV } from './src/store/slices/CVSlice';
 
 export default function GlobalDataLoader() {
     const dispatch = useDispatch<AppDispatch>();
+    const CVStatus = useSelector((state: RootState) => state.cv.status);
     const aboutMeStatus = useSelector((state: RootState) => state.aboutMe.status);
     const technologiesStatus = useSelector((state: RootState) => state.technologies.status);
     const projectsStatus = useSelector((state: RootState) => state.projects.status);
@@ -22,6 +24,7 @@ export default function GlobalDataLoader() {
 
     const dataLoaded = useMemo(() => {
         return (
+            (CVStatus === 'succeeded' || CVStatus === 'failed') &&
             (aboutMeStatus === 'succeeded' || aboutMeStatus === 'failed') &&
             (technologiesStatus === 'succeeded' || technologiesStatus === 'failed') &&
             (projectsStatus === 'succeeded' || projectsStatus === 'failed') &&
@@ -29,7 +32,21 @@ export default function GlobalDataLoader() {
             (vercelProjectsStatus === 'succeeded' || vercelProjectsStatus === 'failed') &&
             (countriesStatus === 'succeeded' || countriesStatus === 'failed')
         );
-    }, [aboutMeStatus, technologiesStatus, projectsStatus, experiencesStatus, vercelProjectsStatus, countriesStatus]);
+    }, [
+        CVStatus,
+        aboutMeStatus,
+        technologiesStatus,
+        projectsStatus,
+        experiencesStatus,
+        vercelProjectsStatus,
+        countriesStatus
+    ]);
+
+    useEffect(() => {
+        if (CVStatus === 'idle') {
+            dispatch(fetchCV())
+        }
+    }, [dispatch, CVStatus])
 
     useEffect(() => {
         if (aboutMeStatus === 'idle') {

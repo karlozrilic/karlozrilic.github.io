@@ -1,21 +1,22 @@
 'use client';
-import { useState } from 'react';
 import LatexPdfPreview from '@/app/src/components/custom/latex_pdf_preview';
-
-const INITIAL = String.raw`\documentclass{article}
-    \begin{document}
-    \section{Hello}
-    The Gaussian integral:
-    \[ \int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi} \]
-    \end{document}
-`;
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/src/store/store';
+import { useEffect, useState } from 'react';
 
 export default function EditorPage() {
-    const [source, setSource] = useState(INITIAL);
+    const cvData = useSelector((state: RootState) => state.cv);
+    const [source, setSource] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (cvData.data) {
+            setSource(cvData.data);
+        }
+    }, [cvData]);
 
     return (
         <div className='grid h-screen grid-cols-1'>
-            <LatexPdfPreview source={source} />
+            <LatexPdfPreview source={source ?? ''} />
         </div>
     );
 }

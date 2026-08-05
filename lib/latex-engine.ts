@@ -24,6 +24,7 @@ let lastEmit = 0;
 const BINARIES = [
 	{ name: 'busytex.wasm', size: 32501975 },
   	{ name: 'texlive-basic.data', size: 90786746 },
+	{ name: 'texlive-extra.data', size: 339644138 },
 ];
 const listeners = new Set<(progress: BootProgress) => void>();
 
@@ -78,6 +79,7 @@ async function boot(): Promise<BusyTexRunner> {
 
 		const texRunner = new BusyTexRunner({
 			busytexBasePath: ASSET_BASE,
+			// preloadDataPackages: ['texlive-basic.js', 'texlive-extra.js'],
 			preloadDataPackages: ['texlive-basic.js'],
 			catalogDataPackages: ['texlive-recommended.js', 'texlive-extra.js']
 			// engineMode: 'pdftex', // smaller than 'combined'; use 'xetex' if you need UTF-8/OpenType

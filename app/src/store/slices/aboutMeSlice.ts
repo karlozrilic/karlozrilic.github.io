@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { AboutMe } from '@/app/src/types/about_me/about_me';
 import { AboutMeHistory } from '@/app/src/types/about_me/about_me_history';
@@ -43,22 +43,21 @@ export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () =>
     let aboutMeData: AboutMe | null = null;
 
     try {
-        const aboutMeSnapshot = await getDocs(
-            query(
-                collection(db, 'about_me')
-            )
+        const aboutMeSnapshot = await getDoc(
+            doc(db, 'about_me', 'main')
         );
-        aboutMeData = aboutMeSnapshot.docs.map((doc) => {
-            const data = doc.data() as Omit<AboutMe, 'updated'> & {
-                updated: Timestamp;
-            };
 
-            return {
-                ...data,
-                updated: data.updated?.toDate?.().toISOString(),
-                id: doc.ref.id
-            };
-        })[0] || null; // Return the first (and likely only) document, or null if none exist
+        if (!aboutMeSnapshot.exists()) return null;
+
+        const data = aboutMeSnapshot.data() as Omit<AboutMe, 'updated'> & {
+            updated: Timestamp;
+        };
+
+        aboutMeData = {
+            ...data,
+            updated: data.updated?.toDate?.().toISOString(),
+            id: aboutMeSnapshot.ref.id
+        }
     } catch (error: unknown) {
         if (error instanceof FirebaseError) {
             console.error('FIRESTORE QUERY FAILED');
