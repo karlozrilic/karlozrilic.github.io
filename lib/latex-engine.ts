@@ -20,6 +20,7 @@ let runner: BusyTexRunner | null = null;
 let booting: Promise<BusyTexRunner> | null = null;
 let chain: Promise<unknown> = Promise.resolve();
 
+const BINARIES = ['busytex.wasm', 'texlive-basic.data'];
 const listeners = new Set<(progress: BootProgress) => void>();
 
 export function onBootProgress(fn: (progress: BootProgress) => void): () => void {
@@ -32,37 +33,46 @@ function emit(loaded: number, total: number) {
 	for (const fn of listeners) fn(progress);
 }
 
+async function prefetchBinaries() {
+	const responses: Response[] = [];
+	let total = 0;
+
+	for (const name of BINARIES) {
+		const res = await fetch(`${ASSET_BASE}/${name}`);
+		if (!res.ok || !res.body) throw new Error(`prefetch failed: ${name} (${res.status})`);
+		total += Number(res.headers.get('content-length') ?? 0);
+		responses.push(res);
+	}
+
+	let loaded = 0;
+	for (const res of responses) {
+		const reader = res.body!.getReader();
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			loaded += value.byteLength;
+			emit(loaded, total);
+    	}
+  	}
+}
+
 async function boot(): Promise<BusyTexRunner> {
 	if (runner) return runner;
 	if (booting) return booting;
 
 	booting = (async () => {
-		const originalLog = console.log;
+		if (navigator.serviceWorker?.controller) await prefetchBinaries();
 
-		console.log = (...args: unknown[]) => {
-			const first = typeof args[0] === 'string' ? args[0] : '';
-			const message = PROGRESS_RE.exec(first);
-			if (message) {
-				emit(Number(message[1]), Number(message[2]));
-				return;
-			}
-			originalLog.apply(console, args);
-		};
-
-		try {
-			const texRunner = new BusyTexRunner({
-				busytexBasePath: ASSET_BASE,
-				preloadDataPackages: ['texlive-basic.js'],
-				catalogDataPackages: ['texlive-recommended.js', 'texlive-extra.js']
-				// engineMode: 'pdftex', // smaller than 'combined'; use 'xetex' if you need UTF-8/OpenType
-			});
-			await texRunner.initialize(true); // true = run in a Web Worker
-			runner = texRunner;
-			emit(1, 1);
-			return texRunner;
-		} finally {
-			console.log = originalLog;
-		}
+		const texRunner = new BusyTexRunner({
+			busytexBasePath: ASSET_BASE,
+			preloadDataPackages: ['texlive-basic.js'],
+			catalogDataPackages: ['texlive-recommended.js', 'texlive-extra.js']
+			// engineMode: 'pdftex', // smaller than 'combined'; use 'xetex' if you need UTF-8/OpenType
+		});
+		await texRunner.initialize(true); // true = run in a Web Worker
+		runner = texRunner;
+		emit(1, 1);
+		return texRunner;
 	})();
 
 	booting.catch(() => {
