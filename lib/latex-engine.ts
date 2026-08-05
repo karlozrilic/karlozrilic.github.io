@@ -47,10 +47,13 @@ async function prefetchBinaries() {
 	let loaded = 0;
 	for (const res of responses) {
 		const reader = res.body!.getReader();
+		let chunks = 0;
 		for (;;) {
 			const { done, value } = await reader.read();
 			if (done) break;
+			chunks++;
 			loaded += value.byteLength;
+			console.log('[prefetch] chunk', chunks, loaded, '/', total);
 			emit(loaded, total);
     	}
   	}
