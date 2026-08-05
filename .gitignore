@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 public/core/
+!public/core/busytex/
+!public/core/busytex/*.js
+!public/core/busytex/*.txt
