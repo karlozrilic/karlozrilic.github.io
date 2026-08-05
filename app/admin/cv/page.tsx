@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import LatexEditor from '@/app/src/components/custom/latex_editor';
 import LatexPdfPreview from '@/app/src/components/custom/latex_pdf_preview';
+import { useState } from 'react';
 
 const INITIAL = String.raw`\documentclass{article}
     \begin{document}
@@ -10,11 +11,15 @@ const INITIAL = String.raw`\documentclass{article}
     \end{document}
 `;
 
-export default function EditorPage() {
+export default function CV() {
     const [source, setSource] = useState(INITIAL);
 
     return (
-        <div className='grid h-screen grid-cols-1'>
+        <div className='grid h-screen grid-cols-2'>
+            <LatexEditor value='' onChange={(value) => {
+                console.log(value);
+                setSource(value);
+            }} />
             <LatexPdfPreview source={source} />
         </div>
     );

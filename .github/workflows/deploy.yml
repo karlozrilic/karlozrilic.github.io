@@ -54,6 +54,7 @@ jobs:
           NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}
           NEXT_PUBLIC_PROXY_SECRET: ${{ secrets.NEXT_PUBLIC_PROXY_SECRET }}
           NEXT_PUBLIC_VERCEL_TOKEN: ${{ secrets.NEXT_PUBLIC_VERCEL_TOKEN }}
+          NEXT_PUBLIC_BUSYTEX_BASE: ${{ secrets.NEXT_PUBLIC_BUSYTEX_BASE }}
         run: npm run build
 
       - name: Upload static files as artifact

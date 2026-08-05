@@ -7,6 +7,7 @@ import ReduxProvider from '@/app/reduxProvider';
 import { SidebarProvider } from '@/app/src/components/ui/sidebar';
 import GlobalDataLoader from '@/app/global_data_loader';
 import LayoutContent from '@/app/layout_content';
+import Script from 'next/script';
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{children: React.React
 	return (
 		<html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
 			<head>
+				<Script src='./sw-register.js' strategy='beforeInteractive' />
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();`,
