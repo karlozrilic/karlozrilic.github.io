@@ -1,14 +1,5 @@
 'use client';
 
-// Compiles via the latex-api Vercel project (see latex-api/ in this repo)
-// instead of running a LaTeX engine client-side. That WASM approach (busytex)
-// turned out to have an unfixable-from-here bug in its on-demand package
-// loading (a stale kpathsea filename database after loading new TeX packages
-// mid-session - see git history on this file for the full investigation),
-// on top of needing a service worker + cross-origin isolation dance just to
-// serve its multi-hundred-MB assets from a static host. The API sidesteps
-// both: Tectonic ships its own resource cache, and there's no browser-side
-// asset loading at all.
 const API_URL = process.env.NEXT_PUBLIC_LATEX_API_URL ?? 'https://latex-api-three.vercel.app/api/compile';
 
 export interface CompileResult {
