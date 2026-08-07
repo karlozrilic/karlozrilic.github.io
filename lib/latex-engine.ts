@@ -44,6 +44,32 @@ function emit(loaded: number, total: number, force = false) {
 	return true;
 }
 
+async function waitForServiceWorkerControl(): Promise<void> {
+	if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+	if (navigator.serviceWorker.controller) return;
+
+	const registration = await navigator.serviceWorker.getRegistration().catch(() => undefined);
+	if (!registration) return; // no service worker for this origin (e.g. local dev)
+
+	await Promise.race([
+		navigator.serviceWorker.ready,
+		new Promise((resolve) => setTimeout(resolve, 10000)),
+	]);
+	if (navigator.serviceWorker.controller) return;
+
+	// Registration is active but hasn't claimed this client yet (e.g. it
+	// activated after this page's own navigation). Wait for it to do so
+	// rather than letting asset fetches race ahead uncontrolled.
+	await new Promise<void>((resolve) => {
+		const onChange = () => {
+			navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+			resolve();
+		};
+		navigator.serviceWorker.addEventListener('controllerchange', onChange);
+		setTimeout(resolve, 5000);
+	});
+}
+
 async function prefetchBinaries() {
 	const responses: { res: Response; size: number }[] = [];
 	let total = 0;
@@ -75,6 +101,8 @@ async function boot(): Promise<BusyTexRunner> {
 	if (booting) return booting;
 
 	booting = (async () => {
+		await waitForServiceWorkerControl();
+
 		if (navigator.serviceWorker?.controller) await prefetchBinaries();
 
 		const texRunner = new BusyTexRunner({
@@ -98,11 +126,26 @@ async function boot(): Promise<BusyTexRunner> {
 
 export function compile(source: string): Promise<CompileResult> {
 	const run = chain.then(
-		() => runCompile(source),
-		() => runCompile(source),
+		() => runCompileWithRetry(source),
+		() => runCompileWithRetry(source),
 	);
 	chain = run.catch(() => {});
 	return run;
+}
+
+// A rejection here means something in the boot/compile pipeline itself broke
+// (worker init failure, network hiccup fetching assets, compile timeout) as
+// opposed to a normal LaTeX error, which resolves with `ok: false` and never
+// throws. Those infra failures are usually transient, so give it one retry
+// against a freshly booted engine before surfacing an error to the user.
+async function runCompileWithRetry(source: string, attempt = 0): Promise<CompileResult> {
+	try {
+		return await runCompile(source);
+	} catch (err) {
+		if (attempt >= 1) throw err;
+		resetEngine();
+		return runCompileWithRetry(source, attempt + 1);
+	}
 }
 
 async function runCompile(source: string): Promise<CompileResult> {
