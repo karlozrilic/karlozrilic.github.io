@@ -25,6 +25,12 @@ const BINARIES = [
 	{ name: 'busytex.wasm', size: 32501975 },
   	{ name: 'texlive-basic.data', size: 90786746 },
 	{ name: 'texlive-extra.data', size: 339644138 },
+	// catalogDataPackages below also allows texlive-recommended.js to be
+	// pulled in on demand; without warming it here too, a compile that
+	// needs it (or the resolver's "package didn't resolve, enable
+	// everything" fallback) falls back to an unwarmed worker-side fetch
+	// instead of a cache hit from this prefetch.
+	{ name: 'texlive-recommended.data', size: 199273688 },
 ];
 const listeners = new Set<(progress: BootProgress) => void>();
 
@@ -109,8 +115,19 @@ async function boot(): Promise<BusyTexRunner> {
 			busytexBasePath: ASSET_BASE,
 			// preloadDataPackages: ['texlive-basic.js', 'texlive-extra.js'],
 			preloadDataPackages: ['texlive-basic.js'],
-			catalogDataPackages: ['texlive-recommended.js', 'texlive-extra.js']
+			catalogDataPackages: ['texlive-recommended.js', 'texlive-extra.js'],
 			// engineMode: 'pdftex', // smaller than 'combined'; use 'xetex' if you need UTF-8/OpenType
+			// Fires for packages pulled in on-demand mid-compile (not just the
+			// initial boot fetch), so the UI can reflect that download too
+			// instead of sitting frozen at the last boot progress value.
+			onDownloadProgress: (progress) => emit(progress.loaded, progress.total, true),
+			// Surfaces package resolution + on-demand load decisions (which
+			// data package a \usepackage resolved to, or the "enabling all
+			// available data packages" fallback when one doesn't resolve) in
+			// the browser console. This is currently the only way to see why
+			// a package ends up unavailable mid-compile - the compile log
+			// only contains the pdflatex/bibtex/makeindex transcripts.
+			verbose: true,
 		});
 		await texRunner.initialize(true); // true = run in a Web Worker
 		runner = texRunner;
