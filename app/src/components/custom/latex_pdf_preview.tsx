@@ -1,18 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useLatexPreview } from '@/hooks/useLatexPreview';
-import { BootProgress, onBootProgress } from '@/lib/latex-engine';
 
 export default function LatexPdfPreview({ source }: { source: string }) {
     const { url, log, status } = useLatexPreview(source);
-    const [progress, setProgress] = useState<BootProgress | null>(null);
     const [previewState, setPreviewState] = useState({
         statusMessage: 'Compiling…',
         class: 'text-neutral-500'
     });
     const [showLog, setShowLog] = useState(false);
-
-    useEffect(() => onBootProgress(setProgress), []);
 
     useEffect(() => {
         switch (status) {
@@ -49,13 +45,6 @@ export default function LatexPdfPreview({ source }: { source: string }) {
     return (
         <div className='relative flex h-full flex-col bg-neutral-100'>
             <div className='flex items-center gap-2 border-b bg-white px-3 py-1.5 text-xs'>
-                {
-                    status === 'compiling' && url === null ?
-                    <span className='text-neutral-500'>
-                        {progress ? progress?.pct : 0}%
-                    </span>
-                    : null
-                }
                 <span
                     className={previewState.class}
                 >
