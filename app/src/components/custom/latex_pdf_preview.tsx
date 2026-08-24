@@ -5,7 +5,7 @@ import { useLatexPreview } from '@/hooks/useLatexPreview';
 export default function LatexPdfPreview({ source }: { source: string }) {
     const { url, log, status } = useLatexPreview(source);
     const [previewState, setPreviewState] = useState({
-        statusMessage: 'Compiling…',
+        statusMessage: 'Compiling...',
         class: 'text-neutral-500'
     });
     const [showLog, setShowLog] = useState(false);
@@ -63,7 +63,7 @@ export default function LatexPdfPreview({ source }: { source: string }) {
                 <iframe src={url} title='PDF preview' className='h-full w-full border-0' />
             ) : (
                 <div className='flex h-full items-center justify-center text-sm text-neutral-500'>
-                    {status === 'compiling' ? 'Building first PDF…' : 'No output yet'}
+                    {status === 'compiling' ? 'Building PDF...' : 'No output yet'}
                 </div>
             )}
 
