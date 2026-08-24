@@ -2,11 +2,14 @@
 import { BorderBeam } from '@/app/src/components/ui/border-beam';
 import { TypingAnimation } from '@/app/src/components/ui/typing-animation';
 import { Button } from '@/app/src/components/ui/button'
-import { faArrowUpRightFromSquare, faDownload, faFileContract, faPrint } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUpRightFromSquare, faDownload, faFileContract } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRef, useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useWebHaptics } from 'web-haptics/react';
 import { useAuth } from '@/hooks/useAuth';
+import { useLatexPreview } from '@/hooks/useLatexPreview';
+import { RootState } from '@/app/src/store/store';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogTitle, DialogTrigger } from '@/app/src/components/ui/dialog';
 import { Spinner } from '../components/ui/spinner';
 
@@ -18,17 +21,17 @@ type Particle = {
     opacity: number;
 };
 
-const VERCEL_API = 'https://html-to-pdf-api-tawny.vercel.app/api';
-const test = 'https://karlozrilic.github.io';
-
 export default function Hero() {
     const { trigger } = useWebHaptics();
     const { user } = useAuth();
     
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [CVMessage, setCVMessage] = useState<string>('Download my CV');
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const [iframeLoading, setIframeLoading] = useState<boolean>(true);
+    const [pendingDownload, setPendingDownload] = useState(false);
+
+    const cvData = useSelector((state: RootState) => state.cv);
+    const { url: pdfUrl, status: pdfStatus } = useLatexPreview(cvData.data ?? '');
 
     const words = useMemo(() => [
         'I build websites.',
@@ -170,27 +173,28 @@ export default function Hero() {
         setIframeLoading(false);
     }
 
-    async function generatePDF() {
-        setCVMessage('Generating PDF');
-        try {
-            const response = await fetch(`${VERCEL_API}/html-to-pdf?url=${test ?? window.location.origin}/preview&format=A4&responseFormat=base64`, {
-                headers: {
-                    'x-proxy-secret': `${process.env.NEXT_PUBLIC_PROXY_SECRET}`,
-                },
-            });
-            const { pdf } = await response.json();
-            
-            const a = document.createElement('a');
-            a.href = pdf;
-            a.download = 'document.pdf';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        } catch {
-            // silent fail
-        } finally {
-            setCVMessage('Download my CV');
+    function downloadPdf(url: string) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Karlo_Zrilic_CV.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    useEffect(() => {
+        if (!pendingDownload || pdfStatus !== 'ok' || !pdfUrl) return;
+        downloadPdf(pdfUrl);
+        setPendingDownload(false);
+    }, [pendingDownload, pdfStatus, pdfUrl]);
+
+    function generatePDF() {
+        if (pdfStatus === 'ok' && pdfUrl) {
+            downloadPdf(pdfUrl);
+            return;
         }
+
+        setPendingDownload(true);
     }
 
     return (
@@ -256,13 +260,13 @@ export default function Hero() {
                 className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold'
                 size='lg'
                 variant='secondary'
-                onClick={() => {
-                    // generatePDF();
-                    window.open('https://drive.google.com/file/d/1k8j3dScW7Juptu2iFUqQzd7BIIdsWLpb/view?usp=sharing', '_blank');
-                }}
+                onClick={generatePDF}
+                disabled={pdfStatus === 'compiling'}
             >
-                <span>{CVMessage}</span>
-                <FontAwesomeIcon icon={faDownload} />
+                <span>
+                    {pdfStatus === 'compiling' ? 'Generating PDF...' : pdfStatus === 'error' ? 'Failed - Retry' : 'Download my CV'}
+                </span>
+                {pdfStatus === 'compiling' ? <Spinner className='size-4' /> : <FontAwesomeIcon icon={faDownload} />}
                 <BorderBeam
                     duration={6}
                     size={70}
@@ -339,9 +343,12 @@ export default function Hero() {
                                 <Button
                                     type='button'
                                     onClick={generatePDF}
+                                    disabled={pdfStatus === 'compiling'}
                                 >
-                                    <span>Print</span>
-                                    <FontAwesomeIcon icon={faPrint} />
+                                    <span>
+                                        {pdfStatus === 'compiling' ? 'Generating PDF...' : pdfStatus === 'error' ? 'Failed - Retry' : 'Download PDF'}
+                                    </span>
+                                    {pdfStatus === 'compiling' ? <Spinner className='size-4' /> : <FontAwesomeIcon icon={faDownload} />}
                                 </Button>
                             </DialogFooter>
                         </div>

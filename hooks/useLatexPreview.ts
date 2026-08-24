@@ -14,6 +14,12 @@ export function useLatexPreview(source: string, delay = 900) {
 
     useEffect(() => {
         const id = ++runId.current;
+
+        if (!source) {
+            setStatus('idle');
+            return;
+        }
+
         setStatus('compiling');
 
         const timer = setTimeout(async () => {
