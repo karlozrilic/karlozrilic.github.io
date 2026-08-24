@@ -29,9 +29,12 @@ export default function Hero() {
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const [iframeLoading, setIframeLoading] = useState<boolean>(true);
     const [pendingDownload, setPendingDownload] = useState(false);
+    const [pdfRequested, setPdfRequested] = useState(false);
 
     const cvData = useSelector((state: RootState) => state.cv);
-    const { url: pdfUrl, status: pdfStatus } = useLatexPreview(cvData.data ?? '');
+    // only compile once they click download - cvData.data doesn't change
+    // after that so it just stays cached for the rest of the session
+    const { url: pdfUrl, status: pdfStatus } = useLatexPreview(pdfRequested ? (cvData.data ?? '') : '');
 
     const words = useMemo(() => [
         'I build websites.',
@@ -194,6 +197,7 @@ export default function Hero() {
             return;
         }
 
+        setPdfRequested(true);
         setPendingDownload(true);
     }
 
