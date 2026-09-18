@@ -310,10 +310,7 @@ export default function Hero() {
                     <DialogContent className='w-[95dvw] md:w-[60dvw] h-[95dvh] !max-w-none p-2 md:p-6'>
                         <div className='flex flex-col'>
                             <DialogHeader>
-                                <DialogTitle>Are you absolutely sure?</DialogTitle>
-                                <DialogDescription>
-                                    This action cannot be undone.
-                                </DialogDescription>
+                                <DialogTitle>CV</DialogTitle>
                             </DialogHeader>
                             <div className='relative -mx-4 no-scrollbar flex-1 overflow-y-auto px-4 py-2'>
                                 {
