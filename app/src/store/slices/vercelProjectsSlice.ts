@@ -28,8 +28,11 @@ export const fetchVercelProjects = createAsyncThunk('vercelProjects/fetchVercelP
                 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_VERCEL_TOKEN}`,
             },
         });
-        const data = await result.json();
-        projects = data.projects as VercelProject[];
+        const responseJSON = await result.json();
+
+        if (!responseJSON || responseJSON.error) return [];
+
+        projects = responseJSON.projects as VercelProject[];
         // Sort from newest to oldest
         projects.sort((projectA, projectB) => projectB.createdAt - projectA.createdAt);
     } catch (error: unknown) {

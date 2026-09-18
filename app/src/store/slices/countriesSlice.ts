@@ -48,7 +48,14 @@ export const fetchCountries = createAsyncThunk('countries/fetchCountries', async
                 'x-proxy-secret': process.env.NEXT_PUBLIC_PROXY_SECRET!,
             },
         });
-        let resultCountries = await result.json() as Countries[];
+        const responseJSON = await result.json();
+
+        if (!responseJSON || responseJSON.error) return {
+            countries: [],
+            groupedCountries: []
+        };
+
+        const resultCountries = responseJSON as Countries[];
 
         const countriesByRegion = resultCountries
             .filter((country) => country.independent)    

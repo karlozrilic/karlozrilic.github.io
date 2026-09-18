@@ -119,6 +119,41 @@ export function AppSidebar() {
                                             <DropdownMenuTrigger asChild>
                                                 <SidebarMenuSubItem>
                                                     <SidebarMenuSubButton asChild className='cursor-pointer'>
+                                                        <span>CV</span>
+                                                    </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent side={isMobile ? 'bottom' : 'right'}>
+                                                <DropdownMenuGroup>
+                                                    <DropdownMenuItem
+                                                        className='cursor-pointer'
+                                                        onClick={() => {
+                                                            router.push('/admin/cv');
+                                                            toggleSidebar();
+                                                        }}
+                                                    >
+                                                        <Eye />
+                                                        Preview
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className='cursor-pointer'
+                                                        onClick={() => {
+                                                            router.push('/admin/cv');
+                                                            toggleSidebar();
+                                                        }}
+                                                    >
+                                                        <Pencil />
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuGroup>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </SidebarMenuSub>
+                                    <SidebarMenuSub>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <SidebarMenuSubItem>
+                                                    <SidebarMenuSubButton asChild className='cursor-pointer'>
                                                         <span>About me</span>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
