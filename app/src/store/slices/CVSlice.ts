@@ -50,9 +50,13 @@ export const fetchCV = createAsyncThunk('CV/CV', async () => {
 });
 
 const CVSlice = createSlice({
-    name: 'about_me',
+    name: 'cv',
     initialState,
-    reducers: {},
+    reducers: {
+        setCV: (state, action: PayloadAction<string>) => {
+            state.data = action.payload;
+        },
+    },
     extraReducers: (builder) => {
         builder
         .addCase(fetchCV.pending, (state) => {
@@ -74,4 +78,5 @@ const CVSlice = createSlice({
     },
 });
 
+export const { setCV } = CVSlice.actions;
 export const CVReducer = CVSlice.reducer;

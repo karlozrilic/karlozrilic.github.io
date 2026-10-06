@@ -17,6 +17,7 @@ export default function Header() {
 	const { toggleSidebar } = useSidebar();
 	const isMobile = useIsMobile();
 
+	const navRef = useRef<HTMLElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const drawerBackdropRef = useRef<HTMLDivElement>(null);
 	const drawerRef = useRef<HTMLDivElement>(null);
@@ -43,6 +44,18 @@ export default function Header() {
 
 		mediaQuery.addEventListener('change', onChange);
 		return () => mediaQuery.removeEventListener('change', onChange);
+	}, []);
+
+	// lets full height pages size themselves below the header
+	useEffect(() => {
+		const nav = navRef.current;
+		if (!nav) return;
+
+		const observer = new ResizeObserver(() => {
+			document.documentElement.style.setProperty('--header-height', `${nav.offsetHeight}px`);
+		});
+		observer.observe(nav);
+		return () => observer.disconnect();
 	}, []);
 
 	useEffect(() => {
@@ -126,7 +139,7 @@ export default function Header() {
 
     return (
 		<>
-			<nav className='bg-background text-foreground shadow sticky top-0 w-full z-10 transition-colors duration-500'>
+			<nav ref={navRef} className='bg-background text-foreground shadow sticky top-0 w-full z-10 transition-colors duration-500'>
 				<div className='container mx-auto flex justify-between items-center p-5'>
 					<span
 						onClick={headerClick}
