@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @source not "../../../public";
+/* used by the icon svgs */
+@source inline("fill-foreground fill-background");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@blocknote/shadcn/style.css";
