@@ -62,7 +62,7 @@ export default function Home() {
             <main className='w-full'>
                 {!loaded && <LoadingScreen />}
                 <Hero />
-                {user && <VisitorGlobe />}
+                {/* user && <VisitorGlobe /> */}
                 <AboutMe />
                 <Experience />
                 <Technologies />
