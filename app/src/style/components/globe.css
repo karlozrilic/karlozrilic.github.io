@@ -287,12 +287,12 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	/* No height: 100% — globe-canvas-area is a flex container that centers
+	/* No height: 100% - globe-canvas-area is a flex container that centers
 	   this element vertically via align-items: center. */
 }
 
 /* width: 87% would be relative to container WIDTH, but the globe uses
-   min(width, height) × 0.87 — on wide layouts that makes the skeleton huge.
+   min(width, height) x 0.87 - on wide layouts that makes the skeleton huge.
    max-width: 60dvh caps the circle to 60 % of viewport height, which
    closely tracks the height-constrained globe diameter without JS. */
 .globe-skeleton__circle {

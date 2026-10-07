@@ -1,4 +1,4 @@
-// WebGL2 globe renderer — runs inside the render worker.
+// WebGL2 globe renderer - runs inside the render worker.
 // Per-frame cost: 4 uniform uploads + 4 drawArrays calls. No Path2D, no per-frame allocation.
 
 import type { GeoFeature } from './globe_utils';
@@ -70,7 +70,7 @@ void main() {
     fragColor = u_color;
 }`;
 
-// City lights as gl.POINTS — visibility and day/night entirely in the vertex shader
+// City lights as gl.POINTS - visibility and day/night entirely in the vertex shader
 const POINTS_VERT = `#version 300 es
 in vec3 a_pos;
 in float a_size;
@@ -99,7 +99,7 @@ void main() {
     v_col = a_col; v_alpha = alpha;
 }`;
 
-// Gaussian glow — with additive blending overlapping halos accumulate into bright hotspots
+// Gaussian glow - with additive blending overlapping halos accumulate into bright hotspots
 const POINTS_FRAG = `#version 300 es
 precision mediump float;
 in vec3 v_col;
@@ -123,7 +123,7 @@ function buildOrtho(radius: number, cx: number, cy: number, width: number, heigh
     ]);
 }
 
-// Combined rotY then rotX — same convention as applyRotation() in globe_utils
+// Combined rotY then rotX - same convention as applyRotation() in globe_utils
 function buildRotMat(rotY: number, rotX: number): Float32Array {
     const cosRotY = Math.cos(rotY), sinRotY = Math.sin(rotY);
     const cosRotX = Math.cos(rotX), sinRotX = Math.sin(rotX);
@@ -222,7 +222,7 @@ export function initWebGL(canvas: OffscreenCanvas, width: number, height: number
     const lineProg   = makeProgram(gl, LINE_VERT,   LINE_FRAG);
     const ptsProg    = makeProgram(gl, POINTS_VERT,  POINTS_FRAG);
 
-    // sphere VAO — static, never rebuilt
+    // sphere VAO - static, never rebuilt
     const { verts, idx } = buildSphere(64, 32);
     const sphereVAO = gl.createVertexArray()!;
     gl.bindVertexArray(sphereVAO);
@@ -324,7 +324,7 @@ export function uploadLandTexture(state: WebGLGlobeState, features: GeoFeature[]
                 poleY = latSum / ring.length < 0 ? H : 0;
             }
 
-            // Draw 3× (dx = 0, +W, −W) so antimeridian rings fill both sides
+            // Draw 3× (dx = 0, +W, -W) so antimeridian rings fill both sides
             for (const dx of [0, W, -W]) {
                 path.moveTo((nLngs[0] + 180) / 360 * W + dx, (90 - ring[0][1]) / 180 * H);
                 for (let i = 1; i < ring.length; i++) {
@@ -358,7 +358,7 @@ export function uploadLandTexture(state: WebGLGlobeState, features: GeoFeature[]
     state.landTex = tex;
 }
 
-// Country borders as GL_LINES — one segment per ring edge
+// Country borders as GL_LINES - one segment per ring edge
 export function uploadBorderData(state: WebGLGlobeState, features: PrecomputedFeature[]): void {
     const { gl } = state;
     const segs: number[] = [];
@@ -476,7 +476,7 @@ export function renderWebGLFrame(state: WebGLGlobeState, params: WebGLFrameParam
         gl.disableVertexAttribArray(state.aLine);
     }
 
-    // city lights — additive blend, overlapping halos accumulate into bright hotspots
+    // city lights - additive blend, overlapping halos accumulate into bright hotspots
     if (state.lightBuf && state.lightCount > 0) {
         gl.useProgram(state.ptsProg);
         gl.uniformMatrix4fv(state.uPts.rot,  false, rotMat);

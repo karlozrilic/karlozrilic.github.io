@@ -1,148 +1,32 @@
 'use client'
-import { BorderBeam } from '@/app/src/components/ui/border-beam';
-import { TypingAnimation } from '@/app/src/components/ui/typing-animation';
 import { Button } from '@/app/src/components/ui/button'
 import { faArrowUpRightFromSquare, faDownload, faFileContract } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useRef, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useWebHaptics } from 'web-haptics/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLatexPreview } from '@/hooks/useLatexPreview';
 import { RootState } from '@/app/src/store/store';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogTitle, DialogTrigger } from '@/app/src/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogOverlay, DialogTitle, DialogTrigger } from '@/app/src/components/ui/dialog';
 import { Spinner } from '../components/ui/spinner';
-
-type Particle = {
-    x: number;
-    y: number;
-    r: number;
-    speed: number;
-    opacity: number;
-};
 
 export default function Hero() {
     const { trigger } = useWebHaptics();
     const { user } = useAuth();
-    
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const [iframeLoading, setIframeLoading] = useState<boolean>(true);
     const [pendingDownload, setPendingDownload] = useState(false);
     const [pdfRequested, setPdfRequested] = useState(false);
 
     const cvData = useSelector((state: RootState) => state.cv);
+    const experiences = useSelector((state: RootState) => state.experiences.data);
     // only compile once they click download - cvData.data doesn't change
     // after that so it just stays cached for the rest of the session
     const { url: pdfUrl, status: pdfStatus } = useLatexPreview(pdfRequested ? (cvData.data ?? '') : '');
 
-    const words = useMemo(() => [
-        'I build websites.',
-        'I design apps.',
-        'I create experiences.'
-    ], [])
-    
-    // PARTICLES
-    useEffect(() => {
-        if (canvasRef.current == null) return;
-        
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d')!;
-        if (!ctx) return;
-
-        let animationFrameId: number = 0;
-        const particles: Particle[] = [];
-
-        function createParticle(): Particle {
-            return {
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 3 + 1,
-                speed: Math.random() * 0.5 + 0.2,
-                opacity: Math.random() * 0.5 + 0.3,
-            };
-        }
-
-        function getTargetParticleCount() {
-            const area = canvas.width * canvas.height;
-
-            // tweak this number to control density
-            const density = 1 / 16000;
-
-            return Math.max(20, Math.min(120, Math.round(area * density)));
-        }
-
-        function syncParticleCountSmooth() {
-            const target = getTargetParticleCount();
-            const diff = target - particles.length;
-
-            if (diff > 0) {
-                const toAdd = Math.min(diff, 2);
-                for (let i = 0; i < toAdd; i++) {
-                    particles.push(createParticle());
-                }
-            } else if (diff < 0) {
-                const toRemove = Math.min(Math.abs(diff), 2);
-                particles.splice(particles.length - toRemove, toRemove);
-            }
-        }
-
-        function resize() {
-            const oldWidth = canvas.width || window.innerWidth;
-            const oldHeight = canvas.height || window.innerHeight;
-
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            const scaleX = canvas.width / oldWidth;
-            const scaleY = canvas.height / oldHeight;
-
-            particles.forEach(p => {
-                p.x *= scaleX;
-                p.y *= scaleY;
-            });
-
-            syncParticleCountSmooth();
-        }
-
-        function animateParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            syncParticleCountSmooth();
-
-            particles.forEach(p => {
-                p.y -= p.speed;
-
-                if (p.y < -p.r) {
-                    p.y = canvas.height + p.r;
-                    p.x = Math.random() * canvas.width;
-                }
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255,255,255,${p.opacity})`;
-                ctx.fill();
-                ctx.closePath();
-            });
-
-            animationFrameId = window.requestAnimationFrame(animateParticles);
-        }
-
-        resize();
-
-        while (particles.length < getTargetParticleCount()) {
-            particles.push(createParticle());
-        }
-
-        animateParticles();
-
-        window.addEventListener('resize', resize);
-
-        return () => {
-            window.removeEventListener('resize', resize);
-            cancelAnimationFrame(animationFrameId);
-        };
-    }, []);
+    const currentJob = experiences.find(e => e.show && !e.end_date);
 
     useEffect(() => {
         const faders = document.querySelectorAll('.fade-in');
@@ -172,7 +56,7 @@ export default function Hero() {
         }
     }, [dialogOpen]);
 
-    function onIframeLoad(event: React.SyntheticEvent<HTMLIFrameElement>) {
+    function onIframeLoad() {
         setIframeLoading(false);
     }
 
@@ -203,160 +87,126 @@ export default function Hero() {
 
     return (
         <section
-            className='h-[calc(100vh-5rem)] md:h-[calc(100vh-4.25rem)] flex flex-col justify-center items-center text-center bg-gradient-to-b from-primary to-secondary relative overflow-hidden'
+            className='relative overflow-hidden min-h-[calc(100svh-var(--header-height,68px))] flex items-center'
             id='hero'
         >
-            {/* Parallax layers */}
-            {/* <div className='w-80 h-80 bg-white opacity-10 rounded-full parallax-layer hidden pointer-events-none' data-speed='0.3' data-base-top='-20' style={{top: '-20%', left: '-15%' }}></div>
-            <div className='w-60 h-60 bg-white opacity-10 rounded-full parallax-layer hidden pointer-events-none' data-speed='0.5' data-base-top='10' style={{top: '10%', right: '-10%' }}></div>
-            <div className='w-96 h-96 bg-white opacity-5 rounded-full parallax-layer hidden pointer-events-none' data-speed='0.2' data-base-bottom='-20' style={{bottom: '-20%', left: '25%' }}></div> */}
+            <div className='container relative mx-auto px-6 py-14 md:py-24 grid gap-10 md:gap-6 md:grid-cols-[3fr_2fr] items-center'>
+                <div className='order-2 md:order-1'>
+                    <h1 className='font-display text-6xl md:text-8xl font-semibold tracking-tight leading-[0.95] fade-in'>
+                        Karlo Zrilić<span className='text-brand'>.</span>
+                    </h1>
 
-            {/* Particles */}
-            <canvas ref={canvasRef} className='absolute top-0 left-0 w-full h-full pointer-events-none'></canvas>
+                    <p className='mt-6 text-2xl md:text-3xl font-medium'>
+                        Frontend and mobile developer.
+                    </p>
+                    <p className='mt-3 max-w-xl text-lg text-muted-foreground leading-relaxed'>
+                        I build websites and apps, mostly with React, Vue and Flutter.{' '}
+                        {currentJob ?
+                            <>Right now I'm working at <span className='text-foreground'>{currentJob.company_name}</span>.</>
+                        :
+                            <>Currently looking for my next job.</>
+                        }
+                    </p>
 
-            {/* <div className='absolute top-0 left-0 w-full h-full pointer-events-none'>
-                <div className='hero-grid-mask absolute top-0 left-0 w-full h-full'>
-                    <div className='hero-grid absolute top-0 left-0 w-full h-full'></div>
-                </div>
-            </div> */}
-
-            <h1 className='text-6xl md:text-7xl font-extrabold mb-4 fade-in z-1'>Hello, I'm Karlo Zrilić</h1>
-            <div className='text-2xl md:text-3xl mb-6 z-1'>
-                <TypingAnimation
-                    words={words}
-                    typeSpeed={100}
-                    deleteSpeed={50}
-                    pauseDelay={2000}
-                    loop
-                    startOnView={false}
-                />
-            </div>
-            <Button
-                className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold'
-                size='lg'
-                variant='secondary'
-                onClick={() => {
-                    trigger('success');
-                    document.querySelector('#contact')?.scrollIntoView();
-                }}
-            >
-                Get in Touch
-                <BorderBeam
-                    duration={6}
-                    size={70}
-                    className='from-transparent via-orange-500 to-transparent'
-                />
-                <BorderBeam
-                    duration={6}
-                    delay={3}
-                    size={70}
-                    className='from-transparent via-white to-transparent'
-                />
-            </Button>
-
-            <div className='flex items-center w-3xs my-4 z-1'>
-                <hr className='flex-grow border-t-2 border-border' />
-                <span className='mx-4 text-secondary font-semibold'>OR</span>
-                <hr className='flex-grow border-t-2 border-border' />
-            </div>
-
-            <Button
-                className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold'
-                size='lg'
-                variant='secondary'
-                onClick={generatePDF}
-                disabled={pdfStatus === 'compiling'}
-            >
-                <span>
-                    {pdfStatus === 'compiling' ? 'Generating PDF...' : pdfStatus === 'error' ? 'Failed - Retry' : 'Download my CV'}
-                </span>
-                {pdfStatus === 'compiling' ? <Spinner className='size-4' /> : <FontAwesomeIcon icon={faDownload} />}
-                <BorderBeam
-                    duration={6}
-                    size={70}
-                    className='from-transparent via-white to-transparent'
-                    reverse
-                />
-                <BorderBeam
-                    duration={6}
-                    delay={3}
-                    size={70}
-                    className='from-transparent via-orange-500 to-transparent'
-                    reverse
-                />
-            </Button>
-
-            {user &&
-                <Dialog
-                    open={dialogOpen}
-                    onOpenChange={setDialogOpen}
-                >
-                    <DialogTrigger asChild>
+                    <div className='mt-10 flex flex-wrap items-center gap-x-6 gap-y-3'>
                         <Button
-                            className='relative bg-secondary text-secondary-foreground overflow-hidden font-semibold mt-2'
                             size='lg'
-                            variant='secondary'
+                            className='bg-brand text-black font-semibold hover:bg-brand/90'
+                            onClick={() => {
+                                trigger('success');
+                                document.querySelector('#contact')?.scrollIntoView();
+                            }}
                         >
-                            <span>Preview CV</span>
-                            <FontAwesomeIcon icon={faFileContract} />
-                            <BorderBeam
-                                duration={6}
-                                size={70}
-                                className='from-transparent via-white to-transparent'
-                                reverse
-                            />
-                            <BorderBeam
-                                duration={6}
-                                delay={3}
-                                size={70}
-                                className='from-transparent via-orange-500 to-transparent'
-                                reverse
-                            />
+                            Get in touch
                         </Button>
-                    </DialogTrigger>
-                    <DialogOverlay className='backdrop-blur-sm' />
-                    <DialogContent className='w-[95dvw] md:w-[60dvw] h-[95dvh] !max-w-none p-2 md:p-6'>
-                        <div className='flex flex-col'>
-                            <DialogHeader>
-                                <DialogTitle>CV</DialogTitle>
-                            </DialogHeader>
-                            <div className='relative -mx-4 no-scrollbar flex-1 overflow-y-auto px-4 py-2'>
-                                {
-                                    iframeLoading ? 
-                                        <div className='absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center px-4 py-2 bg-background'>
-                                            <Spinner className='size-8' />
+                        <button
+                            type='button'
+                            className='inline-flex items-center gap-2 font-medium underline underline-offset-4 decoration-muted-foreground/50 hover:decoration-foreground disabled:opacity-60'
+                            onClick={generatePDF}
+                            disabled={pdfStatus === 'compiling'}
+                        >
+                            {pdfStatus === 'compiling' ? 'Preparing PDF...' : pdfStatus === 'error' ? 'Failed, try again' : 'Download my CV'}
+                            {pdfStatus === 'compiling' ? <Spinner className='size-4' /> : <FontAwesomeIcon icon={faDownload} className='text-sm' />}
+                        </button>
+
+                        {user &&
+                            <Dialog
+                                open={dialogOpen}
+                                onOpenChange={setDialogOpen}
+                            >
+                                <DialogTrigger asChild>
+                                    <Button size='sm' variant='ghost'>
+                                        <span>Preview CV</span>
+                                        <FontAwesomeIcon icon={faFileContract} />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogOverlay className='backdrop-blur-sm' />
+                                <DialogContent className='w-[95dvw] md:w-[60dvw] h-[95dvh] !max-w-none p-2 md:p-6'>
+                                    <div className='flex flex-col'>
+                                        <DialogHeader>
+                                            <DialogTitle>CV</DialogTitle>
+                                        </DialogHeader>
+                                        <div className='relative -mx-4 no-scrollbar flex-1 overflow-y-auto px-4 py-2'>
+                                            {
+                                                iframeLoading ?
+                                                    <div className='absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center px-4 py-2 bg-background'>
+                                                        <Spinner className='size-8' />
+                                                    </div>
+                                                :
+                                                null
+                                            }
+                                            <iframe src='/preview' className='w-full h-full' onLoad={onIframeLoad}></iframe>
                                         </div>
-                                    :
-                                    null
-                                }
-                                <iframe src='/preview' className='w-full h-full' onLoad={onIframeLoad}></iframe>
-                            </div>
-                            <DialogFooter>
-                                <Button
-                                    type='button'
-                                    onClick={() => {
-                                        window.open('/preview', '_blank');
-                                    }}
-                                >
-                                    <span>Open in window</span>
-                                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                                </Button>
-                                <Button
-                                    type='button'
-                                    onClick={generatePDF}
-                                    disabled={pdfStatus === 'compiling'}
-                                >
-                                    <span>
-                                        {pdfStatus === 'compiling' ? 'Generating PDF...' : pdfStatus === 'error' ? 'Failed - Retry' : 'Download PDF'}
-                                    </span>
-                                    {pdfStatus === 'compiling' ? <Spinner className='size-4' /> : <FontAwesomeIcon icon={faDownload} />}
-                                </Button>
-                            </DialogFooter>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            }
-    
+                                        <DialogFooter>
+                                            <Button
+                                                type='button'
+                                                onClick={() => {
+                                                    window.open('/preview', '_blank');
+                                                }}
+                                            >
+                                                <span>Open in window</span>
+                                                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                                            </Button>
+                                            <Button
+                                                type='button'
+                                                onClick={generatePDF}
+                                                disabled={pdfStatus === 'compiling'}
+                                            >
+                                                <span>
+                                                    {pdfStatus === 'compiling' ? 'Preparing PDF...' : pdfStatus === 'error' ? 'Failed, try again' : 'Download PDF'}
+                                                </span>
+                                                {pdfStatus === 'compiling' ? <Spinner className='size-4' /> : <FontAwesomeIcon icon={faDownload} />}
+                                            </Button>
+                                        </DialogFooter>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        }
+                    </div>
+                </div>
+
+                <div className='order-1 md:order-2 flex justify-end md:justify-start'>
+                    <div className='relative w-48 md:w-full md:max-w-sm md:-ml-10'>
+                    <div className='absolute top-1/4 -left-32 md:top-0 md:-left-36 flex flex-col items-end font-hand text-2xl md:text-3xl text-foreground/80 -rotate-6 pointer-events-none select-none' aria-hidden='true'>
+                        <span>that's me</span>
+                        <svg className='w-12 h-9 md:w-14 md:h-10 mr-1' viewBox='0 0 60 40' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+                            <path d='M6 4 C 18 6, 34 14, 50 32' />
+                            <path d='M41 31 L 51 33 L 50 22' />
+                        </svg>
+                    </div>
+                    <figure className='w-full bg-white p-2.5 md:p-3 pb-11 md:pb-16 shadow-2xl shadow-black/40 rotate-3 hover:rotate-1 transition-transform duration-500 relative'>
+                        <img
+                            src='/images/portfolio_picture.jpeg'
+                            alt='Karlo Zrilić in Šibenik, Croatia'
+                            className='aspect-[4/5] w-full object-cover object-[56%_40%]'
+                        />
+                        <figcaption className='absolute bottom-1.5 md:bottom-3 left-0 right-0 text-center font-hand text-2xl md:text-3xl text-neutral-700'>
+                            Šibenik, Croatia
+                        </figcaption>
+                    </figure>
+                    </div>
+                </div>
+            </div>
         </section>
     );
 }

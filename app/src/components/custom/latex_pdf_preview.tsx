@@ -28,7 +28,7 @@ export default function LatexPdfPreview({ source }: { source: string }) {
 
             case 'compiling':
                 setPreviewState({
-                    statusMessage: 'Compiling…',
+                    statusMessage: 'Compiling...',
                     class: 'text-neutral-500'
                 });
                 break;

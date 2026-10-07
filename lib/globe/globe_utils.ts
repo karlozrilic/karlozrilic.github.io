@@ -1,4 +1,4 @@
-// Pure math / astronomy — no DOM or canvas dependencies.
+// Pure math / astronomy - no DOM or canvas dependencies.
 
 export interface Visitor {
     city: string;
@@ -14,7 +14,7 @@ export interface Visitor {
 export interface CityLight {
     lat: number;
     lng: number;
-    s?: number; // relative size 0–1; omit for small fill dots
+    s?: number; // relative size 0-1; omit for small fill dots
 }
 
 export type Vec3 = [number, number, number];
@@ -47,8 +47,8 @@ export interface TopoJSON {
 }
 
 // TopoJSON polygon nesting:
-//   Polygon      → arcs: number[][]   (rings → arc indices)
-//   MultiPolygon → arcs: number[][][] (polygons → rings → arc indices)
+//   Polygon      -> arcs: number[][]   (rings -> arc indices)
+//   MultiPolygon -> arcs: number[][][] (polygons -> rings -> arc indices)
 // Negative arc indices mean the arc is reversed.
 export interface TopoPolygon {
     type: "Polygon";
@@ -90,13 +90,13 @@ export interface FlyState {
 
 export const DEG_TO_RAD = Math.PI / 180;
 export const RAD_TO_DEG = 180 / Math.PI;
-// Full rotation in ~42 s — visually interesting without being dizzying
+// Full rotation in ~42 s - visually interesting without being dizzying
 export const SPIN_SPEED_RAD_S = -0.15;
 
 const TWILIGHT_HALF_BAND_DEG = 9.0;
 const TWILIGHT_COS_OFFSET = Math.sin(TWILIGHT_HALF_BAND_DEG * DEG_TO_RAD);
 
-// Greenwich Mean Sidereal Time in degrees — accurate to ~0.1°, good enough for a globe
+// Greenwich Mean Sidereal Time in degrees - accurate to ~0.1°, good enough for a globe
 export function getGMST(ms: number): number {
     const JD = ms / 86_400_000 + 2_440_587.5;
     const julianCenturies = (JD - 2_451_545.0) / 36_525.0;
@@ -107,7 +107,7 @@ export function getGMST(ms: number): number {
     return ((gmstDegrees % 360) + 360) % 360;
 }
 
-// Sub-solar point — the lat/lng directly under the sun at a given timestamp
+// Sub-solar point - the lat/lng directly under the sun at a given timestamp
 export function getSolarPosition(ms: number): SolarPosition {
     const JD = ms / 86_400_000 + 2_440_587.5;
     const daysSinceJ2000 = JD - 2_451_545.0;
@@ -136,7 +136,7 @@ export function getDaylightFactor(lat: number, lng: number, sunLat: number, sunL
     return Math.max(0, Math.min(1, (cosAngle + TWILIGHT_COS_OFFSET) / (2 * TWILIGHT_COS_OFFSET)));
 }
 
-// Standard geographic → Cartesian mapping used throughout
+// Standard geographic -> Cartesian mapping used throughout
 export function latLngToVec3(lat: number, lng: number): Vec3 {
     const phi = (90 - lat) * DEG_TO_RAD;
     const theta = (lng + 180) * DEG_TO_RAD;
@@ -147,7 +147,7 @@ export function latLngToVec3(lat: number, lng: number): Vec3 {
     ];
 }
 
-// Y rotation then X rotation — same camera transform applied to every world point
+// Y rotation then X rotation - same camera transform applied to every world point
 export function applyRotation(vec: Vec3, rotY: number, rotX: number): Vec3 {
     const [vecX, vecY, vecZ] = vec;
     const xAfterRotY = vecX * Math.cos(rotY) + vecZ * Math.sin(rotY);
@@ -229,7 +229,7 @@ function dequantize(
 ): [number, number] {
     let lng = point[0] * scale[0] + translate[0];
     const lat = point[1] * scale[1] + translate[1];
-    // Wrap back to [−180, 180] — delta accumulation can push antimeridian arcs past ±180°
+    // Wrap back to [-180, 180] - delta accumulation can push antimeridian arcs past ±180°
     if (lng > 180) lng -= 360;
     else if (lng < -180) lng += 360;
     return [lng, lat];
@@ -302,14 +302,14 @@ export function inverseProjectGlobe(
     };
 }
 
-// Spherical great-circle crossing test — handles antimeridian countries (Russia, Alaska, Kiribati)
+// Spherical great-circle crossing test - handles antimeridian countries (Russia, Alaska, Kiribati)
 // that break 2D lat/lng ray-casting. Works in 3D unit-vector space so there is no antimeridian.
-// Casts an arc from P toward (0°N, 90°E) — open Indian Ocean, never inside a country polygon —
+// Casts an arc from P toward (0°N, 90°E) - open Indian Ocean, never inside a country polygon -
 // and counts how many polygon edges (as great-circle arcs) it crosses. Odd count = inside.
 // Reference (0°N, 90°E) avoids the poles: south pole is inside Antarctica (wrong count),
 // north pole causes the arc to coincide with antimeridian splits near 180°E (spurious crossing).
 
-// Per-click scratch buffers — avoids Float64Array allocation per ring
+// Per-click scratch buffers - avoids Float64Array allocation per ring
 let _vx: Float64Array = new Float64Array(0);
 let _vy: Float64Array = new Float64Array(0);
 let _vz: Float64Array = new Float64Array(0);
@@ -324,14 +324,14 @@ export function hitTestCountry(lat: number, lng: number, features: GeoFeature[])
     const testY = cosPhi;
     const testZ = sinPhi * Math.sin(theta);
 
-    // half-plane normal: testPoint × [0, 0, −1] = [−testY, testX, 0]
+    // half-plane normal: testPoint × [0, 0, -1] = [-testY, testX, 0]
     const planeNormX = -testY, planeNormY = testX;
 
     let bestIdx: number | null = null;
     let bestArea = Infinity;
 
     for (let featIdx = 0; featIdx < features.length; featIdx++) {
-        // lat bounding box pre-filter — fast, no trig, antimeridian-safe
+        // lat bounding box pre-filter - fast, no trig, antimeridian-safe
         let fMinLat = Infinity, fMaxLat = -Infinity;
         let fMinLng = Infinity, fMaxLng = -Infinity;
         for (const ring of features[featIdx].rings) {

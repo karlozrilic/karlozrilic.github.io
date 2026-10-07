@@ -39,6 +39,9 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-hero-color: var(--hero-color);
   --color-hero-color-2: var(--hero-color-2);
+  --color-brand: var(--brand);
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-hand: var(--font-caveat), cursive;
 }
 
 :root {
@@ -76,6 +79,7 @@
   --sidebar-ring: oklch(0.708 0 0);
   --hero-color: oklch(80.024% 0.10352 252.566);
   --hero-color-2: oklch(68.452% 0.16972 254.094);
+  --brand: #FE9A00;
 
   /* LaTex editor theme */
   --cm-keyword: oklch(0.55 0.2 300);

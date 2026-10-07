@@ -137,7 +137,7 @@ export default function PDFCV() {
                                     <View key={index} style={styles.item}>
                                         <View style={styles.itemHeader}>
                                             <Text style={styles.title}>
-                                                {experience.job_title} — {experience.company_name}
+                                                {experience.job_title} at {experience.company_name}
                                             </Text>
                                             <Text style={styles.date}>
                                                 {
@@ -184,7 +184,7 @@ export default function PDFCV() {
                         <View style={styles.item}>
                             <View style={styles.itemHeader}>
                                 <Text style={styles.title}>B.Sc. Computer Science</Text>
-                                <Text style={styles.date}>2015–2019</Text>
+                                <Text style={styles.date}>2015 - 2019</Text>
                             </View>
                             <Text style={styles.text}>University Name</Text>
                         </View>

@@ -3,6 +3,7 @@ import { Marquee } from '@/app/src/components/ui/marquee';
 import Technology from '@/app/src/components/custom/technology';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
+import SectionHeading from '@/app/src/components/custom/section_heading';
 
 export default function Technologies() {
     const technologies = useSelector((state: RootState) => state.technologies);
@@ -32,11 +33,15 @@ export default function Technologies() {
         
     return (
         <>
-            <span id='technologies'></span>
-            <section className='relative py-10 md:py-20 overflow-hidden fade-in'>
-                <h2 className='text-4xl font-bold text-center mb-12'>Technologies</h2>
+            <section className='border-t scroll-mt-(--header-height) py-16 md:py-28 overflow-hidden fade-in' id='technologies'>
+                <div className='container mx-auto px-6 mb-10 md:mb-14'>
+                    <SectionHeading>Technologies</SectionHeading>
+                    <p className='mt-4 max-w-xl text-lg text-muted-foreground'>
+                        Things I've used at work or on my own projects.
+                    </p>
+                </div>
 
-                <div className='relative flex w-full flex-col items-center justify-center overflow-hidden'>
+                <div className='relative flex w-full flex-col items-center justify-center overflow-hidden mask-[linear-gradient(to_right,transparent,#000_20%,#000_80%,transparent)]'>
                     <Marquee pauseOnHover className='[--duration:30s]'>
                         {firstRow.map((technology) => (
                             <Technology key={technology.name} {...technology} />
@@ -47,8 +52,6 @@ export default function Technologies() {
                             <Technology key={technology.name} {...technology} />
                         ))}
                     </Marquee>
-                    <div className='from-background pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r'></div>
-                    <div className='from-background pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l'></div>
                 </div>
             </section>
         </>

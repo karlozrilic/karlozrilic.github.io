@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
+import SectionHeading from '@/app/src/components/custom/section_heading';
 
 export default function AboutMe() {
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
@@ -27,32 +28,16 @@ export default function AboutMe() {
     }, []);
 
     return (
-        <>
-            <span id='about'></span>
-            <section className='container mx-auto py-10 md:py-20 fade-in px-1' id='about'>
-                <h2 className='text-4xl font-bold text-center mb-10'>About Me</h2>
-                <div className='md:flex md:items-center md:space-x-10'>
-                    <img
-                        src='/images/portfolio_picture.jpeg'
-                        alt='Your Photo'
-                        className='rounded-lg mb-6 md:mb-0 md:w-1/3 border-4 border-primary'
-                    />
-                    <div className='md:w-2/3 md:m-auto mx-[20px] text-lg leading-relaxed space-y-4' dangerouslySetInnerHTML={{ __html: aboutMe.data?.content ?? '' }}></div>
-                    {/**
-                        I'm an Information Technology Engineer who enjoys building clean, responsive, and easy-to-use interfaces. I like turning ideas into simple, functional digital experiences that work smoothly across devices and feel natural to use.
-
-                        I work with modern frontend frameworks, build cross-platform mobile apps with Flutter and React Native, and handle backend basics with PHP, SQL, and Java. I usually end up connecting everything together APIs, databases, frontend logic. Just making sure it all runs properly and makes sense as a whole.
-
-                        I've worked with UI/UX designers, developers, and stakeholders, so I'm used to taking vague ideas like "make it more engaging" and shaping them into something real and usable. Debugging and polishing details is a big part of my workflow, especially using browser dev tools and performance checks.
-
-                        Before this, I worked as a Sales Advisor at Hrvatski Telekom, which taught me how to explain technical things in a simple, human way. I also spent time in logistics, which helped me get more organized and structured in how I work.
-
-                        Outside of development, I'm into photography, video shooting, and music production. Mostly creative stuff that keeps me inspired outside of code.
-
-                        Overall, I just enjoy building useful things that feel good to use and are easy to understand.
-                    */}
+        <section className='border-t scroll-mt-(--header-height) fade-in' id='about'>
+            <div className='container mx-auto px-6 py-16 md:py-28 grid gap-8 md:grid-cols-[1fr_2fr] md:gap-16'>
+                <div>
+                    <SectionHeading className='md:sticky md:top-[calc(var(--header-height,68px)+2rem)]'>About me</SectionHeading>
                 </div>
-            </section>
-        </>
+                <div
+                    className='max-w-2xl text-lg leading-relaxed text-foreground/85 space-y-5'
+                    dangerouslySetInnerHTML={{ __html: aboutMe.data?.content ?? '' }}
+                ></div>
+            </div>
+        </section>
     );
 }

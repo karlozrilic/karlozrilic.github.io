@@ -39,7 +39,6 @@ export default function CV() {
         if (source === null || !isDirty || saving) return;
         setSaving(true);
         try {
-            // saved as is, firestore keeps line breaks and spaces
             await addOrUpdateCollection({
                 firebaseCollection: 'latex_cv',
                 id: 'cv',
@@ -55,7 +54,6 @@ export default function CV() {
         }
     }
 
-    // ctrl/cmd + s
     const saveRef = useRef(save);
     saveRef.current = save;
     useEffect(() => {

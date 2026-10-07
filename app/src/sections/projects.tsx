@@ -6,6 +6,7 @@ import { BentoCard, BentoGrid } from '@/app/src/components/ui/bento-grid';
 import { useWebHaptics } from 'web-haptics/react';
 import { AspectRatio } from '@/app/src/components/ui/aspect-ratio';
 import Image from 'next/image';
+import SectionHeading from '@/app/src/components/custom/section_heading';
 
 export default function Projects() {
     const projects = useSelector((state: RootState) => state.projects);
@@ -36,7 +37,7 @@ export default function Projects() {
                 setActiveFilter(filter ?? 'all');
                 projects.forEach(project => {
                     if(filter === 'all' || project.dataset.tags?.split(',').includes(filter || '')) {
-                        project.style.display = 'block';
+                        project.style.display = '';
                     } else {
                         project.style.display = 'none';
                     }
@@ -66,55 +67,52 @@ export default function Projects() {
     }, []);
     
     return (
-        <>
-            <span id='projects'></span>
-            <section className='relative bg-secondary text-secondary-foreground fade-in px-1' id='projects'>
-                <div className='container mx-auto py-10 md:py-20'>
-                    <h2 className='text-4xl font-bold text-center mb-10'>Projects</h2>
-                    <div className='flex justify-center flex-wrap mb-10 gap-3'>
-                        <button
-                            className={`project-filter rounded px-4 py-2 ${activeFilter === 'all' ? 'bg-foreground text-background' : 'bg-background text-foreground'}`}
-                            data-filter='all'
-                        >All</button>
-                        {tags.map((tag, index) => 
+        <section className='border-t scroll-mt-(--header-height) fade-in' id='projects'>
+            <div className='container mx-auto px-6 py-16 md:py-28'>
+                <div className='mb-10 md:mb-14 flex flex-col gap-6 md:flex-row md:items-end md:justify-between'>
+                    <SectionHeading>Projects</SectionHeading>
+                    <div className='flex flex-wrap gap-x-6 gap-y-2' role='tablist'>
+                        {['all', ...tags].map(tag =>
                             <button
-                                className={`project-filter rounded px-4 py-2 ${activeFilter === tag ? 'bg-foreground text-background' : 'bg-background text-foreground'}`}
+                                key={tag}
+                                role='tab'
+                                aria-selected={activeFilter === tag}
+                                className={`project-filter pb-1 border-b-2 transition-colors ${activeFilter === tag ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                                 data-filter={tag}
-                                key={index}
                             >{tag.charAt(0).toUpperCase() + tag.slice(1)}</button>
                         )}
                     </div>
-                    <BentoGrid className='m-auto bg-muted'>
-                        {projects.data.map((project, index) => 
-                            <BentoCard
-                                key={index}
-                                name={project.title}
-                                description={project.content}
-                                background={
-                                    <AspectRatio
-                                        ratio={16 / 9}
-                                        className='flex items-center'
-                                    >
-                                        <Image
-                                            src={`/images/${project.image}.svg`}
-                                            alt={`${project.title} logo`}
-                                            width={100}
-                                            height={100}
-                                            onError={(e) => {
-                                                e.currentTarget.src = `/images/${project.image}.png`;
-                                            }}
-                                            className='w-full h-full object-contain scale-80 [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-100'
-                                        />
-                                    </AspectRatio>
-                                }
-                                href={project.link}
-                                className='project-item h-full'
-                                tags={project.tags}
-                            />
-                        )}
-                    </BentoGrid>
                 </div>
-            </section>
-        </>
+                <BentoGrid>
+                    {projects.data.map((project, index) => 
+                        <BentoCard
+                            key={index}
+                            name={project.title}
+                            description={project.content}
+                            background={
+                                <AspectRatio
+                                    ratio={16 / 9}
+                                    className='flex items-center bg-neutral-100 dark:bg-neutral-200'
+                                >
+                                    <Image
+                                        src={`/images/${project.image}.svg`}
+                                        alt={`${project.title} logo`}
+                                        width={100}
+                                        height={100}
+                                        onError={(e) => {
+                                            e.currentTarget.src = `/images/${project.image}.png`;
+                                        }}
+                                        className='w-full h-full object-contain scale-75 transition-transform duration-300 ease-out group-hover:scale-80'
+                                    />
+                                </AspectRatio>
+                            }
+                            href={project.link}
+                            className='project-item h-full'
+                            tags={project.tags}
+                        />
+                    )}
+                </BentoGrid>
+            </div>
+        </section>
     );
 }

@@ -90,7 +90,7 @@ function buildPrecomputed(features: GeoFeature[]): PrecomputedFeature[] {
 
 // Animation state
 const ZOOM_LERP_SPEED = 0.10;
-const SPIN_RAMP_MS = 5000; // ease from 0 → full speed on load
+const SPIN_RAMP_MS = 5000; // ease from 0 -> full speed on load
 let spinAngle = 0;
 let zoom = 1.0;
 let lastNowMs = 0;
@@ -148,7 +148,7 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
         if (glState) {
             uploadGridData(glState, precomputedGrid);
             uploadLightData(glState, precomputedLights);
-            // geo features may arrive before init — upload now if so
+            // geo features may arrive before init - upload now if so
             if (geoFeatures.length > 0) {
                 uploadLandTexture(glState, geoFeatures);
                 uploadBorderData(glState, precomputedFeatures);
@@ -203,7 +203,7 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
         } else {
             const elapsed = (nowMs - lastNowMs) / 1000;
             if (rotateEnabled) {
-                // smoothstep ramp from 0→1 over SPIN_RAMP_MS so the globe eases into rotation
+                // smoothstep ramp from 0->1 over SPIN_RAMP_MS so the globe eases into rotation
                 const rampT = Math.min((nowMs - spinStartMs) / SPIN_RAMP_MS, 1);
                 const ramp = rampT * rampT * (3 - 2 * rampT);
                 spinAngle += SPIN_SPEED_RAD_S * elapsed * ramp;
@@ -242,7 +242,7 @@ addEventListener('message', (e: MessageEvent<WorkerMsg>) => {
         mainCtx.fillRect(0, 0, width, height);
         drawStars(mainCtx, width, height);
 
-        // Solid disc behind the WebGL blit — without it, semi-transparent globe edges
+        // Solid disc behind the WebGL blit - without it, semi-transparent globe edges
         // blend with star colours instead of the background, making stars bleed through coastlines.
         mainCtx.beginPath();
         mainCtx.arc(cx, cy, effectiveRadius, 0, Math.PI * 2);

@@ -32,22 +32,6 @@ export default function Header() {
 	const headerTitle = 'Karlo Zrilić';
 
 	useEffect(() => {
-		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-		const onChange = (event: MediaQueryListEvent) => {
-			const stored = localStorage.getItem('theme');
-			if (!stored) {
-				const next = event.matches ? 'dark' : 'light';
-				document.documentElement.classList.toggle('dark', next === 'dark');
-			}
-		};
-
-		mediaQuery.addEventListener('change', onChange);
-		return () => mediaQuery.removeEventListener('change', onChange);
-	}, []);
-
-	// lets full height pages size themselves below the header
-	useEffect(() => {
 		const nav = navRef.current;
 		if (!nav) return;
 

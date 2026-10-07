@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Caveat, Fraunces } from 'next/font/google';
 import '@/app/src/style/globals.css';
 import { TooltipProvider } from "@/app/src/components/ui/tooltip"
 import { config } from '@fortawesome/fontawesome-svg-core';
@@ -8,6 +9,9 @@ import { SidebarProvider } from '@/app/src/components/ui/sidebar';
 import GlobalDataLoader from '@/app/global_data_loader';
 import LayoutContent from '@/app/layout_content';
 config.autoAddCss = false;
+
+const display = Fraunces({ subsets: ['latin', 'latin-ext'], variable: '--font-fraunces', axes: ['SOFT', 'opsz'] });
+const hand = Caveat({ subsets: ['latin', 'latin-ext'], variable: '--font-caveat' });
 
 export const metadata: Metadata = {
     title: 'Frontend & Mobile App Developer | IT Engineer | Karlo Zrilić',
@@ -31,11 +35,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
 	return (
-		<html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
+		<html lang='en' data-scroll-behavior='smooth' className={`${display.variable} ${hand.variable}`} suppressHydrationWarning>
 			<head>
 				<script
 					dangerouslySetInnerHTML={{
-						__html: `(function () { try { var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); var theme = localStorage.getItem('theme'); if (theme === null) { theme = mediaQuery.matches ? 'dark' : 'light'; localStorage.setItem('theme', theme); } document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) {} })();`,
+						__html: `(function () { try { if (!localStorage.getItem('theme-v2')) { localStorage.removeItem('theme'); localStorage.setItem('theme-v2', '1'); } var theme = localStorage.getItem('theme') || 'dark'; document.documentElement.classList.toggle('dark', theme === 'dark'); } catch (e) { document.documentElement.classList.add('dark'); } })();`,
 					}}
 				/>
 				<script

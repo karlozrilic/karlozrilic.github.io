@@ -100,7 +100,7 @@ export default function VisitorGlobe({
         if (stored !== null) setRotateEnabled(stored === 'true');
     }, []);
 
-    // Last values reported by the worker — used for click hit-testing so the
+    // Last values reported by the worker - used for click hit-testing so the
     // inverse projection matches exactly what the user is looking at.
     const initEarthBase = getEarthRotY(Date.now());
     const lastWorkerFrameRef = useRef({
@@ -145,7 +145,7 @@ export default function VisitorGlobe({
 
     const rotateEnabledRef = useRef(rotateEnabled);
     rotateEnabledRef.current = rotateEnabled;
-    // spin angle snapshot taken when rotation is paused — worker locks to this
+    // spin angle snapshot taken when rotation is paused - worker locks to this
     const pausedAngleRef = useRef(initEarthBase);
 
     const pinPositionsRef = useRef<PinPosition[]>([]);
@@ -197,13 +197,13 @@ export default function VisitorGlobe({
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const [tooltipVisitor, setTooltipVisitor] = useState<Visitor | null>(null);
     const [zoomLabel, setZoomLabel] = useState(initialZoom.toFixed(1) + '×');
-    const [solarInfo, setSolarInfo] = useState('loading…');
+    const [solarInfo, setSolarInfo] = useState('loading...');
 
     // Globe is ready to display once both the IP lookup and geo data are done.
     // Waiting for continents ensures the first visible frame already has country outlines.
     const readyToShow = ipReady && geoFeaturesReady;
 
-    // Merge user location into the visitors list — mark a matching city or prepend a new entry
+    // Merge user location into the visitors list - mark a matching city or prepend a new entry
     const enrichedVisitors = useMemo<Visitor[]>(() => {
         if (!userLocation) return visitors;
         const userCity = userLocation.city.toLowerCase().trim();
@@ -321,7 +321,7 @@ export default function VisitorGlobe({
         function tick(): void {
             const anim = animRef.current;
 
-            // Fly animation — stays on main thread for zero-latency drag-cancel response
+            // Fly animation - stays on main thread for zero-latency drag-cancel response
             if (anim.flyState?.active) {
                 const result = stepFlyAnimation(anim.flyState);
                 anim.userOffsetY = result.offsetY;
@@ -364,7 +364,7 @@ export default function VisitorGlobe({
     }, []);
 
     const handleGlobeClick = useCallback((mx: number, my: number) => {
-        // Use the exact rotation from the last rendered frame — more accurate than
+        // Use the exact rotation from the last rendered frame - more accurate than
         // reading a stale ref that may have advanced past what the user sees.
         const { rotY, rotX, effectiveRadius: radius } = lastWorkerFrameRef.current;
         const hit = inverseProjectGlobe(mx, my, rotY, rotX, radius, canvasWidthRef.current / 2, canvasHeightRef.current / 2);
@@ -612,9 +612,8 @@ export default function VisitorGlobe({
                             <div className='globe-tooltip__meta'>
                                 {tooltipVisitor && (
                                     <>
-                                        {tooltipVisitor.count} visit{tooltipVisitor.count !== 1 ? 's' : ''}{' '}
-                                        · {tooltipVisitor.country}
-                                        {tooltipVisitor.live ? ' · 🔴 live' : ''}
+                                        {tooltipVisitor.count} visit{tooltipVisitor.count !== 1 ? 's' : ''}, {tooltipVisitor.country}
+                                        {tooltipVisitor.live ? ' (live)' : ''}
                                     </>
                                 )}
                             </div>
@@ -662,7 +661,7 @@ export default function VisitorGlobe({
                         <div className='globe-controls'>
                             <div className='globe-zoom-group'>
                                 <button className='globe-zoom-button' onClick={handleZoomOut} aria-label='Zoom out'>
-                                    −
+                                    -
                                 </button>
                                 <span className='globe-zoom-label'>{zoomLabel}</span>
                                 <button className='globe-zoom-button' onClick={handleZoomIn} aria-label='Zoom in'>

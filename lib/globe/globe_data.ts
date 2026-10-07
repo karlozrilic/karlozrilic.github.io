@@ -14,7 +14,7 @@ export const VISITORS: Visitor[] = [
 ];
 
 export const CITY_LIGHTS: CityLight[] = [
-    // ── North America — major metros ─────────────────────────────────────────
+    // North America - major metros
     { lat:  40.71, lng:  -74.00, s: 0.90 }, // New York City
     { lat:  34.05, lng: -118.20, s: 0.88 }, // Los Angeles
     { lat:  41.85, lng:  -87.65, s: 0.85 }, // Chicago
@@ -61,7 +61,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  40.90, lng:  -74.17 }, { lat:  40.50, lng:  -74.43 }, { lat:  40.44, lng:  -74.30 },
     { lat:  40.78, lng:  -73.57 }, { lat:  40.66, lng:  -73.44 }, { lat:  41.07, lng:  -74.07 },
     { lat:  41.50, lng:  -74.00 }, { lat:  40.96, lng:  -74.14 }, { lat:  40.57, lng:  -74.15 },
-    // Northeast Corridor fill (Boston → DC)
+    // Northeast Corridor fill (Boston -> DC)
     { lat:  43.07, lng:  -70.75 }, { lat:  42.67, lng:  -71.32 }, { lat:  42.45, lng:  -71.12 },
     { lat:  42.18, lng:  -71.81 }, { lat:  42.08, lng:  -71.40 }, { lat:  41.82, lng:  -71.41 },
     { lat:  41.76, lng:  -72.67 }, { lat:  41.31, lng:  -72.93 }, { lat:  40.27, lng:  -76.88 },
@@ -100,7 +100,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  35.10, lng: -106.65 }, { lat:  32.22, lng: -110.97 }, { lat:  43.61, lng: -116.20 },
     { lat:  39.51, lng: -119.81 }, { lat:  47.66, lng: -117.43 }, { lat:  46.86, lng: -113.99 },
 
-    // ── South America ─────────────────────────────────────────────────────────
+    // South America
     { lat: -23.55, lng:  -46.63, s: 0.88 }, // São Paulo
     { lat: -34.61, lng:  -58.38, s: 0.84 }, // Buenos Aires
     { lat: -22.90, lng:  -43.17, s: 0.82 }, // Rio de Janeiro
@@ -124,7 +124,7 @@ export const CITY_LIGHTS: CityLight[] = [
     // Buenos Aires fill
     { lat: -34.55, lng:  -58.25 }, { lat: -34.40, lng:  -58.56 }, { lat: -34.85, lng:  -58.47 },
 
-    // ── Europe — major metros ─────────────────────────────────────────────────
+    // Europe - major metros
     { lat:  51.50, lng:   -0.12, s: 0.90 }, // London
     { lat:  48.85, lng:    2.35, s: 0.88 }, // Paris
     { lat:  52.52, lng:   13.40, s: 0.82 }, // Berlin
@@ -222,7 +222,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  37.98, lng:   -1.13 }, { lat:  36.72, lng:   -4.42 }, { lat:  39.86, lng:   -4.02 },
     { lat:  40.96, lng:   -5.66 },
 
-    // ── Middle East ──────────────────────────────────────────────────────────
+    // Middle East
     { lat:  30.04, lng:   31.23, s: 0.82 }, // Cairo
     { lat:  24.69, lng:   46.72, s: 0.78 }, // Riyadh
     { lat:  21.39, lng:   39.86, s: 0.67 }, // Jeddah
@@ -250,7 +250,7 @@ export const CITY_LIGHTS: CityLight[] = [
     // Istanbul fill
     { lat:  40.97, lng:   29.12 }, { lat:  41.10, lng:   29.05 },
 
-    // ── Africa ───────────────────────────────────────────────────────────────
+    // Africa
     { lat:  36.82, lng:   10.18, s: 0.61 }, // Tunis
     { lat:  33.59, lng:   -7.62, s: 0.62 }, // Casablanca
     { lat:  34.02, lng:   -6.83, s: 0.56 }, // Rabat
@@ -282,7 +282,7 @@ export const CITY_LIGHTS: CityLight[] = [
     // Joburg fill
     { lat: -25.74, lng:   28.19 }, { lat: -26.32, lng:   27.50 }, { lat: -26.17, lng:   28.30 },
 
-    // ── Russia / Central Asia ─────────────────────────────────────────────────
+    // Russia / Central Asia
     { lat:  54.99, lng:   73.39, s: 0.57 }, // Omsk
     { lat:  56.85, lng:   60.61, s: 0.60 }, // Yekaterinburg
     { lat:  54.85, lng:   83.10, s: 0.58 }, // Novosibirsk
@@ -309,7 +309,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  56.02, lng:   37.51 }, { lat:  55.55, lng:   37.38 }, { lat:  55.78, lng:   37.18 },
     { lat:  59.73, lng:   30.47 }, { lat:  60.00, lng:   30.13 },
 
-    // ── South & Southeast Asia ────────────────────────────────────────────────
+    // South & Southeast Asia
     { lat:  28.66, lng:   77.22, s: 0.88 }, // Delhi
     { lat:  19.07, lng:   72.87, s: 0.88 }, // Mumbai
     { lat:  12.97, lng:   77.59, s: 0.78 }, // Bangalore
@@ -380,7 +380,7 @@ export const CITY_LIGHTS: CityLight[] = [
     // KL fill
     { lat:   3.08, lng:  101.60 }, { lat:   3.20, lng:  101.70 },
 
-    // ── East Asia ─────────────────────────────────────────────────────────────
+    // East Asia
     { lat:  35.67, lng:  139.65, s: 0.92 }, // Tokyo
     { lat:  34.69, lng:  135.50, s: 0.84 }, // Osaka
     { lat:  35.18, lng:  136.90, s: 0.78 }, // Nagoya
@@ -417,7 +417,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  37.40, lng:  126.74 }, { lat:  37.76, lng:  126.73 }, { lat:  37.42, lng:  127.13 },
     { lat:  37.53, lng:  127.07 }, { lat:  35.54, lng:  129.33 }, { lat:  35.96, lng:  128.69 },
     { lat:  36.80, lng:  127.15 },
-    // Eastern China — major cities
+    // Eastern China - major cities
     { lat:  39.90, lng:  116.40, s: 0.90 }, // Beijing
     { lat:  31.23, lng:  121.47, s: 0.90 }, // Shanghai
     { lat:  23.13, lng:  113.26, s: 0.82 }, // Guangzhou
@@ -464,7 +464,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  40.38, lng:  122.48 }, { lat:  40.69, lng:  122.16 }, { lat:  42.34, lng:  122.85 },
     { lat:  46.62, lng:  125.16 }, { lat:  46.07, lng:  123.57 },
 
-    // ── Oceania ───────────────────────────────────────────────────────────────
+    // Oceania
     { lat: -33.86, lng:  151.20, s: 0.72 }, // Sydney
     { lat: -27.47, lng:  153.02, s: 0.67 }, // Brisbane
     { lat: -37.81, lng:  144.96, s: 0.70 }, // Melbourne
@@ -478,25 +478,25 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat: -37.95, lng:  145.19 }, { lat: -37.75, lng:  145.00 },
     { lat: -27.55, lng:  152.95 }, { lat: -27.63, lng:  153.12 },
 
-    // ── Extra density fill — corridors that should glow like the ISS photo ───
+    // Extra density fill - corridors that should glow like the ISS photo
 
-    // Rhine-Ruhr core grid (0.25° spacing — creates one solid amber blob)
+    // Rhine-Ruhr core grid (0.25° spacing - creates one solid amber blob)
     { lat:  51.25, lng:   6.75 }, { lat:  51.25, lng:   7.00 }, { lat:  51.25, lng:   7.25 },
     { lat:  51.25, lng:   7.50 }, { lat:  51.50, lng:   6.75 }, { lat:  51.50, lng:   7.00 },
     { lat:  51.50, lng:   7.25 }, { lat:  51.50, lng:   7.50 }, { lat:  51.75, lng:   6.75 },
     { lat:  51.75, lng:   7.00 }, { lat:  51.75, lng:   7.25 }, { lat:  51.75, lng:   7.50 },
     { lat:  51.00, lng:   7.00 }, { lat:  51.00, lng:   7.25 }, { lat:  51.00, lng:   6.75 },
     { lat:  51.00, lng:   6.50 }, { lat:  51.25, lng:   6.50 }, { lat:  51.50, lng:   6.50 },
-    // Netherlands coastal strip (Rotterdam–Amsterdam–Utrecht belt)
+    // Netherlands coastal strip (Rotterdam-Amsterdam-Utrecht belt)
     { lat:  52.00, lng:   4.20 }, { lat:  52.00, lng:   4.60 }, { lat:  52.00, lng:   5.00 },
     { lat:  52.25, lng:   4.40 }, { lat:  52.25, lng:   4.80 }, { lat:  52.50, lng:   4.50 },
     { lat:  52.50, lng:   4.90 }, { lat:  52.00, lng:   5.30 }, { lat:  51.75, lng:   5.00 },
     { lat:  51.75, lng:   4.60 }, { lat:  51.75, lng:   4.20 }, { lat:  51.50, lng:   4.10 },
-    // Belgium–Luxembourg corridor
+    // Belgium-Luxembourg corridor
     { lat:  50.60, lng:   4.00 }, { lat:  50.60, lng:   4.50 }, { lat:  50.85, lng:   3.50 },
     { lat:  50.85, lng:   3.00 }, { lat:  51.00, lng:   3.50 }, { lat:  50.50, lng:   5.00 },
 
-    // UK — M62/Pennines corridor (Leeds–Manchester–Liverpool continuous belt)
+    // UK - M62/Pennines corridor (Leeds-Manchester-Liverpool continuous belt)
     { lat:  53.60, lng:  -2.80 }, { lat:  53.55, lng:  -2.55 }, { lat:  53.52, lng:  -2.30 },
     { lat:  53.50, lng:  -2.10 }, { lat:  53.50, lng:  -1.90 }, { lat:  53.50, lng:  -1.70 },
     { lat:  53.75, lng:  -1.75 }, { lat:  53.75, lng:  -2.00 }, { lat:  53.75, lng:  -2.25 },
@@ -508,17 +508,17 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  51.10, lng:  -0.20 }, { lat:  51.25, lng:  -0.55 }, { lat:  51.55, lng:  -0.90 },
     { lat:  51.75, lng:  -0.45 }, { lat:  51.75, lng:   0.10 },
 
-    // France — Paris basin fill
+    // France - Paris basin fill
     { lat:  48.55, lng:   1.60 }, { lat:  48.50, lng:   2.00 }, { lat:  48.80, lng:   2.70 },
     { lat:  49.10, lng:   2.10 }, { lat:  48.80, lng:   1.70 }, { lat:  48.60, lng:   2.80 },
 
-    // Po Valley — denser fill Milan to Venice
+    // Po Valley - denser fill Milan to Venice
     { lat:  45.50, lng:   9.50 }, { lat:  45.50, lng:  10.00 }, { lat:  45.50, lng:  10.50 },
     { lat:  45.50, lng:  11.00 }, { lat:  45.50, lng:  11.50 }, { lat:  45.25, lng:   9.75 },
     { lat:  45.25, lng:  10.25 }, { lat:  45.25, lng:  10.75 }, { lat:  45.25, lng:  11.25 },
     { lat:  45.75, lng:   9.50 }, { lat:  45.75, lng:  10.00 }, { lat:  45.75, lng:  10.50 },
 
-    // US NE Corridor — tighter grid Boston to Washington
+    // US NE Corridor - tighter grid Boston to Washington
     { lat:  42.25, lng:  -71.10 }, { lat:  42.00, lng:  -71.50 }, { lat:  41.75, lng:  -71.55 },
     { lat:  41.55, lng:  -72.10 }, { lat:  41.40, lng:  -73.00 }, { lat:  41.10, lng:  -73.85 },
     { lat:  40.90, lng:  -73.85 }, { lat:  40.75, lng:  -74.30 }, { lat:  40.55, lng:  -74.90 },
@@ -529,7 +529,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  41.90, lng:  -87.90 }, { lat:  42.15, lng:  -87.95 }, { lat:  42.40, lng:  -87.85 },
     { lat:  42.60, lng:  -87.75 }, { lat:  43.10, lng:  -88.20 }, { lat:  43.20, lng:  -87.95 },
 
-    // Japan — Tokaido Shinkansen corridor (Tokyo to Osaka as one strip)
+    // Japan - Tokaido Shinkansen corridor (Tokyo to Osaka as one strip)
     { lat:  35.25, lng:  139.15 }, { lat:  35.10, lng:  138.90 }, { lat:  35.00, lng:  138.45 },
     { lat:  34.95, lng:  138.05 }, { lat:  34.85, lng:  137.55 }, { lat:  34.80, lng:  137.10 },
     { lat:  34.83, lng:  136.70 }, { lat:  34.87, lng:  136.20 }, { lat:  34.90, lng:  135.95 },
@@ -539,15 +539,15 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  36.00, lng:  139.90 }, { lat:  36.15, lng:  139.55 }, { lat:  35.95, lng:  139.30 },
     { lat:  35.45, lng:  139.80 }, { lat:  35.30, lng:  139.70 },
 
-    // South Korea — Seoul to Busan corridor
+    // South Korea - Seoul to Busan corridor
     { lat:  37.10, lng:  127.00 }, { lat:  36.90, lng:  127.10 }, { lat:  36.60, lng:  127.35 },
     { lat:  36.20, lng:  127.60 }, { lat:  35.80, lng:  127.75 }, { lat:  35.55, lng:  128.20 },
     { lat:  35.30, lng:  128.55 }, { lat:  35.20, lng:  128.80 }, { lat:  35.10, lng:  129.00 },
 
-    // Eastern China — Shanghai → Nanjing corridor
+    // Eastern China - Shanghai -> Nanjing corridor
     { lat:  31.45, lng:  120.90 }, { lat:  31.60, lng:  120.45 }, { lat:  31.70, lng:  120.00 },
     { lat:  31.80, lng:  119.55 }, { lat:  31.90, lng:  119.10 }, { lat:  32.00, lng:  118.95 },
-    // Beijing–Tianjin–Shijiazhuang strip
+    // Beijing-Tianjin-Shijiazhuang strip
     { lat:  39.60, lng:  116.90 }, { lat:  39.40, lng:  117.00 }, { lat:  39.20, lng:  117.10 },
     { lat:  38.90, lng:  116.95 }, { lat:  38.60, lng:  116.85 }, { lat:  38.30, lng:  115.80 },
     // Pearl River Delta extra fill
@@ -558,19 +558,19 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  30.55, lng:  120.40 }, { lat:  30.80, lng:  120.50 }, { lat:  31.00, lng:  120.30 },
     { lat:  31.15, lng:  120.00 }, { lat:  30.40, lng:  120.60 }, { lat:  30.20, lng:  120.30 },
 
-    // India — Ganges plain corridor (Delhi → Kolkata unbroken)
+    // India - Ganges plain corridor (Delhi -> Kolkata unbroken)
     { lat:  28.00, lng:   78.60 }, { lat:  27.60, lng:   79.75 }, { lat:  27.10, lng:   80.85 },
     { lat:  26.50, lng:   81.40 }, { lat:  26.00, lng:   82.25 }, { lat:  25.70, lng:   83.00 },
     { lat:  25.40, lng:   83.60 }, { lat:  25.20, lng:   84.30 }, { lat:  25.00, lng:   85.05 },
     { lat:  24.80, lng:   85.70 }, { lat:  24.50, lng:   86.50 }, { lat:  24.10, lng:   87.40 },
     { lat:  23.50, lng:   88.00 },
-    // South India (Chennai–Bangalore–Hyderabad triangle)
+    // South India (Chennai-Bangalore-Hyderabad triangle)
     { lat:  13.50, lng:   79.80 }, { lat:  13.70, lng:   79.50 }, { lat:  14.40, lng:   79.10 },
     { lat:  15.15, lng:   78.85 }, { lat:  15.75, lng:   78.20 }, { lat:  14.65, lng:   78.00 },
     { lat:  13.80, lng:   77.50 }, { lat:  12.85, lng:   77.65 }, { lat:  12.30, lng:   76.65 },
     { lat:  11.50, lng:   76.95 }, { lat:  12.50, lng:   78.20 }, { lat:  11.85, lng:   79.50 },
 
-    // Indonesia — Java island fill (very dense)
+    // Indonesia - Java island fill (very dense)
     { lat:  -6.55, lng:  107.00 }, { lat:  -6.80, lng:  108.00 }, { lat:  -7.00, lng:  109.00 },
     { lat:  -7.15, lng:  110.00 }, { lat:  -7.35, lng:  110.50 }, { lat:  -7.50, lng:  111.00 },
     { lat:  -7.60, lng:  111.50 }, { lat:  -7.70, lng:  112.25 }, { lat:  -7.40, lng:  112.50 },
@@ -583,7 +583,7 @@ export const CITY_LIGHTS: CityLight[] = [
     // East Africa fill
     { lat:  -6.50, lng:   37.00 }, { lat:  -4.00, lng:   39.60 }, { lat:  -3.00, lng:   40.10 },
 
-    // Russia — Ural industrial strip
+    // Russia - Ural industrial strip
     { lat:  56.50, lng:   58.00 }, { lat:  55.50, lng:   59.50 }, { lat:  54.50, lng:   55.50 },
     { lat:  56.00, lng:   54.00 }, { lat:  57.50, lng:   56.00 }, { lat:  58.50, lng:   59.00 },
     // Trans-Siberian cities
@@ -597,7 +597,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  29.55, lng:   30.50 }, { lat:  28.50, lng:   30.82 }, { lat:  27.30, lng:   31.20 },
     { lat:  26.20, lng:   32.00 }, { lat:  25.70, lng:   32.64 },
 
-    // ── EXTENDED US FILLS ────────────────────────────────────────────────────
+    // EXTENDED US FILLS
     // I-95 NE corridor micro-fill (every ~0.3°)
     { lat:  42.10, lng:  -70.95 }, { lat:  41.95, lng:  -71.15 }, { lat:  41.82, lng:  -71.40 },
     { lat:  41.70, lng:  -71.45 }, { lat:  41.55, lng:  -71.57 }, { lat:  41.45, lng:  -71.90 },
@@ -665,8 +665,8 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  45.55, lng: -122.85 }, { lat:  45.49, lng: -122.44 }, { lat:  45.55, lng: -122.43 },
     { lat:  45.48, lng: -122.78 },
 
-    // ── EXTENDED EUROPE FILLS ────────────────────────────────────────────────
-    // UK — comprehensive England grid (0.5° spacing)
+    // EXTENDED EUROPE FILLS
+    // UK - comprehensive England grid (0.5° spacing)
     { lat:  50.72, lng:   -1.88 }, { lat:  50.82, lng:   -0.36 }, { lat:  50.92, lng:    0.10 },
     { lat:  51.05, lng:   -0.08 }, { lat:  51.05, lng:    0.55 }, { lat:  51.08, lng:   -1.30 },
     { lat:  51.45, lng:   -1.00 }, { lat:  51.45, lng:   -0.48 }, { lat:  51.45, lng:    0.05 },
@@ -787,15 +787,15 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  60.00, lng:   24.45 }, { lat:  60.52, lng:   27.18 }, { lat:  61.50, lng:   23.78 },
     { lat:  62.90, lng:   27.68 }, { lat:  60.45, lng:   22.30 },
 
-    // ── EXTENDED INDIA FILLS ─────────────────────────────────────────────────
-    // Western coast (Mumbai → Kochi corridor)
+    // EXTENDED INDIA FILLS
+    // Western coast (Mumbai -> Kochi corridor)
     { lat:  20.00, lng:   73.00 }, { lat:  19.62, lng:   72.95 }, { lat:  19.45, lng:   72.82 },
     { lat:  18.65, lng:   73.50 }, { lat:  18.00, lng:   73.92 }, { lat:  17.68, lng:   73.82 },
     { lat:  17.05, lng:   73.28 }, { lat:  16.00, lng:   73.90 }, { lat:  15.35, lng:   74.00 },
     { lat:  14.80, lng:   74.12 }, { lat:  14.08, lng:   74.80 }, { lat:  13.35, lng:   74.88 },
     { lat:  12.88, lng:   74.85 }, { lat:  11.88, lng:   75.42 }, { lat:  11.25, lng:   75.78 },
     { lat:  10.52, lng:   76.22 }, { lat:  10.12, lng:   76.35 }, { lat:   9.60, lng:   76.48 },
-    // Eastern coast (Kolkata → Chennai)
+    // Eastern coast (Kolkata -> Chennai)
     { lat:  20.42, lng:   85.88 }, { lat:  19.82, lng:   85.62 }, { lat:  19.30, lng:   84.82 },
     { lat:  18.55, lng:   84.18 }, { lat:  17.72, lng:   83.27 }, { lat:  17.00, lng:   82.25 },
     { lat:  16.30, lng:   81.78 }, { lat:  15.55, lng:   80.05 }, { lat:  14.90, lng:   80.00 },
@@ -821,7 +821,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  31.52, lng:   74.55 }, { lat:  31.15, lng:   75.68 }, { lat:  30.78, lng:   76.52 },
     { lat:  30.35, lng:   77.12 }, { lat:  29.95, lng:   77.72 }, { lat:  29.22, lng:   79.52 },
 
-    // ── EXTENDED EAST ASIA FILLS ─────────────────────────────────────────────
+    // EXTENDED EAST ASIA FILLS
     // China eastern coast comprehensive (0.5° lat grid)
     { lat:  40.22, lng:  116.85 }, { lat:  40.00, lng:  116.25 }, { lat:  39.75, lng:  116.70 },
     { lat:  39.50, lng:  116.55 }, { lat:  39.25, lng:  116.65 }, { lat:  38.95, lng:  116.45 },
@@ -857,7 +857,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  44.58, lng:  129.62 }, { lat:  43.82, lng:  128.00 }, { lat:  42.88, lng:  129.48 },
     { lat:  41.58, lng:  129.88 }, { lat:  42.02, lng:  128.10 }, { lat:  41.38, lng:  123.85 },
     { lat:  40.78, lng:  122.72 }, { lat:  40.12, lng:  122.00 }, { lat:  39.88, lng:  121.65 },
-    // Japan comprehensive — Honshu island
+    // Japan comprehensive - Honshu island
     { lat:  40.82, lng:  140.72 }, { lat:  40.25, lng:  141.25 }, { lat:  39.72, lng:  141.15 },
     { lat:  39.22, lng:  141.08 }, { lat:  38.68, lng:  141.22 }, { lat:  38.25, lng:  140.28 },
     { lat:  38.02, lng:  140.88 }, { lat:  37.82, lng:  140.48 }, { lat:  37.45, lng:  140.38 },
@@ -886,7 +886,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  22.38, lng:  120.62 }, { lat:  25.18, lng:  121.45 }, { lat:  25.12, lng:  121.78 },
     { lat:  24.98, lng:  121.95 }, { lat:  24.72, lng:  121.72 },
 
-    // ── EXTENDED SE ASIA FILLS ───────────────────────────────────────────────
+    // EXTENDED SE ASIA FILLS
     // Vietnam comprehensive
     { lat:  21.55, lng:  105.82 }, { lat:  20.85, lng:  106.68 }, { lat:  20.42, lng:  106.20 },
     { lat:  19.82, lng:  105.82 }, { lat:  18.68, lng:  105.70 }, { lat:  17.50, lng:  106.60 },
@@ -894,7 +894,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:  14.06, lng:  108.25 }, { lat:  13.42, lng:  108.05 }, { lat:  12.25, lng:  109.10 },
     { lat:  11.55, lng:  108.90 }, { lat:  10.98, lng:  108.22 }, { lat:  10.62, lng:  107.00 },
     { lat:  10.48, lng:  106.50 }, { lat:  10.92, lng:  106.18 }, { lat:  11.15, lng:  106.72 },
-    // Indonesia — Sumatra south + Kalimantan + Sulawesi
+    // Indonesia - Sumatra south + Kalimantan + Sulawesi
     { lat:  -5.42, lng:  105.25 }, { lat:  -5.95, lng:  106.12 }, { lat:  -6.98, lng:  107.38 },
     { lat:  -7.72, lng:  109.88 }, { lat:  -7.88, lng:  110.62 }, { lat:  -7.98, lng:  111.12 },
     { lat:  -7.32, lng:  113.72 }, { lat:  -7.62, lng:  114.12 }, { lat:  -8.12, lng:  115.22 },
@@ -915,7 +915,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat:   4.32, lng:  100.88 }, { lat:   4.18, lng:  101.12 }, { lat:   5.42, lng:  100.45 },
     { lat:   5.62, lng:  103.45 }, { lat:   6.12, lng:  102.25 }, { lat:   1.22, lng:  103.55 },
 
-    // ── EXTENDED SOUTH AMERICA FILLS ─────────────────────────────────────────
+    // EXTENDED SOUTH AMERICA FILLS
     // Brazil comprehensive
     { lat:  -2.55, lng:  -44.30 }, { lat:  -3.10, lng:  -44.30 }, { lat:  -4.00, lng:  -38.55 },
     { lat:  -5.20, lng:  -37.30 }, { lat:  -5.82, lng:  -35.22 }, { lat:  -7.15, lng:  -34.87 },
@@ -944,7 +944,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat: -27.38, lng:  -70.32 }, { lat: -25.45, lng:  -70.62 }, { lat: -23.65, lng:  -70.38 },
     { lat: -22.90, lng:  -70.13 }, { lat: -20.22, lng:  -70.15 }, { lat: -18.48, lng:  -70.32 },
 
-    // ── EXTENDED MIDDLE EAST + AFRICA FILLS ─────────────────────────────────
+    // EXTENDED MIDDLE EAST + AFRICA FILLS
     // Turkey comprehensive fill
     { lat:  41.65, lng:   26.55 }, { lat:  40.18, lng:   29.05 }, { lat:  39.78, lng:   30.52 },
     { lat:  39.92, lng:   32.82 }, { lat:  38.68, lng:   35.50 }, { lat:  37.18, lng:   37.68 },
@@ -995,7 +995,7 @@ export const CITY_LIGHTS: CityLight[] = [
     { lat: -33.02, lng:   27.90 }, { lat: -32.15, lng:   28.80 }, { lat: -33.58, lng:   26.88 },
     { lat: -34.18, lng:   22.12 }, { lat: -33.65, lng:   19.45 }, { lat: -34.00, lng:   18.52 },
 
-    // ── EXTENDED RUSSIA / CENTRAL ASIA FILLS ─────────────────────────────────
+    // EXTENDED RUSSIA / CENTRAL ASIA FILLS
     // Russia European part
     { lat:  61.78, lng:   34.38 }, { lat:  60.72, lng:   28.78 }, { lat:  57.68, lng:   28.55 },
     { lat:  56.35, lng:   27.95 }, { lat:  57.52, lng:   30.20 }, { lat:  57.88, lng:   31.35 },

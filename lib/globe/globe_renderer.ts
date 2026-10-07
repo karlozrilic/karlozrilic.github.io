@@ -58,7 +58,7 @@ export function buildPrecomputedGrid(): PrecomputedGrid {
     return { lines };
 }
 
-// Per-light data built once — only rotation and sun dot-product vary per frame.
+// Per-light data built once - only rotation and sun dot-product vary per frame.
 export interface PrecomputedLight {
     vx: number; vy: number; vz: number;
     dotSize: number;
@@ -82,7 +82,7 @@ export function buildPrecomputedLights(lights: { lat: number; lng: number; s?: n
     });
 }
 
-// Reusable scratch buffers for projected vertices — avoids TypedArray allocation per ring.
+// Reusable scratch buffers for projected vertices - avoids TypedArray allocation per ring.
 let _sx: Float32Array = new Float32Array(0);
 let _sy: Float32Array = new Float32Array(0);
 let _sz: Float32Array = new Float32Array(0);
@@ -116,7 +116,7 @@ export function buildLandPaths(
         const dedupSq = isSelected ? DEDUP_SQ_SEL : DEDUP_SQ;
 
         for (const { vecs, centroid, coneSin } of features[featIdx].rings) {
-            // rotate centroid, check z — if entire bounding cone faces away, skip ring
+            // rotate centroid, check z - if entire bounding cone faces away, skip ring
             const centX = centroid[0], centY = centroid[1], centZ = centroid[2];
             const centZRotY = -centX * sinRY + centZ * cosRY;
             const centZRotX = centY * sinRX + centZRotY * cosRX;
@@ -163,7 +163,7 @@ export function buildLandPaths(
                     }
                     lastIsLimb = false;
                     if (nextCameraZ <= 0) {
-                        // front→back: draw the limb exit point
+                        // front->back: draw the limb exit point
                         const blend = cameraZ / (cameraZ - nextCameraZ);
                         const limbX = screenX + blend * (_sx[nextIdx] - screenX);
                         const limbY = screenY + blend * (_sy[nextIdx] - screenY);
@@ -173,7 +173,7 @@ export function buildLandPaths(
                         lastX = limbX; lastY = limbY;
                     }
                 } else if (nextCameraZ > 0) {
-                    // back→front: draw limb entry point
+                    // back->front: draw limb entry point
                     const blend = cameraZ / (cameraZ - nextCameraZ);
                     const limbX = screenX + blend * (_sx[nextIdx] - screenX);
                     const limbY = screenY + blend * (_sy[nextIdx] - screenY);
