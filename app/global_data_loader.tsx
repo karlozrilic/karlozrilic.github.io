@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
 import { fetchAboutMe } from '@/app/src/store/slices/aboutMeSlice';
@@ -14,6 +15,7 @@ import { fetchCV } from './src/store/slices/CVSlice';
 
 export default function GlobalDataLoader() {
     const dispatch = useDispatch<AppDispatch>();
+    const pathname = usePathname();
     const CVStatus = useSelector((state: RootState) => state.cv.status);
     const aboutMeStatus = useSelector((state: RootState) => state.aboutMe.status);
     const technologiesStatus = useSelector((state: RootState) => state.technologies.status);
@@ -99,6 +101,9 @@ export default function GlobalDataLoader() {
             delete (window as any).__pendingHash;
         });
     }, [dataLoaded]);
+
+    // home has its own intro
+    if (pathname === '/') return null;
 
     if (
         aboutMeStatus === 'loading' ||

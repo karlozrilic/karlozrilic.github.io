@@ -156,7 +156,7 @@ export default function Header() {
 			</nav>
 
 			<div ref={drawerBackdropRef} className='fixed inset-0 w-full h-full bg-black/50 backdrop-blur-sm hidden z-55'></div>
-			<div ref={drawerRef} className='fixed top-0 right-0 sm:w-64 w-full h-full bg-background text-foreground shadow-xl p-6 flex flex-col space-y-6 transform translate-x-full transition-transform duration-300 z-55'>
+			<div ref={drawerRef} className='fixed top-0 right-0 sm:w-64 w-full h-full bg-background text-foreground shadow-xl [&.translate-x-full]:shadow-none p-6 flex flex-col space-y-6 transform translate-x-full transition-transform duration-300 z-55'>
 				<div className='flex justify-between items-center'>
 					<span className='text-xl font-bold'>{headerTitle}</span>
 					<button ref={closeDrawerButtonRef} className='text-2xl hover:text-primary'>✕</button>

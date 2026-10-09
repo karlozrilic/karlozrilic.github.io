@@ -10,6 +10,7 @@ import { useLatexPreview } from '@/hooks/useLatexPreview';
 import { RootState } from '@/app/src/store/store';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogOverlay, DialogTitle, DialogTrigger } from '@/app/src/components/ui/dialog';
 import { Spinner } from '../components/ui/spinner';
+import Polaroid from '@/app/src/components/custom/polaroid';
 
 export default function Hero() {
     const { trigger } = useWebHaptics();
@@ -194,16 +195,11 @@ export default function Hero() {
                             <path d='M41 31 L 51 33 L 50 22' />
                         </svg>
                     </div>
-                    <figure className='w-full bg-white p-2.5 md:p-3 pb-11 md:pb-16 shadow-2xl shadow-black/40 rotate-3 hover:rotate-1 transition-transform duration-500 relative'>
-                        <img
-                            src='/images/portfolio_picture.jpeg'
-                            alt='Karlo Zrilić in Šibenik, Croatia'
-                            className='aspect-[4/5] w-full object-cover object-[56%_40%]'
-                        />
-                        <figcaption className='absolute bottom-1.5 md:bottom-3 left-0 right-0 text-center font-hand text-2xl md:text-3xl text-neutral-700'>
-                            Šibenik, Croatia
-                        </figcaption>
-                    </figure>
+                    <Polaroid
+                        caption='Šibenik, Croatia'
+                        alt='Karlo Zrilić in Šibenik, Croatia'
+                        className='hero-polaroid w-full rotate-3 hover:rotate-1 transition-transform duration-500'
+                    />
                     </div>
                 </div>
             </div>
