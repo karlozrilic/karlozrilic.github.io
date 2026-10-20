@@ -13,3 +13,7 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 https://magicui.design
 https://ui.shadcn.com
+
+https://emilkowal.ski/skill
+https://impeccable.style
+https://www.tasteskill.dev
