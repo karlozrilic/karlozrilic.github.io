@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { loadFirestore } from '@/lib/load_firestore';
 import { FirebaseError } from 'firebase/app';
 import { Technologies } from '@/app/src/types/technologies/technologies';
 
@@ -33,6 +32,7 @@ export const fetchTechnologies = createAsyncThunk<
     Technologies[],
     TechnologiesFetchParams | void
 >('technologies/fetchTechnologies', async (params) => {
+    const { db, collection, getDocs, query } = await loadFirestore();
     const { all = false } = params ?? {};
     let technologiesData: Technologies[] = [];
     

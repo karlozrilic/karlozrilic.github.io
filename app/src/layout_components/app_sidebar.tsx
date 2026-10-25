@@ -31,12 +31,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/src/components/ui/avatar';
 import { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use_mobile';
-import { logout } from '@/helpers/firebase';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
 import { capitalizeFirstLetter } from '@/helpers/string';
-import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 const PUBLISH_URL = 'https://portfolio-proxy-mocha.vercel.app/api/publish';
@@ -60,6 +58,7 @@ export function AppSidebar() {
     async function publish() {
         setPublishing(true);
         try {
+            const { auth } = await import('@/lib/firebase');
             const token = await auth.currentUser?.getIdToken();
             const response = await fetch(PUBLISH_URL, {
                 method: 'POST',
@@ -78,6 +77,7 @@ export function AppSidebar() {
     }
 
     async function adminLogout() {
+        const { logout } = await import('@/helpers/firebase');
         await logout();
         toggleSidebar();
     }

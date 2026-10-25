@@ -1,7 +1,6 @@
-import { db } from '@/lib/firebase';
+import { loadFirestore } from '@/lib/load_firestore';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { FirebaseError } from 'firebase/app';
-import { collection, doc, getDoc } from 'firebase/firestore';
 
 type CVState = {
     data: string | null;
@@ -20,6 +19,7 @@ const initialState: CVState = {
 };
 
 export const fetchCV = createAsyncThunk('CV/CV', async () => {
+    const { db, collection, doc, getDoc } = await loadFirestore();
     let cv: string | null = null;
 
     try {

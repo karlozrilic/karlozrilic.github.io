@@ -2,6 +2,7 @@ import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, getRedirectResult, signInWithPopup, signInWithRedirect, signOut, UserCredential } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { ADMIN_FLAG } from '@/hooks/useAuth';
 
 async function authorizeOrReject(result: UserCredential) {
     const email = result.user.email;
@@ -28,7 +29,9 @@ export async function loginGoogle(popup = true) {
     }
 
     // Navigates away immediately - there's no result to await here. It's
-    // picked up by completeRedirectLogin() on the page load that follows.
+    // picked up by completeRedirectLogin() on the page load that follows,
+    // which only runs if this flag tells useAuth to start Firebase Auth.
+    localStorage.setItem(ADMIN_FLAG, '1');
     await signInWithRedirect(auth, provider);
 }
 

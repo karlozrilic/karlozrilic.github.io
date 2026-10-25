@@ -5,10 +5,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link';
 import { useWebHaptics } from 'web-haptics/react';
-import { useAuth } from '@/hooks/useAuth';
+import { startAuth, useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/app/src/components/ui/sidebar';
 import { useLongPress } from '@/hooks/long_press';
-import { loginGoogle } from '@/helpers/firebase';
 import { useIsMobile } from '@/hooks/use_mobile';
 
 export default function Header() {
@@ -18,6 +17,7 @@ export default function Header() {
 	const isMobile = useIsMobile();
 
 	const navRef = useRef<HTMLElement>(null);
+	const loginModuleRef = useRef<typeof import('@/helpers/firebase') | null>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const drawerBackdropRef = useRef<HTMLDivElement>(null);
 	const drawerRef = useRef<HTMLDivElement>(null);
@@ -83,8 +83,16 @@ export default function Header() {
         };
     }, []);
 
+	// load the login code while the long press is held, so the popup can open right on release
+	function prepareLogin() {
+		if (user || loginModuleRef.current) return;
+		startAuth();
+		import('@/helpers/firebase').then(module => loginModuleRef.current = module);
+	}
+
 	async function handleLogin() {
 		try {
+		  const { loginGoogle } = loginModuleRef.current ?? await import('@/helpers/firebase');
 		  await loginGoogle(!isMobile);
 		} catch (error) {
 		  console.error(error);
@@ -127,7 +135,10 @@ export default function Header() {
 				<div className='container mx-auto flex justify-between items-center p-5'>
 					<span
 						onClick={headerClick}
-						onPointerDown={longPressHandlers.onPointerDown}
+						onPointerDown={() => {
+							prepareLogin();
+							longPressHandlers.onPointerDown();
+						}}
 						onPointerUp={longPressHandlers.onPointerUp}
 						onPointerLeave={longPressHandlers.onPointerLeave}
 						onPointerCancel={longPressHandlers.onPointerCancel}

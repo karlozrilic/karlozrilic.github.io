@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, QueryConstraint, Timestamp, where } from 'firebase/firestore';
+import { loadFirestore } from '@/lib/load_firestore';
+import type { QueryConstraint, Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { Experience } from '@/app/src/types/experience/experience';
 import { ExperienceHistory } from '@/app/src/types/experience/experience_history';
@@ -54,6 +54,7 @@ export const fetchExperiences = createAsyncThunk<
     Experience[],
     ExperiencesFetchParams | void
 >('experience/fetchExperiences', async (params) => {
+    const { db, collection, getDocs, orderBy, query, where } = await loadFirestore();
     const { all = false } = params ?? {};
     let experiencesData: Experience[] = [];
 
@@ -106,6 +107,7 @@ export const fetchExperiencesHistory = createAsyncThunk<
     ExperienceHistory[],
     ExperienceHistoryFetchParams | void
 >('experience/fetchExperiencesHistory', async (params) => {
+    const { db, collection, getDocs, orderBy, query, where } = await loadFirestore();
     const { id } = params ?? {};
     if (!id) return [];
     let experiencesData: ExperienceHistory[] = [];

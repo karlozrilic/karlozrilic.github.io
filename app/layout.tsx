@@ -37,8 +37,9 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
 	const preloadedState = await getBuildState();
 
+	// no className on <html>: the theme script owns its class and React would overwrite it
 	return (
-		<html lang='en' data-scroll-behavior='smooth' className={`${display.variable} ${hand.variable}`} suppressHydrationWarning>
+		<html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
 			<head>
 				<script
 					dangerouslySetInnerHTML={{
@@ -65,7 +66,7 @@ export default async function RootLayout({ children }: Readonly<{children: React
 				/>
 			</head>
 			<body
-				className={`bg-background text-foreground font-sans transition-colors duration-500 antialiased`}
+				className={`${display.variable} ${hand.variable} bg-background text-foreground font-sans transition-colors duration-500 antialiased`}
 			>
 				<SidebarProvider
 					defaultOpen={false}

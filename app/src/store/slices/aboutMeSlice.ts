@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
+import { loadFirestore } from '@/lib/load_firestore';
+import type { Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { AboutMe } from '@/app/src/types/about_me/about_me';
 import { AboutMeHistory } from '@/app/src/types/about_me/about_me_history';
@@ -40,6 +40,7 @@ const initialHistoryState: AboutMeHistoryState = {
 };
 
 export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () => {
+    const { db, collection, doc, getDoc, getDocs, orderBy, query } = await loadFirestore();
     let aboutMeData: AboutMe | null = null;
 
     try {
@@ -78,6 +79,7 @@ export const fetchAboutMe = createAsyncThunk('aboutMe/fetchAboutMe', async () =>
 });
 
 export const fetchAboutMeHistory = createAsyncThunk('aboutMe/fetchAboutMeHistory', async () => {
+    const { db, collection, doc, getDoc, getDocs, orderBy, query } = await loadFirestore();
     let aboutMeData: AboutMeHistory[] = [];
 
     try {

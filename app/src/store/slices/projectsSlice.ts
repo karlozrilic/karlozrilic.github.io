@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
+import { loadFirestore } from '@/lib/load_firestore';
+import type { Timestamp } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { Project } from '@/app/src/types/project/project';
 
@@ -33,6 +33,7 @@ export const fetchProjects = createAsyncThunk<
     Project[],
     ProjectFetchParams | void
 >('project/fetchProjects', async (params) => {
+    const { db, collection, getDocs, orderBy, query } = await loadFirestore();
     const { all = false } = params ?? {};
     let projectsData: Project[] = [];
 

@@ -1,5 +1,5 @@
 import { PartialBlock } from '@blocknote/core/blocks';
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 export type Experience = {
     id: string;
