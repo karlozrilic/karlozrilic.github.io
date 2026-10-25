@@ -13,6 +13,8 @@ import Technologies from '@/app/src/sections/technologies';
 import Footer from '@/app/src/layout_components/footer';
 import VisitorGlobe from '@/app/src/sections/globe';
 
+let introPlayed = false;
+
 export default function Home() {
     const aboutMe = useSelector((state: RootState) => state.aboutMe);
     const technologies = useSelector((state: RootState) => state.technologies);
@@ -20,12 +22,15 @@ export default function Home() {
     const experiences = useSelector((state: RootState) => state.experiences);
     const [loaded, setLoaded] = useState(false);
     const [showIntro, setShowIntro] = useState(true);
-    const hideIntro = useCallback(() => setShowIntro(false), []);
+    const hideIntro = useCallback(() => {
+        introPlayed = true;
+        setShowIntro(false);
+    }, []);
     const { user } = useAuth();
 
-    // coming back to home from another page, data is already there so skip the intro
+    // only on a fresh page load, not when navigating back to home inside the app
     useLayoutEffect(() => {
-        if (aboutMe.loaded && technologies.loaded && projects.loaded && experiences.loaded) setShowIntro(false);
+        if (introPlayed) setShowIntro(false);
     }, []);
 
     useEffect(() => {

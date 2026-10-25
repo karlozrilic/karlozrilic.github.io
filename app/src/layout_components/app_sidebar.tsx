@@ -16,7 +16,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from '@/app/src/components/ui/sidebar';
-import { ChevronRight, ChevronsUpDown, ExternalLink, Eye, FolderGit2, LogOutIcon, MoreHorizontal, Pencil, SquareTerminal } from 'lucide-react';
+import { ChevronRight, ChevronsUpDown, ExternalLink, Eye, FolderGit2, LogOutIcon, MoreHorizontal, Pencil, Rocket, SquareTerminal } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,6 +36,10 @@ import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
 import { capitalizeFirstLetter } from '@/helpers/string';
+import { auth } from '@/lib/firebase';
+import { toast } from 'sonner';
+
+const PUBLISH_URL = 'https://portfolio-proxy-mocha.vercel.app/api/publish';
  
 export function AppSidebar() {
     const router = useRouter();
@@ -43,6 +47,7 @@ export function AppSidebar() {
     const { user, loading } = useAuth();
     const [acronym, setAcronym] = useState('');
     const isMobile = useIsMobile()
+    const [publishing, setPublishing] = useState(false);
 
     const vercelProjects = useSelector((state: RootState) => state.vercelProjects.data);
 
@@ -51,6 +56,26 @@ export function AppSidebar() {
             setAcronym(user.displayName.split(/\s/).reduce((response, word) => response += word.slice(0,1), ''));
         }
     }, [user, loading]);
+
+    async function publish() {
+        setPublishing(true);
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const response = await fetch(PUBLISH_URL, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => null);
+                throw new Error(body?.error ?? response.statusText);
+            }
+            toast.success('Publishing, the site updates in about 3 minutes');
+        } catch (error) {
+            toast.error(`Publish failed: ${error instanceof Error ? error.message : error}`);
+        } finally {
+            setPublishing(false);
+        }
+    }
 
     async function adminLogout() {
         await logout();
@@ -221,6 +246,12 @@ export function AppSidebar() {
                                     </SidebarMenuSub>
                                 </CollapsibleContent>
                             </Collapsible>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton onClick={publish} disabled={publishing}>
+                                    <Rocket />
+                                    <span>{publishing ? 'Publishing...' : 'Publish site'}</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarGroup>
                 : null }

@@ -4,7 +4,6 @@
 @source inline("fill-foreground fill-background");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@blocknote/shadcn/style.css";
 
 @import "./theme.css";
 

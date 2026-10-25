@@ -8,6 +8,11 @@ on:
       - .github/workflows/**
   workflow_dispatch:
 
+# a newer publish replaces one that's still running
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pages: write

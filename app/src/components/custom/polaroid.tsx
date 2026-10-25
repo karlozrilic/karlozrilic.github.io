@@ -8,9 +8,10 @@ type PolaroidProps = {
     style?: React.CSSProperties;
     ref?: React.Ref<HTMLElement>;
     onTransitionEnd?: React.TransitionEventHandler<HTMLElement>;
+    priority?: boolean;
 };
 
-export default function Polaroid({ caption, alt = '', className, imgClassName, style, ref, onTransitionEnd }: PolaroidProps) {
+export default function Polaroid({ caption, alt = '', className, imgClassName, style, ref, onTransitionEnd, priority }: PolaroidProps) {
     return (
         <figure
             ref={ref}
@@ -20,7 +21,10 @@ export default function Polaroid({ caption, alt = '', className, imgClassName, s
         >
             <div className='aspect-[4/5] w-full bg-[#e9e3d4] overflow-hidden'>
                 <img
-                    src='/images/portfolio_picture.jpeg'
+                    src='/images/portfolio_picture-800.webp'
+                    srcSet='/images/portfolio_picture-480.webp 480w, /images/portfolio_picture-800.webp 800w'
+                    sizes='(min-width: 768px) 400px, 280px'
+                    fetchPriority={priority ? 'high' : undefined}
                     alt={alt}
                     className={cn('size-full object-cover object-[56%_40%]', imgClassName)}
                 />

@@ -2,7 +2,6 @@
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/src/store/store';
 import { useEffect, useRef, useState } from 'react';
-import moment from 'moment';
 import { capitalizeFirstLetter } from '@/helpers/string';
 import SectionHeading from '@/app/src/components/custom/section_heading';
 import { Experience as ExperienceType } from '@/app/src/types/experience/experience';
@@ -49,8 +48,9 @@ function ExperienceItem({ experience }: { experience: ExperienceType }) {
         }
     }
 
-    const start = moment(new Date(experience.start_date)).format('MMM YYYY');
-    const end = experience.end_date ? moment(new Date(experience.end_date)).format('MMM YYYY') : 'now';
+    const monthYear = (date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const start = monthYear(experience.start_date);
+    const end = experience.end_date ? monthYear(experience.end_date) : 'now';
     const workModel = experience.work_model !== 'on-site' ? ` (${capitalizeFirstLetter(experience.work_model)})` : '';
 
     return (

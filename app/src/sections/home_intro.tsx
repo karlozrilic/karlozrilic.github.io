@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import Polaroid from '@/app/src/components/custom/polaroid';
 
 const captions = ['developing...', 'shaking it a bit', 'almost there'];
-const MIN_MS = 2000;
-const FLY_MS = 900;
+const MIN_MS = 1200;
+const FLY_MS = 700;
 const EASE = 'cubic-bezier(.65, 0, .35, 1)';
 
 export default function HomeIntro({ ready, onDone }: { ready: boolean, onDone: () => void }) {
@@ -17,14 +17,14 @@ export default function HomeIntro({ ready, onDone }: { ready: boolean, onDone: (
     const [boxStyle, setBoxStyle] = useState<React.CSSProperties>({
         left: '50%',
         top: '50%',
-        width: 'min(70vw, 300px)',
+        width: 'min(70vw, 400px)',
         translate: '-50% -50%',
     });
 
     useEffect(() => {
         document.documentElement.classList.add('intro-running');
         const minTimer = setTimeout(() => setMinPassed(true), MIN_MS);
-        const captionTimer = setInterval(() => setStep(s => (s + 1) % captions.length), 1400);
+        const captionTimer = setInterval(() => setStep(s => (s + 1) % captions.length), 500);
         return () => {
             clearTimeout(minTimer);
             clearInterval(captionTimer);
@@ -98,6 +98,7 @@ export default function HomeIntro({ ready, onDone }: { ready: boolean, onDone: (
                     className={`loading-polaroid w-full transition-[rotate] ${flying ? 'rotate-3' : '-rotate-3'} ${shaking ? 'is-shaking' : ''}`}
                     style={{ transitionDuration: `${FLY_MS}ms` }}
                     imgClassName='loading-develop'
+                    priority
                 />
             </div>
         </>

@@ -16,26 +16,24 @@
 
 /* instant photo slowly coming through */
 .loading-develop {
-    animation: develop 2.4s ease-out forwards;
+    animation: develop 1.2s ease-out forwards;
 }
 
+/* no opacity here, so the photo counts as painted right away for LCP */
 @keyframes develop {
     0% {
-        opacity: 0;
-        filter: grayscale(1) sepia(.4) brightness(1.6) blur(8px);
+        filter: grayscale(1) sepia(.4) brightness(2.2) contrast(.4) blur(10px);
     }
     40% {
-        opacity: .5;
-        filter: grayscale(.8) sepia(.4) brightness(1.3) blur(4px);
+        filter: grayscale(.8) sepia(.4) brightness(1.5) contrast(.7) blur(4px);
     }
     100% {
-        opacity: 1;
         filter: none;
     }
 }
 
 .loading-polaroid.is-shaking {
-    animation: shake .6s ease-in-out 2;
+    animation: shake .5s ease-in-out;
 }
 
 @keyframes shake {

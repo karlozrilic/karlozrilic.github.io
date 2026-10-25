@@ -147,6 +147,7 @@ export default function Header() {
 					<div className='flex items-center ml-4 md:hidden'>
 						<button
 							ref={menuButtonRef}
+							aria-label='Open menu'
 							className='p-2 rounded'
 						>
 							<FontAwesomeIcon icon={faBars} />

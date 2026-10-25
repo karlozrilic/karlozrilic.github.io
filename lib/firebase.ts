@@ -1,7 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { AppCheck, initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
-import { Analytics, getAnalytics } from 'firebase/analytics';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -14,28 +12,29 @@ const firebaseConfig = {
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-let analytics: Analytics;
-
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-let appCheck: AppCheck;
-
-if (typeof window !== "undefined") {
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-  if (!siteKey) {
-    throw new Error('Missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable');
-  }
-
-  appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(siteKey),
-    isTokenAutoRefreshEnabled: true,
-  });
-}
-
 if (typeof window !== 'undefined') {
-  // Only run analytics in the browser
-  analytics = getAnalytics(app);
+    // shortcut: App Check only starts on a full load of an /admin page, fine while enforcement is off; init it on every admin visit if you ever enforce it
+    if (window.location.pathname.startsWith('/admin')) {
+        const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+        if (!siteKey) {
+            throw new Error('Missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable');
+        }
+        import('firebase/app-check').then(({ initializeAppCheck, ReCaptchaV3Provider }) => {
+            initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider(siteKey),
+                isTokenAutoRefreshEnabled: true,
+            });
+        });
+    }
+
+    // analytics waits until the page is done so it stays off the loading path
+    const startAnalytics = () => setTimeout(() => {
+        import('firebase/analytics').then(({ getAnalytics }) => getAnalytics(app));
+    }, 2000);
+    if (document.readyState === 'complete') startAnalytics();
+    else window.addEventListener('load', startAnalytics, { once: true });
 }
 
 const auth = getAuth(app)
@@ -43,7 +42,6 @@ const db = getFirestore(app);
 
 export {
     app,
-    appCheck,
     auth,
     db
 }

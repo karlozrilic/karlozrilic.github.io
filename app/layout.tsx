@@ -8,10 +8,11 @@ import ReduxProvider from '@/app/reduxProvider';
 import { SidebarProvider } from '@/app/src/components/ui/sidebar';
 import GlobalDataLoader from '@/app/global_data_loader';
 import LayoutContent from '@/app/layout_content';
+import { getBuildState } from '@/app/src/store/build_state';
 config.autoAddCss = false;
 
-const display = Fraunces({ subsets: ['latin', 'latin-ext'], variable: '--font-fraunces', axes: ['SOFT', 'opsz'] });
-const hand = Caveat({ subsets: ['latin', 'latin-ext'], variable: '--font-caveat' });
+const display = Fraunces({ subsets: ['latin', 'latin-ext'], variable: '--font-fraunces', preload: false });
+const hand = Caveat({ subsets: ['latin', 'latin-ext'], variable: '--font-caveat', preload: false });
 
 export const metadata: Metadata = {
     title: 'Frontend & Mobile App Developer | IT Engineer | Karlo Zrilić',
@@ -33,7 +34,9 @@ export const metadata: Metadata = {
 	}
 };
 
-export default function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
+export default async function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
+	const preloadedState = await getBuildState();
+
 	return (
 		<html lang='en' data-scroll-behavior='smooth' className={`${display.variable} ${hand.variable}`} suppressHydrationWarning>
 			<head>
@@ -68,7 +71,7 @@ export default function RootLayout({ children }: Readonly<{children: React.React
 					defaultOpen={false}
 					className='flex-col'
 				>
-					<ReduxProvider>
+					<ReduxProvider preloadedState={preloadedState}>
 						<GlobalDataLoader />
 						<TooltipProvider>
 							<LayoutContent>

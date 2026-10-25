@@ -3,9 +3,9 @@ import { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Badge } from './badge'
 
+// runs during prerender too, so no window here
 function isExternalLink(link: string): boolean {
-	const currentHost = window.location.hostname;
-	return !link.includes(currentHost);
+	return /^https?:\/\//.test(link) && !link.includes('karlozrilic.github.io');
 }
 
 interface BentoGridProps extends ComponentPropsWithoutRef<'div'> {
@@ -60,7 +60,7 @@ const BentoCard = ({
 	>
 		<a 
 			href={href}
-			target={href.startsWith('http') && isExternalLink(href) ? '_blank' : '_self'}
+			target={isExternalLink(href) ? '_blank' : '_self'}
 			key={name}
 		>
 			<div>{background}</div>

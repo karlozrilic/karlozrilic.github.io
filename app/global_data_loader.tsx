@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/app/src/store/store';
@@ -16,6 +16,8 @@ import { fetchCV } from './src/store/slices/CVSlice';
 export default function GlobalDataLoader() {
     const dispatch = useDispatch<AppDispatch>();
     const pathname = usePathname();
+    const isAdmin = pathname.startsWith('/admin');
+    const refreshedRef = useRef(false);
     const CVStatus = useSelector((state: RootState) => state.cv.status);
     const aboutMeStatus = useSelector((state: RootState) => state.aboutMe.status);
     const technologiesStatus = useSelector((state: RootState) => state.technologies.status);
@@ -31,8 +33,7 @@ export default function GlobalDataLoader() {
             (technologiesStatus === 'succeeded' || technologiesStatus === 'failed') &&
             (projectsStatus === 'succeeded' || projectsStatus === 'failed') &&
             (experiencesStatus === 'succeeded' || experiencesStatus === 'failed') &&
-            (vercelProjectsStatus === 'succeeded' || vercelProjectsStatus === 'failed') &&
-            (countriesStatus === 'succeeded' || countriesStatus === 'failed')
+            (vercelProjectsStatus === 'succeeded' || vercelProjectsStatus === 'failed')
         );
     }, [
         CVStatus,
@@ -41,8 +42,18 @@ export default function GlobalDataLoader() {
         projectsStatus,
         experiencesStatus,
         vercelProjectsStatus,
-        countriesStatus
     ]);
+
+    // content is baked in at build time, admin needs what's in Firestore right now
+    useEffect(() => {
+        if (!isAdmin || refreshedRef.current) return;
+        refreshedRef.current = true;
+        dispatch(fetchCV());
+        dispatch(fetchAboutMe());
+        dispatch(fetchTechnologies());
+        dispatch(fetchProjects());
+        dispatch(fetchExperiences());
+    }, [dispatch, isAdmin]);
 
     useEffect(() => {
         if (CVStatus === 'idle') {
@@ -81,10 +92,10 @@ export default function GlobalDataLoader() {
     }, [dispatch, vercelProjectsStatus])
 
     useEffect(() => {
-        if (countriesStatus === 'idle') {
+        if (isAdmin && countriesStatus === 'idle') {
             dispatch(fetchCountries())
         }
-    }, [dispatch, countriesStatus])
+    }, [dispatch, isAdmin, countriesStatus])
 
     useEffect(() => {
         if (!dataLoaded) return;
