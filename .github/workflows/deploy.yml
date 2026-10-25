@@ -1,11 +1,7 @@
 name: Build & Deploy
 
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - .github/workflows/**
+  # run from the Actions tab or the admin Publish button
   workflow_dispatch:
 
 # a newer publish replaces one that's still running
