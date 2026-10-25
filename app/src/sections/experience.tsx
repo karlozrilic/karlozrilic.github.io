@@ -48,7 +48,8 @@ function ExperienceItem({ experience }: { experience: ExperienceType }) {
         }
     }
 
-    const monthYear = (date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    // fixed timezone so the build server (UTC) and the browser agree, otherwise hydration fails
+    const monthYear = (date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'Europe/Zagreb' });
     const start = monthYear(experience.start_date);
     const end = experience.end_date ? monthYear(experience.end_date) : 'now';
     const workModel = experience.work_model !== 'on-site' ? ` (${capitalizeFirstLetter(experience.work_model)})` : '';
