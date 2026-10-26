@@ -4,7 +4,6 @@ export type Project = {
     id: string;
     category: string,
     title: string,
-    subtitle: string,
     content: string,
     jsonBlocks: PartialBlock[];
     markdown: string;
