@@ -13,6 +13,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: write
 
 jobs:
   build:
@@ -75,3 +76,12 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # the site is live now, the artifact only takes up storage
+      - name: Delete build artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for id in $(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts --jq '.artifacts[].id'); do
+            gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/$id
+          done
