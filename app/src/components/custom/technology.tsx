@@ -18,7 +18,11 @@ export default function Technology({image, name}: {image: string, name: string})
                 <ReactSVG
                     style={{ width: 32, height: 32, display: 'inline-block' }}
                     src={'images/icons/' + image}
-                    desc='Description'
+                    // decorative, the technology name is right next to it
+                    beforeInjection={(svg) => {
+                        svg.removeAttribute('role');
+                        svg.setAttribute('aria-hidden', 'true');
+                    }}
                     className='fill-foreground'
                 />
                 <div className='flex flex-col'>
