@@ -95,12 +95,12 @@ export default function Projects() {
                                     className='flex items-center bg-neutral-100 dark:bg-neutral-200'
                                 >
                                     <Image
-                                        src={`/images/${project.image}.svg`}
+                                        src={`/images/projects/${project.image}.svg`}
                                         alt={`${project.title} logo`}
                                         width={100}
                                         height={100}
                                         onError={(e) => {
-                                            e.currentTarget.src = `/images/${project.image}.png`;
+                                            e.currentTarget.src = `/images/projects/${project.image}.png`;
                                         }}
                                         className='w-full h-full object-contain scale-75 transition-transform duration-300 ease-out group-hover:scale-80'
                                     />
