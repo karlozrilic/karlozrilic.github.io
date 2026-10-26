@@ -23,6 +23,13 @@ export default function HomeIntro({ ready, onDone }: { ready: boolean, onDone: (
 
     useEffect(() => {
         document.documentElement.classList.add('intro-running');
+
+        // a reload restores the old scroll position, which leaves the polaroid nowhere to land
+        if (!(window as { __pendingHash?: string }).__pendingHash) {
+            history.scrollRestoration = 'manual';
+            window.scrollTo(0, 0);
+        }
+
         const minTimer = setTimeout(() => setMinPassed(true), MIN_MS);
         const captionTimer = setInterval(() => setStep(s => (s + 1) % captions.length), 500);
         return () => {
