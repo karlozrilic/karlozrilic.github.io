@@ -9,7 +9,6 @@ export type Project = {
     jsonBlocks: PartialBlock[];
     markdown: string;
     image: string,
-    small_image: string,
     link: string,
     tags: string[]
     updated: string;
